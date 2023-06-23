@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"fmt"
+
+	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
 const EnvGameServerPort = "GAME_SERVER_PORT"// test
@@ -42,18 +44,19 @@ func main() {
 		if err := enc.Encode(paths); err != nil {
 			writeError(w, "can't marshal list", err)
 		}
+
+		game := Game{Pair[int,int]{1000,1000}, 1, []string{"a", "b"}}
+		err := createGame(game)
+
+		if err != nil {
+			writeError(w, "error initializing game", err)
+		}
 	})
 
 	log.Printf("Starting server on port %s\n", port)
 
 	http.ListenAndServe(":"+port, nil)
 
-	game := Game{Pair[int,int]{1000,1000}, 1, []string{"a", "b"}}
-	err := createGame(game)
-
-	if err != nil {
-		writeError(w, "error initializing game", err)
-	}
 }
 
 func writeError(w http.ResponseWriter, msg string, err error) {
