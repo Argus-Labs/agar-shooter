@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	//"net/http"
 	//"time"
+	"strconv"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
@@ -64,6 +65,18 @@ type PlayerComponent struct {
 	Weapon Weapon// current player weapon; default is 0 for Melee
 	Loc Pair[int, int]// current location
 	Dir Direction// direction player faces & direction player moves; currently, both are the same
+}
+
+func (p PlayerComponent) String() string {
+	s := ""
+	s += "Name: " + p.Name + "\n"
+	s += "Health: " + strconv.Itoa(p.Health) + "\n"
+	s += "Coins: " + strconv.Itoa(p.Coins) + "\n"
+	s += "Weapon: " + strconv.Itoa(int(p.Weapon)) + "\n"
+	s += "Loc: " + strconv.Itoa(p.Loc.First) + " " + strconv.Itoa(p.Loc.Second) + "\n"
+	s += "Dir: " + strconv.Itoa(p.Dir.Face.First) + " " + strconv.Itoa(p.Dir.Face.Second)
+
+	return s
 }
 
 var (
@@ -286,10 +299,6 @@ func GetPlayerState(player ModPlayer) (PlayerComponent, error) {// testing funct
 	}
 
 	return comp, nil
-}
-
-func HandleGameLoop(w http.ResponseWriter, r *http.Request){// output player information along with current tick
-
 }
 
 func HandleMakeMove(move Move) {

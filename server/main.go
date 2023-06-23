@@ -30,7 +30,8 @@ func main() {
 		{"games/pop", handlePlayerPop},
 		{"games/create", handleCreateGame},
 		{"games/move", handleMakeMove},
-		{"games/loop", HandleGameLoop},
+		{"games/loop", handleGameLoop},
+		{"games/status", getPlayerState},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
@@ -156,4 +157,26 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {// add move to tran
 	HandleMakeMove(moves)
 
 	writeResult(w, "move registered")// also write the location of each player by playername
+}
+
+func handleGameLoop(w http.ResponseWriter, r *http.Request){// output player information along with current tick
+
+}
+
+func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	playercomp, err := GetPlayerState(player)
+
+	if err != nil {
+		writeError(w, "could not get player state", err)
+		return
+	}
+
+	writeResult(w, playercomp)// convert to string
 }
