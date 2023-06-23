@@ -2,17 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	//"time"
-
-	//"github.com/argus-labs/world-engine/cardinal/ecs/component"
+	"fmt"
 )
 
 const EnvGameServerPort = "GAME_SERVER_PORT"// test
-
 
 func main() {
 	// opens port
@@ -28,7 +24,7 @@ func main() {
 	}{
 		{"games/push", handlePlayerPush},
 		{"games/pop", handlePlayerPop},
-		{"games/create", handleCreateGame},
+		//{"games/create", handleCreateGame},
 		{"games/move", handleMakeMove},
 		{"games/loop", handleGameLoop},
 		{"games/status", getPlayerState},
@@ -51,6 +47,13 @@ func main() {
 	log.Printf("Starting server on port %s\n", port)
 
 	http.ListenAndServe(":"+port, nil)
+
+	game := Game{Pair[int,int]{1000,1000}, 1, []string{"a", "b"}}
+	err := createGame(game)
+
+	if err != nil {
+		writeError(w, "error initializing game", err)
+	}
 }
 
 func writeError(w http.ResponseWriter, msg string, err error) {
@@ -78,32 +81,32 @@ func decode(r *http.Request, v any) error {
 }
 
 
-// need to figure out how to use these three functions; just need to modify the functions/endpoints we use and the clientside nakama code handles the rest
-func handleCreateGame(w http.ResponseWriter, r *http.Request) {
-	var gameData Game
-	if err := decode(r, &gameData); err != nil {
-		writeError(w, "decode failed", err)
-		return
-	}
-
-	for _, playername := range GameParams.Players {
-		if playername == "" {
-			writeError(w, "must name all players", nil)
-			return
-		}
-	}
-
-	// only creates things after checking that there are no errors with the gameParams input
-	err := HandleCreateGame(gameData)
-
-	if err != nil {
-		writeError(w, "error initializing world: ", err)
-		return
-	}
-
-	w.WriteHeader(200)// outputs success
-	writeResult(w, "success")// also write the location of each player by playername
-}
+//// need to figure out how to use these three functions; just need to modify the functions/endpoints we use and the clientside nakama code handles the rest
+//func handleCreateGame(w http.ResponseWriter, r *http.Request) {
+//	var gameData Game
+//	if err := decode(r, &gameData); err != nil {
+//		writeError(w, "decode failed", err)
+//		return
+//	}
+//
+//	for _, playername := range GameParams.Players {
+//		if playername == "" {
+//			writeError(w, "must name all players", nil)
+//			return
+//		}
+//	}
+//
+//	// only creates things after checking that there are no errors with the gameParams input
+//	err := HandleCreateGame(gameData)
+//
+//	if err != nil {
+//		writeError(w, "error initializing world: ", err)
+//		return
+//	}
+//
+//	w.WriteHeader(200)// outputs success
+//	writeResult(w, "success")// also write the location of each player by playername
+//}
 
 func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to world
 	player := ModPlayer{}
@@ -179,4 +182,64 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 	}
 
 	writeResult(w, playercomp)// convert to string
+}
+
+func createGame(game Game) error {
+	GameParams = game
+	ItemMap, err := World.Create(ItemMapComp)// creates an ItemMap entity
+	PlayerMap, err := World.Create(PlayerMapComp)// creates a PlayerMap entity
+	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp)// creates player entities
+
+	for i, playername := range GameParams.Players {// associates storage.EntityIDs with each player
+		Players[playername] = playerIDs[i]
+	}
+
+	if err != nil {
+		return fmt.Errorf("Error initializing game objects: %w", err)
+	}
+
+	// initializes player and item maps
+	itemmap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[int,int]]] void)
+	playermap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[int, int]]] void)
+	for i := 0; i <= GameParams.Dims.First/GameParams.CSize; i++ {
+		for j := 0; j <= GameParams.Dims.Second/GameParams.CSize; j++ {
+			itemmap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[int,int]]] void)
+			playermap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[int, int]]] void)
+		}
+	}
+
+	ItemMapComp.Set(World, ItemMap, ItemMapComponent{itemmap})// initializes ItemMap using empty map
+	PlayerMapComp.Set(World, ItemMap, PlayerMapComponent{playermap})// initializes PlayerMap using empty map
+
+	for _, playername := range GameParams.Players {
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[int,int]{25,25}, Direction{90, Pair[int,int]{0,0}}})// initializes player entitities through their component
+
+		PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent {// adds players to the board
+			playercomp, err := PlayerComp.Get(World, Players[playername])
+
+			if err != nil {
+				fmt.Errorf("Error getting location with callback function: %w", err)
+				return comp
+			}
+
+			newPlayer := Pair[storage.EntityID, Pair[int,int]]{Players[playername], playercomp.Loc}
+			comp.Players[Pair[int,int]{25/GameParams.CSize,25/GameParams.CSize}][newPlayer] = pewp
+
+			return comp
+		})
+	}
+
+	World.AddSystem(processMoves)
+	World.AddSystem(makeMoves)
+	World.LoadGameState()
+
+	// calls callback goroutine to keep World ticking
+
+	//go func(){ TODO enable after testing
+	//	for range time.Tick(time.Second/tickRate) {
+	//		World.Tick()
+	//	}
+	//}()
+
+	return nil
 }
