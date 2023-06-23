@@ -24,6 +24,9 @@ https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.giti
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+server/vendor
+nakama/vendor
+
 
 # Go workspace file
 go.work
@@ -272,6 +275,8 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+.idea
 
 # End of 
 https://www.toptal.com/developers/gitignore/api/unity,go,macos,windows,jetbrains

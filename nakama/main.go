@@ -38,7 +38,86 @@ const (
 	EnvGameServer = "GAME_SERVER_ADDR"
 )
 
+type MatchState struct {
+	presences map[string]runtime.Presence
+}
+
+type Match struct{}
+
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {
+
+	// Register the RPC function of Cardinal to Nakama to create a proxy
+	err := InitializeCardinalProxy(logger, initializer)
+	if err != nil {
+		return err
+	}
+
+	// Create the singleton match
+	err2 := initializer.RegisterMatch("singleton_match", newMatch)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule) (m runtime.Match, err error) {
+	return &Match{}, nil
+}
+
+func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
+	state := &MatchState{
+		presences: make(map[string]runtime.Presence),
+	}
+
+	tickRate := 1
+	label := ""
+
+	return state, tickRate, label
+}
+
+func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
+	acceptUser := true
+
+	return state, acceptUser, ""
+}
+
+func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
+	mState, _ := state.(*MatchState)
+
+	for _, p := range presences {
+		mState.presences[p.GetUserId()] = p
+	}
+
+	return mState
+}
+
+func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
+	mState, _ := state.(*MatchState)
+
+	for _, p := range presences {
+		delete(mState.presences, p.GetUserId())
+	}
+
+	return mState
+}
+
+func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
+	mState, _ := state.(*MatchState)
+
+	return mState
+}
+
+func (m *Match) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, graceSeconds int) interface{} {
+
+	return state
+}
+
+func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, data string) (interface{}, string) {
+	return state, "signal received: " + data
+}
+
+func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initializer) error {
 	gameServerAddr := os.Getenv(EnvGameServer)
 	if gameServerAddr == "" {
 		msg := fmt.Sprintf("Must specify a game server via %s", EnvGameServer)
@@ -65,7 +144,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	for _, e := range endpoints {
 		logger.Debug("registering: %v", e)
 		currEndpoint := e
-		initializer.RegisterRpc(e, func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		err := initializer.RegisterRpc(e, func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 			logger.Debug("Got request for %q", currEndpoint)
 
 			req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(payload))
@@ -90,21 +169,9 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 			}
 			return string(str), nil
 		})
-//	
-//		}
-//	}
-//
-//	// match update loop
-//	func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *SQL.db, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-//		if tick%5 == 0 {
-//			var opCode int64 = 123
-//			var data []byte = []byte("test")
-//			dispatcher.BroadcastMessage(opcode, data, nil, nil)// figure out how to specify the players
-//
-//			return state
-//		}
-//		return nil
+		if err != nil {
+			logger.Error("failed to register endpoint %q: %v", e, err)
+		}
 	}
-
 	return nil
 }
