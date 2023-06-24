@@ -30,6 +30,7 @@ func main() {
 		{"games/move", handleMakeMove},
 		{"games/loop", handleGameLoop},
 		{"games/status", getPlayerState},
+		{"games/tick", tig},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
@@ -246,3 +247,5 @@ func createGame(game Game) error {
 
 	return nil
 }
+
+func tig(w http.ResponseWriter, r *http.Request) {TickTock();}// use in place of broadcast to tick
