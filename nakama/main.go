@@ -39,12 +39,12 @@ const (
 )
 
 type MatchState struct {
-	presences map[string]runtime.Presence
+	presences map[string]runtime.Presence// contains all in-game players
 }
 
 type Match struct{}
 
-func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {
+func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {// called when connection is established
 
 	// Register the RPC function of Cardinal to Nakama to create a proxy
 	err := InitializeCardinalProxy(logger, initializer)
@@ -70,13 +70,14 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 		presences: make(map[string]runtime.Presence),
 	}
 
-	tickRate := 1
+	tickRate := 5
 	label := ""
 
 	return state, tickRate, label
 }
 
 func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
+
 	acceptUser := true
 
 	return state, acceptUser, ""
@@ -105,6 +106,8 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
 	mState, _ := state.(*MatchState)
 
+	//broadcast; later, handle transactions here instead of in cardinal
+	
 	return mState
 }
 
