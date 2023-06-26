@@ -28,7 +28,6 @@ func main() {
 		{"games/pop", handlePlayerPop},
 		//{"games/create", handleCreateGame},
 		{"games/move", handleMakeMove},
-		{"games/loop", handleGameLoop},
 		{"games/status", getPlayerState},
 		{"games/tick", tig},
 	}
@@ -164,10 +163,6 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {// add move to tran
 	HandleMakeMove(moves)
 
 	writeResult(w, "move registered")// also write the location of each player by playername
-}
-
-func handleGameLoop(w http.ResponseWriter, r *http.Request){// output player information along with current tick
-
 }
 
 func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
