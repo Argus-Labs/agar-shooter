@@ -31,13 +31,16 @@ public class NakamaConnection : ScriptableObject
     public string Host = "localhost";
     public int Port = 7350;
     public string ServerKey = "defaultkey";
+    public string matchName = "singleton_match";
     
     // if we want the player to enter the game using still valid session 
     // private const string SessionPrefName = "nakama.session";
 
-    private IClient client;
-    private ISession session;
-    private ISocket socket;
+    public IClient client;
+    public ISession session;
+    public ISocket socket;
+    public string matchID = "";
+    
 
     private string currentMatchmakingTicket;
     private string currentMatchId;
@@ -76,6 +79,10 @@ public class NakamaConnection : ScriptableObject
         Debug.Log("Connected to Nakama server");
         Debug.Log(session);
         Debug.Log(socket);
+        // join the match 
+        var match = await socket.CreateMatchAsync(matchName);
+        Debug.Log("matchID "+match.Id);
+        matchID = match.Id;
         return session.Username;
     }
 
