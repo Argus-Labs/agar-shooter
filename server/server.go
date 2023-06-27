@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
 func init() {
-	World.RegisterComponents(ItemMapComp, PlayerMapComp, PlayerComp)
-	MoveTx.SetID(0)
-	//World.RegisterTransactions(MoveTx)
 }
 
 //func callback(cb func() error) {
@@ -19,7 +17,7 @@ func init() {
 //	callback(cb)
 //}
 
-// adds update Systems
+// world Systems
 func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts player directions based on their movement
 	moveMap := make(map[string] Move)
 
@@ -28,14 +26,20 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 	}
 
 	for name, move := range moveMap {
-		PlayerComp.Update(World, Players[name], func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
-			diff := func(a, b bool) int {
+		naMe, contains := Players[name]
+		
+		if !contains {
+			return fmt.Errorf("Cardinal: unregistered player attempting to move")
+		}
+
+		PlayerComp.Update(World, naMe, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
+			diff := func(a, b bool) float64 {
 				if a == b { return 0 }
 				if a && !b { return 1 }
 				return -1
 			}
 
-			comp.Dir.Face = Pair[int,int]{diff(move.Right, move.Left), diff(move.Up, move.Down)}// adjusts move direction
+			comp.Dir.Face = Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}// adjusts move direction
 			return comp
 		})
 	}
@@ -43,7 +47,7 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 	return nil
 }
 
-func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed; TODO: check collisions
+func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
 	for playerName, id := range Players {
 		tmpPlayer, err := PlayerComp.Get(World, id)
 
@@ -53,7 +57,13 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		prevLoc := tmpPlayer.Loc
 
-		loc := Pair[int,int]{prevLoc.First + (10 * tmpPlayer.Dir.Face.First)/(1 + tmpPlayer.Coins), prevLoc.Second + (10 * tmpPlayer.Dir.Face.Second)/(1 + tmpPlayer.Coins)}// change speed function
+		bound := func(x float64, y float64) (float64, float64){
+			return math.Min(float64(GameParams.Dims.First), math.Max(0, x)), math.Min(float64(GameParams.Dims.Second), math.Max(0, y))
+		}
+
+		x, y := bound(prevLoc.First + (10 * tmpPlayer.Dir.Face.First)/float64(1 + tmpPlayer.Coins), prevLoc.Second + (10 * tmpPlayer.Dir.Face.Second)/float64(1 + tmpPlayer.Coins))
+		
+		loc := Pair[float64, float64]{x,y}// change speed function
 
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
 			comp.Loc = loc
@@ -61,8 +71,8 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		})
 
 		PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent{// moves player in map
-			delete(comp.Players[Pair[int,int]{prevLoc.First/GameParams.CSize, prevLoc.Second/GameParams.CSize}], Pair[storage.EntityID, Pair[int,int]]{id, prevLoc})
-			comp.Players[Pair[int,int]{loc.First/GameParams.CSize, loc.Second/GameParams.CSize}][Pair[storage.EntityID,Pair[int,int]]{id, loc}] = pewp
+			delete(comp.Players[Pair[int,int]{int(math.Floor(prevLoc.First/GameParams.CSize)), int(math.Floor(prevLoc.Second/GameParams.CSize))}], Pair[storage.EntityID, Pair[float64,float64]]{id, prevLoc})
+			comp.Players[Pair[int,int]{int(math.Floor(loc.First/GameParams.CSize)), int(math.Floor(loc.Second/GameParams.CSize))}][Pair[storage.EntityID,Pair[float64,float64]]{id, loc}] = pewp
 
 			return comp
 		})
@@ -78,7 +88,7 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[int,int]{25,25}, Direction{90, Pair[int,int]{0,0}}})// default player
+	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}})// default player
 	PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent {// adds a player to the board
 		playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -87,8 +97,8 @@ func HandlePlayerPush(player ModPlayer) error {
 			return comp
 		}
 
-		newPlayer := Pair[storage.EntityID, Pair[int,int]]{Players[player.Name], playercomp.Loc}
-		comp.Players[Pair[int,int]{25/GameParams.CSize,25/GameParams.CSize}][newPlayer] = pewp
+		newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
+		comp.Players[Pair[int,int]{25/int(GameParams.CSize),25/int(GameParams.CSize)}][newPlayer] = pewp
 
 		return comp
 	})
@@ -111,8 +121,8 @@ func HandlePlayerPop(player ModPlayer) error {
 			return comp
 		}
 
-		oldPlayer := Pair[storage.EntityID, Pair[int,int]]{Players[player.Name], playercomp.Loc}
-		delete(comp.Players[Pair[int,int]{playercomp.Loc.First/GameParams.CSize, playercomp.Loc.Second/GameParams.CSize}], oldPlayer)
+		oldPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
+		delete(comp.Players[Pair[int,int]{int(math.Floor(playercomp.Loc.First/GameParams.CSize)), int(math.Floor(playercomp.Loc.Second/GameParams.CSize))}], oldPlayer)
 
 		return comp
 	})

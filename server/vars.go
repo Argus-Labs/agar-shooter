@@ -19,12 +19,12 @@ type Pair[T1 any, T2 any] struct {
 type ItemComponent struct {}
 
 type HealthComponent struct {
-	Loc Pair[int, int]// location
+	Loc Pair[float64, float64]// location
 	Val int// how much health it contains
 }
 
 type CoinComponent struct {
-	Loc Pair[int, int]
+	Loc Pair[float64, float64]
 	Val int// how many coins the component represents; could represent different denominations as larger or different colored coins
 }
 
@@ -36,22 +36,22 @@ const (// add more weapons as needed
 )
 
 type WeaponComponent struct {
-	Loc Pair[int, int]
+	Loc Pair[float64, float64]
 	Val Weapon// weapon type; TODO: implement ammo later outside of weapon component
 	// cooldown, ammo, damage, range
 }
 
 type ItemMapComponent struct {// TODO: maybe don't turn these into components
-	Items map[Pair[int, int]] map[Pair[storage.EntityID, Pair[int,int]]] void// maps cells to sets of item lists
+	Items map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void// maps cells to sets of item lists
 }
 
 type PlayerMapComponent struct {
-	Players map[Pair[int,int]] map[Pair[storage.EntityID, Pair[int,int]]] void// maps cells to sets of player name-location pairs
+	Players map[Pair[int,int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void// maps cells to sets of player name-location pairs
 }
 
 type Direction struct {
-	Theta int// degree angle int with range [0,359] for player direction
-	Face Pair[int,int]// movement direction with range [[-1,1],[-1,1]]
+	Theta float64// degree angle int with range [0,359] for player direction
+	Face Pair[float64,float64]// movement direction with range [[-1,1],[-1,1]]
 }
 
 type PlayerComponent struct {
@@ -59,7 +59,7 @@ type PlayerComponent struct {
 	Health int// current player health (cap enforced in update loop)
 	Coins int// how much money the player has
 	Weapon Weapon// current player weapon; default is 0 for Melee
-	Loc Pair[int, int]// current location
+	Loc Pair[float64, float64]// current location
 	Dir Direction// direction player faces & direction player moves; currently, both are the same
 }
 
@@ -69,8 +69,8 @@ func (p PlayerComponent) String() string {
 	s += "Health: " + strconv.Itoa(p.Health) + "\n"
 	s += "Coins: " + strconv.Itoa(p.Coins) + "\n"
 	s += "Weapon: " + strconv.Itoa(int(p.Weapon)) + "\n"
-	s += "Loc: " + strconv.Itoa(p.Loc.First) + " " + strconv.Itoa(p.Loc.Second) + "\n"
-	s += "Dir: " + strconv.Itoa(p.Dir.Face.First) + " " + strconv.Itoa(p.Dir.Face.Second)
+	s += "Loc: " + strconv.FormatFloat(float64(p.Loc.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Loc.Second), 'e', -1, 32) + "\n"
+	s += "Dir: " + strconv.FormatFloat(float64(p.Dir.Face.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Dir.Face.Second), 'e', -1, 32)
 
 	return s
 }
@@ -90,8 +90,8 @@ const (
 )
 
 type Game struct {
-	Dims	Pair[int, int]
-	CSize	int// cell size
+	Dims	Pair[float64, float64]
+	CSize	float64// cell size
 	Players	[]string// list of players
 }
 

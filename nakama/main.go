@@ -32,6 +32,7 @@ const (
 	UNAVAILABLE int64			= 14
 	DATA_LOSS int64				= 15
 	UNAUTHENTICATED int64		= 16
+	MOVE int64					= 17
 )
 
 const (
@@ -64,6 +65,23 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return err2
 	}
 
+	var matchId string
+
+	if err := initializer.RegisterMatchmakerMatched(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, entries []runtime.MatchmakerEntry) (string, error) {
+		matchId, err = nk.MatchCreate(ctx, "lobby", map[string]interface{}{"invited": entries})
+
+		if err != nil {
+			return "", fmt.Errorf("Nakama: unable to create match; ", err)
+		}
+	
+		logger.Debug("MATCH ID: ", matchId)
+
+		return matchId, nil
+	}); err != nil {
+		logger.Error("unable to register matchmaker matched hook: %v", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -72,12 +90,25 @@ func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime
 }
 
 func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
+	for i := 0; i < 50; i++ {
+		fmt.Println("test")
+	}
 	state := &MatchState{
 		presences: make(map[string]runtime.Presence),
 	}
 
 	tickRate := 5
 	label := ""
+
+	for i := 0; i < 50; i++ {
+		fmt.Println("test")
+	}
+
+	_, err := CallRPCs["game/create"](ctx, logger, db, nk, "")
+
+	if err != nil {
+		fmt.Errorf("Nakama: error creating game", err)
+	}
 
 	return state, tickRate, label
 }
@@ -129,7 +160,15 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	// process player moves
 	for _, match := range messages {
-		_, err := CallRPCs["game/move"](ctx, logger, db, nk, string(match.GetData()))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+		if _, contains := mState.presences[match.GetUserId()]; !contains {
+			return fmt.Errorf("Nakama: unregistered player is moving")
+		}
+		
+		var err error
+
+		switch match.GetOpCode() {
+			case MOVE: _, err = CallRPCs["game/move"](ctx, logger, db, nk, string(match.GetData()))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+		}
 
 		if err != nil {
 			return err

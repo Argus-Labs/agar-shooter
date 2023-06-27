@@ -29,13 +29,13 @@ func (m Message) WriteHeader(statusCode int) {
 
 func TestPewp(t *testing.T) {
 	// test game initialization
-	gameParams := Game{Pair[int,int]{1000,1000}, 2, []string{"a","b"}}
+	game := Game{Pair[float64,float64]{1000,1000}, 2, []string{"a","b"}}
 	var err error
 	var player ModPlayer
 	var contains bool
 	var p PlayerComponent
 
-	err = HandleCreateGame(gameParams)
+	err = CreateGame(game)
 
 	if err != nil {
 		fmt.Println("pewp")

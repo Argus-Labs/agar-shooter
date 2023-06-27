@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"fmt"
+	"math"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
@@ -16,8 +17,10 @@ func main() {
 	// opens port
 	port := os.Getenv(EnvGameServerPort)
 	if port == "" {
-		log.Fatalf("Must specify a port via %s", EnvGameServerPort)
+		fmt.Errorf("Must specify a port via %s", EnvGameServerPort)
 	}
+
+
 
 	// defines an array of handlers that do one of handle games, create games, and make moves
 	handlers := []struct {
@@ -26,37 +29,33 @@ func main() {
 	}{
 		{"games/push", handlePlayerPush},
 		{"games/pop", handlePlayerPop},
-		//{"games/create", handleCreateGame},
 		{"games/move", handleMakeMove},
 		{"games/status", getPlayerState},
 		{"games/tick", tig},
+		{"games/create", createGame},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
 	// handles the function by taking the response, figuring out which game function to call, and calling it
 	paths := []string{}
+
+
 	for _, h := range handlers {
 		http.HandleFunc("/"+h.path, h.handler)
 		paths = append(paths, h.path)
 	}
 	http.HandleFunc("/list", func(w http.ResponseWriter, r *http.Request) {
 		enc := json.NewEncoder(w)
+
 		if err := enc.Encode(paths); err != nil {
 			writeError(w, "can't marshal list", err)
 		}
 
-		game := Game{Pair[int,int]{1000,1000}, 1, []string{"a", "b"}}
-		err := createGame(game)
-
-		if err != nil {
-			writeError(w, "error initializing game", err)
-		}
 	})
 
 	log.Printf("Starting server on port %s\n", port)
 
 	http.ListenAndServe(":"+port, nil)
-
 }
 
 func writeError(w http.ResponseWriter, msg string, err error) {
@@ -82,7 +81,6 @@ func decode(r *http.Request, v any) error {
 	}
 	return nil
 }
-
 
 //// need to figure out how to use these three functions; just need to modify the functions/endpoints we use and the clientside nakama code handles the rest
 //func handleCreateGame(w http.ResponseWriter, r *http.Request) {
@@ -183,8 +181,25 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 	writeResult(w, playercomp)// convert to string
 }
 
-func createGame(game Game) error {
+func createGame(w http.ResponseWriter, r *http.Request) {
+	game := Game{Pair[float64,float64]{1000,1000}, 1, []string{"a", "b"}}
+	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter
+	if errr != nil {// error from game creation
+		writeError(w, "error initializing game", errr)
+	}
+}
+
+func CreateGame(game Game) error {
+	//if World.stateIsLoaded {
+	//	return fmt.Errorf("already loaded state")
+	//}
 	GameParams = game
+	World.RegisterComponents(ItemMapComp, PlayerMapComp, PlayerComp)
+	World.AddSystem(processMoves)
+	World.AddSystem(makeMoves)
+
+	World.LoadGameState()
+	MoveTx.SetID(0)
 	ItemMap, err := World.Create(ItemMapComp)// creates an ItemMap entity
 	PlayerMap, err := World.Create(PlayerMapComp)// creates a PlayerMap entity
 	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp)// creates player entities
@@ -198,12 +213,12 @@ func createGame(game Game) error {
 	}
 
 	// initializes player and item maps
-	itemmap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[int,int]]] void)
-	playermap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[int, int]]] void)
-	for i := 0; i <= GameParams.Dims.First/GameParams.CSize; i++ {
-		for j := 0; j <= GameParams.Dims.Second/GameParams.CSize; j++ {
-			itemmap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[int,int]]] void)
-			playermap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[int, int]]] void)
+	itemmap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)
+	playermap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64, float64]]] void)
+	for i := 0; i <= int(math.Ceil(GameParams.Dims.First/GameParams.CSize)); i++ {
+		for j := 0; j <= int(math.Ceil(GameParams.Dims.Second/GameParams.CSize)); j++ {
+			itemmap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
+			playermap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64, float64]]] void)
 		}
 	}
 
@@ -211,7 +226,7 @@ func createGame(game Game) error {
 	PlayerMapComp.Set(World, ItemMap, PlayerMapComponent{playermap})// initializes PlayerMap using empty map
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[int,int]{25,25}, Direction{90, Pair[int,int]{0,0}}})// initializes player entitities through their component
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}})// initializes player entitities through their component
 
 		PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent {// adds players to the board
 			playercomp, err := PlayerComp.Get(World, Players[playername])
@@ -221,16 +236,14 @@ func createGame(game Game) error {
 				return comp
 			}
 
-			newPlayer := Pair[storage.EntityID, Pair[int,int]]{Players[playername], playercomp.Loc}
-			comp.Players[Pair[int,int]{25/GameParams.CSize,25/GameParams.CSize}][newPlayer] = pewp
+			newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[playername], playercomp.Loc}
+			comp.Players[Pair[int,int]{25/int(GameParams.CSize),25/int(GameParams.CSize)}][newPlayer] = pewp
 
 			return comp
 		})
 	}
 
-	World.AddSystem(processMoves)
-	World.AddSystem(makeMoves)
-	World.LoadGameState()
+	//World.RegisterTransactions(MoveTx)
 
 	// calls callback goroutine to keep World ticking
 
