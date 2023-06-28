@@ -64,6 +64,7 @@ func writeError(w http.ResponseWriter, msg string, err error) {
 }
 
 func writeResult(w http.ResponseWriter, v any) {
+	w.WriteHeader(200)// outputs success
 	if s, ok := v.(string); ok {
 		v = struct{ Msg string }{Msg: s}
 	}
@@ -111,6 +112,14 @@ func decode(r *http.Request, v any) error {
 
 func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to world
 	player := ModPlayer{}
+
+	fmt.Println(r)
+	//
+	//b, errr := ioutil.ReadAll(r.Body)
+	//if errr != nil {
+	//	panic(errr)
+	//}
+	//fmt.Println("request: ", string(b))
 
 	if err := decode(r, &player); err != nil {
 		writeError(w, "invalid player name format given: ", err)
@@ -187,6 +196,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 	if errr != nil {// error from game creation
 		writeError(w, "error initializing game", errr)
 	}
+	writeResult(w, "game created")
 }
 
 func CreateGame(game Game) error {
@@ -243,17 +253,10 @@ func CreateGame(game Game) error {
 		})
 	}
 
-	//World.RegisterTransactions(MoveTx)
-
-	// calls callback goroutine to keep World ticking
-
-	//go func(){ TODO enable after testing
-	//	for range time.Tick(time.Second/tickRate) {
-	//		World.Tick()
-	//	}
-	//}()
-
 	return nil
 }
 
-func tig(w http.ResponseWriter, r *http.Request) {TickTock();}// use in place of broadcast to tick
+func tig(w http.ResponseWriter, r *http.Request) {
+	TickTock();
+	writeResult(w, "game tick completed")
+}
