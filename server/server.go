@@ -78,6 +78,10 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 
 func HandlePlayerPush(player ModPlayer) error {
+	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
+		return nil
+	}
+
 	playerID, err := World.Create(PlayerComp)// creates new player
 	if err != nil {
 		return fmt.Errorf("Error adding player to world: %w", err)
@@ -161,6 +165,7 @@ func CreateGame(game Game) error {
 	PlayerMap, err := World.Create(PlayerMapComp)// creates a PlayerMap entity
 	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp)// creates player entities
 
+	Players = make(map[string] storage.EntityID, 0)
 	for i, playername := range GameParams.Players {// associates storage.EntityIDs with each player
 		Players[playername] = playerIDs[i]
 	}
