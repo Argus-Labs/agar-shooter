@@ -13,10 +13,10 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 	moveMap := make(map[string] Move)
 
 	for _, move := range MoveTx.In(q) {
-		//_, contains := moveMap[move.Player]
-		//if (_, contains := moveMap[move.Player]; !contains) || moveMap[move.Player].PacketNum < move.PacketNum{
+		_, contains := moveMap[move.Player]
+		if !contains || moveMap[move.Player].PacketNum < move.PacketNum{
 			moveMap[move.Player] = move
-		//}
+		}
 	}
 
 	for name, move := range moveMap {
@@ -34,6 +34,8 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			}
 
 			comp.Dir.Face = Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}// adjusts move direction
+			comp.MoveNum = move.PacketNum		
+
 			return comp
 		})
 	}
@@ -82,7 +84,7 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}})// default player
+	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}, 0})// default player
 	PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent {// adds a player to the board
 		playercomp, err := PlayerComp.Get(World, Players[player.Name])
 

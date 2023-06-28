@@ -179,15 +179,15 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 		writeError(w, "invalid player name given", err)
 		return
 	}
-
-	playercomp, err := GetPlayerState(player)
+	comp, err := GetPlayerState(player)
+	bareplayer := comp.Simplify()
 
 	if err != nil {
 		writeError(w, "could not get player state", err)
 		return
 	}
 
-	writeResult(w, playercomp)// convert to string
+	writeResult(w, bareplayer)// convert to string
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +236,7 @@ func CreateGame(game Game) error {
 	PlayerMapComp.Set(World, ItemMap, PlayerMapComponent{playermap})// initializes PlayerMap using empty map
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}})// initializes player entitities through their component
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}, 0})// initializes player entitities through their component
 
 		PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent {// adds players to the board
 			playercomp, err := PlayerComp.Get(World, Players[playername])

@@ -61,7 +61,22 @@ type PlayerComponent struct {
 	Weapon Weapon// current player weapon; default is 0 for Melee
 	Loc Pair[float64, float64]// current location
 	Dir Direction// direction player faces & direction player moves; currently, both are the same
-	//MoveNum int// most recently-processed move
+	MoveNum int// most recently-processed move
+}
+
+type BarePlayer struct {
+	Name string
+	Health int
+	Coins int
+	//Weapon int
+	LocX float64
+	LocY float64
+	IsRight bool
+	InputNum int
+}
+
+func (p PlayerComponent) Simplify() BarePlayer {
+	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.Dir.Face.First > 0, p.MoveNum}
 }
 
 func (p PlayerComponent) String() string {
@@ -104,7 +119,7 @@ type Move struct {
 	Down	bool
 	Left	bool
 	Right	bool
-	//PacketNum int
+	PacketNum int
 }
 
 type ModPlayer struct {// for adding and removing players

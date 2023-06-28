@@ -209,14 +209,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// broadcast
-	_, err := CallRPCs["games/tick"](ctx, logger, db, nk, "")
+	_, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}")
 
 	if err != nil {
 		return err
 	}
 
 	for _, p := range mState.presences {
-		playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, p.GetUserId())
+		playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() + "\"}")
 		
 		if err != nil {
 			return err
