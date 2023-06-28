@@ -13,9 +13,9 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 	moveMap := make(map[string] Move)
 
 	for _, move := range MoveTx.In(q) {
-		_, contains := moveMap[move.Player]
-		if !contains || moveMap[move.Player].PacketNum < move.PacketNum{
-			moveMap[move.Player] = move
+		_, contains := moveMap[move.PlayerID]
+		if !contains || moveMap[move.PlayerID].PacketNum < move.PacketNum{
+			moveMap[move.PlayerID] = move
 		}
 	}
 
@@ -144,4 +144,65 @@ func GetPlayerState(player ModPlayer) (PlayerComponent, error) {// testing funct
 
 func HandleMakeMove(move Move) {
 	MoveTx.AddToQueue(World, move)// adds "move" transaction to World transaction queue
+}
+
+func CreateGame(game Game) error {
+	//if World.stateIsLoaded {
+	//	return fmt.Errorf("already loaded state")
+	//}
+	GameParams = game
+	World.RegisterComponents(ItemMapComp, PlayerMapComp, PlayerComp)
+	World.AddSystem(processMoves)
+	World.AddSystem(makeMoves)
+
+	World.LoadGameState()
+	MoveTx.SetID(0)
+	ItemMap, err := World.Create(ItemMapComp)// creates an ItemMap entity
+	PlayerMap, err := World.Create(PlayerMapComp)// creates a PlayerMap entity
+	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp)// creates player entities
+
+	for i, playername := range GameParams.Players {// associates storage.EntityIDs with each player
+		Players[playername] = playerIDs[i]
+	}
+
+	if err != nil {
+		return fmt.Errorf("Error initializing game objects: %w", err)
+	}
+
+	// initializes player and item maps
+	itemmap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)
+	playermap := make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64, float64]]] void)
+	for i := 0; i <= int(math.Ceil(GameParams.Dims.First/GameParams.CSize)); i++ {
+		for j := 0; j <= int(math.Ceil(GameParams.Dims.Second/GameParams.CSize)); j++ {
+			itemmap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
+			playermap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64, float64]]] void)
+		}
+	}
+
+	ItemMapComp.Set(World, ItemMap, ItemMapComponent{itemmap})// initializes ItemMap using empty map
+	PlayerMapComp.Set(World, ItemMap, PlayerMapComponent{playermap})// initializes PlayerMap using empty map
+
+	for _, playername := range GameParams.Players {
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}, 0})// initializes player entitities through their component
+
+		PlayerMapComp.Update(World, PlayerMap, func(comp PlayerMapComponent) PlayerMapComponent {// adds players to the board
+			playercomp, err := PlayerComp.Get(World, Players[playername])
+
+			if err != nil {
+				fmt.Errorf("Error getting location with callback function: %w", err)
+				return comp
+			}
+
+			newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[playername], playercomp.Loc}
+			comp.Players[Pair[int,int]{25/int(GameParams.CSize),25/int(GameParams.CSize)}][newPlayer] = pewp
+
+			return comp
+		})
+	}
+
+	return nil
+}
+
+func SpawnCoins() error {
+	return nil
 }

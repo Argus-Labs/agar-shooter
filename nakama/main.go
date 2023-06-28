@@ -229,6 +229,8 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
+	CallRPCs["games/spawncoins"](ctx, logger, db, nk, "{}")// triggers coin spawn
+
 	m.tick++
 	
 	return mState
