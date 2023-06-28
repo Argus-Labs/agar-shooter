@@ -149,7 +149,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	for _, p := range presences {
 		mState.presences[p.GetUserId()] = p
-		result, err := CallRPCs["games/push"](ctx, logger, db, nk, p.GetUserId())
+		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() + "\"}")
 
 		if err != nil {
 			return err
@@ -165,7 +165,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	mState, _ := state.(*MatchState)
 
 	for _, p := range presences {
-		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, p.GetUserId())
+		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() + "\"}")
 
 		if err != nil {
 			return err

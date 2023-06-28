@@ -8,21 +8,15 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
-func init() {
-}
-
-//func callback(cb func() error) {
-//	cb()
-//	time.Sleep(time.Second/tickRate)
-//	callback(cb)
-//}
-
 // world Systems
 func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts player directions based on their movement
 	moveMap := make(map[string] Move)
 
 	for _, move := range MoveTx.In(q) {
-		moveMap[move.Player] = move
+		//_, contains := moveMap[move.Player]
+		//if (_, contains := moveMap[move.Player]; !contains) || moveMap[move.Player].PacketNum < move.PacketNum{
+			moveMap[move.Player] = move
+		//}
 	}
 
 	for name, move := range moveMap {

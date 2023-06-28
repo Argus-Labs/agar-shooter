@@ -61,6 +61,7 @@ type PlayerComponent struct {
 	Weapon Weapon// current player weapon; default is 0 for Melee
 	Loc Pair[float64, float64]// current location
 	Dir Direction// direction player faces & direction player moves; currently, both are the same
+	//MoveNum int// most recently-processed move
 }
 
 func (p PlayerComponent) String() string {
@@ -103,6 +104,7 @@ type Move struct {
 	Down	bool
 	Left	bool
 	Right	bool
+	//PacketNum int
 }
 
 type ModPlayer struct {// for adding and removing players
