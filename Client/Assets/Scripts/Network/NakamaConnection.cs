@@ -80,9 +80,21 @@ public class NakamaConnection : ScriptableObject
         Debug.Log(session);
         Debug.Log(socket);
         // join the match 
-        var match = await socket.CreateMatchAsync(matchName);
-        Debug.Log("matchID "+match.Id);
-        matchID = match.Id;
+        var minPlayers = 0;
+        var maxPlayers = 10;
+        var limit = 10;
+        var authoritative = true;
+        var label = "";
+        var query = "";
+        var result = await client.ListMatchesAsync(session, minPlayers, maxPlayers, limit, authoritative, label, query);
+        // because we only have one match, we can just join the first one 
+        foreach (var match in result.Matches)
+        {
+            Debug.LogFormat("{0}: {1}/10 players", match.MatchId, match.Size);
+            await socket.JoinMatchAsync(match.MatchId);
+            matchID = match.MatchId;
+            break;
+        }
         return session.Username;
     }
 
