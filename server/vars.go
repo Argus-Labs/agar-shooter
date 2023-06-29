@@ -39,14 +39,6 @@ type WeaponComponent struct {
 	// cooldown, ammo, damage, range
 }
 
-type ItemMapComponent struct {// TODO: maybe don't turn these into components; :PEWPIEPEWPIE: make a map of components not component of map of components
-	items map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void// maps cells to sets of item lists
-}
-
-type PlayerMapComponent struct {
-	Players map[Pair[int,int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void// maps cells to sets of player name-location pairs
-}
-
 type Direction struct {
 	Theta float64// degree angle int with range [0,359] for player direction
 	Face Pair[float64,float64]// movement direction with range [[-1,1],[-1,1]]
@@ -91,12 +83,17 @@ func (p PlayerComponent) String() string {
 
 var (
 	World			= inmem.NewECSWorld()
-	ItemMapComp		= ecs.NewComponentType[ItemMapComponent]()// contains items
-	PlayerMapComp	= ecs.NewComponentType[PlayerMapComponent]()// contains player locations
+	CoinMap			= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of coin lists
+	HealthMap		= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of healthpack lists
+	WeaponMap		= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of weapon lists
+	PlayerMap		= make(map[Pair[int,int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of player name-location pairs
 	PlayerComp		= ecs.NewComponentType[PlayerComponent]()
-	HealthMap, CoinMap, WeaponMap, PlayerMap storage.EntityID
-	Players			= make(map[string] storage.EntityID, 0)//players are names and components identified by strings; input into a map to make it easier to add and remove components
+	CoinComp		= ecs.NewComponentType[CoinComponent]()
+	HealthComp		= ecs.NewComponentType[HealthComponent]()
+	WeaponComp		= ecs.NewComponentType[HealthComponent]()
+	Players			= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
 	MoveTx			= ecs.NewTransactionType[Move]()//(World, "move")
+	Width, Height	int
 )
 
 const (

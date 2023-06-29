@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -134,20 +135,31 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 		logger.Error(fmt.Errorf("Nakama: error creating game", err).Error())
 	}
 
+	time.Sleep(3*time.Second)
+
 	return state, tickRate, label
 }
 
 func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
+	mState, _ := state.(*MatchState)
+
+	if len(mState.presences) == 0 {
+		mState.presences = make(map[string] runtime.Presence)
+	}
 
 	_, contains := state.(*MatchState).presences[presence.GetUserId()]// whether user should be accepted
 
-	return state, !contains, ""
+	return mState, !contains, ""
 }
 
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
 	mState, _ := state.(*MatchState)
 
 	for _, p := range presences {
+		if len(mState.presences) == 0 {
+			mState.presences = make(map[string] runtime.Presence)
+		}
+
 		mState.presences[p.GetUserId()] = p
 		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() + "\"}")
 
@@ -190,6 +202,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return fmt.Errorf("Nakama: unregistered player is moving")
 		}
 
+		if messageMap[match.GetUserId()] == nil {
+			messageMap[match.GetUserId()] = make(map[int64] []byte)
+		}
+
 		messageMap[match.GetUserId()][match.GetOpCode()] = match.GetData()
 	}
 
@@ -209,10 +225,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// broadcast
-	_, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}")
 
-	if err != nil {
-		return err
+	if mState.presences == nil {
+		mState.presences = make(map[string] runtime.Presence)
 	}
 
 	for _, p := range mState.presences {
@@ -229,7 +244,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	CallRPCs["games/spawncoins"](ctx, logger, db, nk, "{}")// triggers coin spawn
+	if _, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}"); err != nil {
+		return fmt.Errorf("Nakama: tick error: %w", err)
+	}
 
 	m.tick++
 	
@@ -308,5 +325,6 @@ func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initiali
 			logger.Error("failed to register endpoint %q: %v", e, err)
 		}
 	}
+
 	return nil
 }

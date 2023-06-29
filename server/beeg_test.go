@@ -29,7 +29,8 @@ func (m Message) WriteHeader(statusCode int) {
 
 func TestPewp(t *testing.T) {
 	// test game initialization
-	game := Game{Pair[float64,float64]{1000,1000}, 2, []string{"a","b"}}
+	const LENGTH = 1000
+	game := Game{Pair[float64,float64]{LENGTH,LENGTH}, 2, []string{"a","b"}}
 	var err error
 	var player ModPlayer
 	var contains bool
@@ -56,7 +57,7 @@ func TestPewp(t *testing.T) {
 			}
 
 			p, err = GetPlayerState(player)
-			fmt.Println(player, ": ", p)
+			//fmt.Println(player, ": ", p)
 			assert.NilError(t, err)
 			m[player] = append(m[player], p)
 		}
@@ -64,7 +65,7 @@ func TestPewp(t *testing.T) {
 
 	testMove([]ModPlayer{testPlayer1, testPlayer2}, false)
 
-	move := Move{"a", true, false, true, false}
+	move := Move{"a", true, false, true, false, 0}// up, down, left, right
 	HandleMakeMove(move)
 
 	testMove([]ModPlayer{testPlayer1, testPlayer2}, false)
@@ -97,7 +98,7 @@ func TestPewp(t *testing.T) {
 	assert.DeepEqual(t, m[testPlayer2][len(m[testPlayer2]) - 2], m[testPlayer2][len(m[testPlayer2]) - 1])
 	assert.DeepEqual(t, m[testPlayer3][len(m[testPlayer3]) - 2], m[testPlayer3][len(m[testPlayer3]) - 1])
 
-	newMove := Move{"c", false, true, false, true}
+	newMove := Move{"c", false, true, false, true, 0}
 	HandleMakeMove(newMove)
 	TickTock()
 
@@ -123,6 +124,36 @@ func TestPewp(t *testing.T) {
 
 	assert.DeepEqual(t, m[testPlayer2][len(m[testPlayer2]) - 2], m[testPlayer2][len(m[testPlayer2]) - 1])
 	assert.Assert(t, m[testPlayer3][len(m[testPlayer3]) - 2] != m[testPlayer3][len(m[testPlayer3]) - 1])
+
+	// test that players do not go beyond boundaries
+	p2X := m[testPlayer2][len(m[testPlayer2])-1].Loc.First
+	p3Y := m[testPlayer3][len(m[testPlayer3])-1].Loc.Second
+
+	move1 := Move{"b", true, false, false, false, 0}// up, down, left, right
+	move2 := Move{"c", false, false, false, true, 0}
+
+	HandleMakeMove(move1)
+	HandleMakeMove(move2)
+	for i := 0; i < LENGTH; i++ {
+		TickTock()
+	}
+
+	testMove([]ModPlayer{testPlayer2, testPlayer3}, false)
+	assert.Assert(t, m[testPlayer2][len(m[testPlayer2])-1].Loc.First == p2X)
+	assert.Assert(t, m[testPlayer3][len(m[testPlayer3])-1].Loc.Second == p3Y)
+	assert.Assert(t, m[testPlayer2][len(m[testPlayer2])-1].Loc.Second == LENGTH)
+	assert.Assert(t, m[testPlayer3][len(m[testPlayer3])-1].Loc.First == LENGTH)
+
+	move3 := Move{"b", false, true, true, false, 0}// up, down, left, right
+	HandleMakeMove(move3)
+
+	for i := 0; i < LENGTH; i++ {
+		TickTock()
+	}
+
+	testMove([]ModPlayer{testPlayer2, testPlayer3}, false)
+	assert.Assert(t, m[testPlayer2][len(m[testPlayer2])-1].Loc.First == 0)
+	assert.Assert(t, m[testPlayer2][len(m[testPlayer2])-1].Loc.Second == 0)
 
 	fmt.Println("Tests successfully passed")
 }

@@ -30,7 +30,6 @@ func main() {
 		{"games/status", getPlayerState},
 		{"games/tick", tig},
 		{"games/create", createGame},
-		{"games/spawncoins", spawnCoins},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
@@ -125,6 +124,7 @@ func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to
 	}
 
 	if _, contains := Players[player.Name]; contains {
+		return
 		writeError(w, "player name already exists", nil)
 		return
 	}
@@ -177,6 +177,7 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 		writeError(w, "invalid player name given", err)
 		return
 	}
+
 	comp, err := GetPlayerState(player)
 	bareplayer := comp.Simplify()
 
@@ -189,20 +190,27 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{Pair[float64,float64]{1000,1000}, 1, []string{"a", "b"}}
+	game := Game{Pair[float64,float64]{1000,1000}, 100, []string{"a", "b"}}
 	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter
 	if errr != nil {// error from game creation
 		writeError(w, "error initializing game", errr)
 	}
+
+	//for i := 0; i < 1; i++ {// change to > 1
+	//	SpawnCoins()
+	//}
+
 	writeResult(w, "game created")
 }
 
 func tig(w http.ResponseWriter, r *http.Request) {
-	TickTock()
-	writeResult(w, "game tick completed")
-}
+	if err := TickTock(); err != nil {
+		writeError(w, "error ticking", err)
+	}
 
-func spawnCoins(w http.ResponseWriter, r *http.Request) {
-	SpawnCoins()
-	writeResult(w, "coins spawned")
+	if err := SpawnCoins(); err != nil {
+		writeError(w, "error spawning coins", err)
+	}
+
+	writeResult(w, "game tick completed; coins spawned")
 }
