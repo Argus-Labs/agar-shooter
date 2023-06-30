@@ -56,7 +56,10 @@ func bound(x float64, y float64) Pair[float64, float64]{
 }
 
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
-	return bound(tmpPlayer.Loc.First + (2/tickRate * tmpPlayer.Dir.Face.First)/float64(1 + tmpPlayer.Coins), tmpPlayer.Loc.Second + (2/tickRate * tmpPlayer.Dir.Face.Second)/float64(1 + tmpPlayer.Coins))
+	norm := math.Max(1, math.Sqrt(tmpPlayer.Dir.Face.First*tmpPlayer.Dir.Face.First + tmpPlayer.Dir.Face.Second*tmpPlayer.Dir.Face.Second))
+	coins := 0//tmpPlayer.Coins
+	const sped = 2
+	return bound(tmpPlayer.Loc.First + (sped * tmpPlayer.Dir.Face.First)/(tickRate*norm*float64(1 + coins)), tmpPlayer.Loc.Second + (sped * tmpPlayer.Dir.Face.Second)/(tickRate*norm*float64(1 + coins)))
 }
 
 func coinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end] TODO: write testcase for finding this value
