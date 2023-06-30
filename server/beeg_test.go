@@ -134,7 +134,7 @@ func TestPewp(t *testing.T) {
 
 	HandleMakeMove(move1)
 	HandleMakeMove(move2)
-	for i := 0; i < LENGTH; i++ {
+	for i := 0; i < 5*LENGTH; i++ {
 		TickTock()
 	}
 
@@ -147,7 +147,7 @@ func TestPewp(t *testing.T) {
 	move3 := Move{"b", false, true, true, false, 0}// up, down, left, right
 	HandleMakeMove(move3)
 
-	for i := 0; i < LENGTH; i++ {
+	for i := 0; i < 5*LENGTH; i++ {
 		TickTock()
 	}
 

@@ -2,8 +2,8 @@ github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a h1:HbKu58rmZp
 github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a/go.mod h1:SGnFV6hVsYE877CKEZ6tDNTjaSXYUk6QqoIK6PrAtcc=
 github.com/alicebob/miniredis/v2 v2.30.1 h1:HM1rlQjq1bm9yQcsawJqSZBJ9AYgxvjkMsNtddh90+g=
 github.com/alicebob/miniredis/v2 v2.30.1/go.mod h1:b25qWj4fCEsBeAAR2mlb0ufImGC6uH3VlUfb/HS5zKg=
-github.com/argus-labs/world-engine/cardinal v0.0.0-20230620223736-ac6fdce60d96 h1:gndcaCC9/DfSp6PDGp91V6rYBJIRim0g67hoTv1Ir8I=
-github.com/argus-labs/world-engine/cardinal v0.0.0-20230620223736-ac6fdce60d96/go.mod h1:m7mWfRwoptVhEckdlr+13/Y7qoUz0l6AR/OqN0cSAME=
+github.com/argus-labs/world-engine/cardinal v0.1.4-alpha h1:bO/ZUbnKcyVeRUuPTwPKvxc1F05+3ZzUpEmuo/tYAnE=
+github.com/argus-labs/world-engine/cardinal v0.1.4-alpha/go.mod h1:m7mWfRwoptVhEckdlr+13/Y7qoUz0l6AR/OqN0cSAME=
 github.com/bsm/ginkgo/v2 v2.5.0 h1:aOAnND1T40wEdAtkGSkvSICWeQ8L3UASX7YVCqQx+eQ=
 github.com/bsm/gomega v1.20.0 h1:JhAwLmtRzXFTx2AkALSLa8ijZafntmhSoU63Ok18Uq8=
 github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=

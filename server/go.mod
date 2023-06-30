@@ -3,7 +3,7 @@ module github.com/argus-labs/world-engine/game/sample_game_server/server
 go 1.20
 
 require (
-	github.com/argus-labs/world-engine/cardinal v0.0.0-20230620223736-ac6fdce60d96 //v0.0.0-20230621230231-22a6739e75f1
+	github.com/argus-labs/world-engine/cardinal v0.1.4-alpha //v0.0.0-20230621230231-22a6739e75f1
 	gotest.tools/v3 v3.4.0
 )
 

@@ -189,6 +189,12 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 	writeResult(w, bareplayer)// convert to string
 }
 
+func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locations of players --- array of pairs of strings and location (coordinate pairs)
+	playerlist := GetPlayerStatus()
+
+	writeResult(w, playerlist)// convert to string
+}
+
 func createGame(w http.ResponseWriter, r *http.Request) {
 	game := Game{Pair[float64,float64]{1000,1000}, 100, []string{"a", "b"}}
 	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter

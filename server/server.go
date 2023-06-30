@@ -108,9 +108,9 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			extraCoins++// TODO: change this to the actual coin value
 			delete(CoinMap[Pair[int,int]{int(math.Floor(entityID.Second.First/GameParams.CSize)),int(math.Floor(entityID.Second.Second/GameParams.CSize))}], entityID)
 
-			//if err := World.Remove(entityID.First); err != nil {
-			//	return err
-			//}
+			if err := World.Remove(entityID.First); err != nil {
+				return err
+			}
 		}
 
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
@@ -150,11 +150,11 @@ func HandlePlayerPush(player ModPlayer) error {
 }
 
 func HandlePlayerPop(player ModPlayer) error {
-	//err := World.Remove(Players[player.Name])
+	err := World.Remove(Players[player.Name])
 
-	//if err != nil {
-	//	return err
-	//}
+	if err != nil {
+		return err
+	}
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -186,6 +186,16 @@ func GetPlayerState(player ModPlayer) (PlayerComponent, error) {// testing funct
 	}
 
 	return comp, nil
+}
+
+func GetPlayerStatus() ([]Pair[string, Pair[float64, float64]]) {// sends all player information to each player
+	locs := make([]Pair[string, Pair[float64, float64]], 0)
+	for key, id := range Players {
+		comp, _ := PlayerComp.Get(World, id)
+		locs = append(locs, Pair[string, Pair[float64, float64]]{key, comp.Loc})
+	}
+
+	return locs
 }
 
 func HandleMakeMove(move Move) {
@@ -254,7 +264,7 @@ func SpawnCoins() error {// randomly spawn 5 coins in each cell and don't place 
 	var (
 		coinCellNum = 5
 		coinRadius = 0.1// <= GameParams.CSize/2
-		density = 0.001 // number of coins per square unit
+		density = 0.01 // number of coins per square unit
 		maxCoinsInCell = int(math.Pow(GameParams.CSize, 2)*density)
 	)
 
