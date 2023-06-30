@@ -10,7 +10,7 @@ public static class Utility
  
  
 #if UNITY_EDITOR
-            deviceId = SystemInfo.deviceUniqueIdentifier + "-editor";
+            deviceId = "editordasdwdasdsadsadwaedasdwa";
 
 #elif UNITY_WEBGL
                 if (!PlayerPrefs.HasKey("UniqueIdentifier"))

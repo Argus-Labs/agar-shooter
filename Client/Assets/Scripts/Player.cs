@@ -14,8 +14,14 @@ public class Player : MonoBehaviour
     [SerializeField] private bool isRight = true;
     [SerializeField] private InputProfile inputProfile;
     private int sequenceNumber = 0;
-    CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>();
+    CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>(100);
+    public Vector2 pos = new Vector2(0,0);
 
+    // may need introduce other parameters
+    public void PlayerInit(Vector2 pos)
+    {
+        this.pos = pos;
+    }
     public bool IsRight
     {
         get { return isRight; }
@@ -99,6 +105,12 @@ public class Player : MonoBehaviour
         // });
         UploadPlayerInput();
         sequenceNumber++;
+        // update the player position on main thread
+        transform.localPosition = pos;
+        IsRight = isRight;
+        
+  
+        
     }
 
 
@@ -107,14 +119,15 @@ public class Player : MonoBehaviour
     {
         PlayerInput input = new PlayerInput(gameManager.UserId, Input.GetKey(inputProfile.up),
             Input.GetKey(inputProfile.down), Input.GetKey(inputProfile.left), Input.GetKey(inputProfile.right),sequenceNumber);
-        int opCode = 1;
+        int opCode = 17;
+        // print(input.ToJson());
         gameManager.SendMessageToServer(opCode,input.ToJson());
-        ApplyInput(input);
-        pendingInputs.Enqueue(new PlayerInputExtraInfo(input, Time.deltaTime, transform.localPosition));
+        ApplyInput(input, Time.deltaTime);
+        pendingInputs.Enqueue(new PlayerInputExtraInfo(input, Time.deltaTime, pos));
 
     }
 
-    private void ApplyInput(PlayerInput input)
+    private void ApplyInput(PlayerInput input, float deltaTime)
     {
         // based on the input update player position and direction
         int y= input.Up? 1 : input.Down? -1 : 0;
@@ -128,9 +141,8 @@ public class Player : MonoBehaviour
         {
             isRight = false;
         }
-        // flip the player if isLeft
-        transform.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
-        transform.Translate(speedVector * (speed * Time.deltaTime));
+        //2m/s
+        pos += speedVector * (speed * deltaTime);
     }
 
     public void ReceiveNewMsg(ServerPayload payload)
@@ -155,25 +167,23 @@ public class Player : MonoBehaviour
                     break;
                 }
                 pendingInputs.Dequeue();
-                Debug.Log("there is a difference");
+                // print expected pos and actual pos and sequence number
+                Debug.Log("there is a difference:" + "Server pos:" + payload.pos + "player pos:" + input.position + "sequence number:" + payload.lastProcessedInput + "current sequence number:" + sequenceNumber);
+                pos = payload.pos;
                 
             }
             else {
                 // Not processed by the server yet. Re-apply it.
                 
                 
-                ApplyInput(input.input);
+                ApplyInput(input.input, input.deltaTime);
                 // update the player position in the pendingInputs
-                pendingInputs[j] = new PlayerInputExtraInfo(input.input, input.deltaTime, transform.localPosition);
+                pendingInputs[j] = new PlayerInputExtraInfo(input.input, input.deltaTime, pos);
                 j++;
             }
         }
         
     }
-    public void UpdatePlayerStatus(Vector2 newPos, bool isRight)
-    {
-        transform.localPosition = newPos;
-        IsRight = isRight;
-    }
+   
 
 }

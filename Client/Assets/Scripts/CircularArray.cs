@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 public class CircularArray<T>
 {
@@ -97,6 +98,7 @@ public class CircularArray<T>
 
     private void ResizeArray()
     {
+        Debug.LogError($"{array.Length} is not enough, now extend to{array.Length*2} ");
         T[] newArray = new T[array.Length * 2];
         if (head < tail)
         {
