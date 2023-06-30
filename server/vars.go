@@ -94,10 +94,11 @@ var (
 	Players			= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
 	MoveTx			= ecs.NewTransactionType[Move]()//(World, "move")
 	Width, Height	int
+	PlayerRadius	float64
 )
 
 const (
-	tickRate		= 5// ticks per second
+	tickRate		= 5.0// ticks per second
 )
 
 type Game struct {
@@ -109,12 +110,12 @@ type Game struct {
 var GameParams Game
 
 type Move struct {
-	PlayerID	string
-	Up			bool
-	Down		bool
-	Left		bool
-	Right		bool
-	PacketNum	int
+	PlayerID				string
+	Up						bool
+	Down					bool
+	Left					bool
+	Right					bool
+	Input_sequence_number	int
 }
 
 type ModPlayer struct {// for adding and removing players

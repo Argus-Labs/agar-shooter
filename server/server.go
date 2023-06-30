@@ -16,19 +16,25 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 
 	for _, move := range MoveTx.In(q) {
 		_, contains := moveMap[move.PlayerID]
-		if !contains || moveMap[move.PlayerID].PacketNum <= move.PacketNum{
+		if !contains || moveMap[move.PlayerID].Input_sequence_number <= move.Input_sequence_number{
 			moveMap[move.PlayerID] = move
 		}
 	}
 
 	for name, move := range moveMap {
-		naMe, contains := Players[name]
-		
+		entityID, contains := Players[name]
+	
 		if !contains {
-			return fmt.Errorf("Cardinal: unregistered player attempting to move")
+			str := ""
+
+			for key, _ := range Players{
+				str += " " + key
+			}
+
+			return fmt.Errorf("Cardinal: unregistered player attempting to move " + str)
 		}
 
-		PlayerComp.Update(World, naMe, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
+		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
 			diff := func(a, b bool) float64 {
 				if a == b { return 0 }
 				if a && !b { return 1 }
@@ -36,13 +42,34 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			}
 
 			comp.Dir.Face = Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}// adjusts move direction
-			comp.MoveNum = move.PacketNum
+			comp.MoveNum = move.Input_sequence_number
 
 			return comp
 		})
 	}
 
 	return nil
+}
+
+func bound(x float64, y float64) Pair[float64, float64]{
+	return Pair[float64, float64]{math.Min(float64(GameParams.Dims.First), math.Max(0, x)), math.Min(float64(GameParams.Dims.Second), math.Max(0, y))}
+}
+
+func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
+	return bound(tmpPlayer.Loc.First + (2/tickRate * tmpPlayer.Dir.Face.First)/float64(1 + tmpPlayer.Coins), tmpPlayer.Loc.Second + (2/tickRate * tmpPlayer.Dir.Face.Second)/float64(1 + tmpPlayer.Coins))
+}
+
+func coinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end] TODO: write testcase for finding this value
+	vec := Pair[float64, float64]{end.First-start.First, end.Second-start.Second}
+	coeff := (vec.First*coin.First + vec.Second*coin.Second)/(vec.First*vec.First + vec.Second*vec.Second)
+	proj := Pair[float64, float64]{coeff*vec.First + start.First, coeff*vec.Second + start.Second}
+	ortho := Pair[float64, float64]{coin.First - proj.First, coin.Second-proj.Second}
+
+	if proj.First*vec.First + proj.Second*vec.Second < 0 {// if the coin is outside of the span of the orthogonal, return the distance to the closest endpoint
+		return math.Min(math.Sqrt(math.Pow(coin.First - start.First, 2) + math.Pow(coin.Second - start.Second, 2)), math.Sqrt(math.Pow(coin.First - end.First, 2) + math.Pow(coin.Second - end.Second, 2)))
+	}
+
+	return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
 }
 
 func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
@@ -55,21 +82,40 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		prevLoc := tmpPlayer.Loc
 
-		bound := func(x float64, y float64) (float64, float64){
-			return math.Min(float64(GameParams.Dims.First), math.Max(0, x)), math.Min(float64(GameParams.Dims.Second), math.Max(0, y))
-		}
-
-		x, y := bound(prevLoc.First + (10 * tmpPlayer.Dir.Face.First)/float64(1 + tmpPlayer.Coins), prevLoc.Second + (10 * tmpPlayer.Dir.Face.Second)/float64(1 + tmpPlayer.Coins))
-		
-		loc := Pair[float64, float64]{x,y}// change speed function
-
-		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
-			comp.Loc = loc
-			return comp
-		})
+		loc := move(tmpPlayer)
 
 		delete(PlayerMap[Pair[int,int]{int(math.Floor(prevLoc.First/GameParams.CSize)), int(math.Floor(prevLoc.Second/GameParams.CSize))}], Pair[storage.EntityID, Pair[float64,float64]]{id, prevLoc})
 		PlayerMap[Pair[int,int]{int(math.Floor(loc.First/GameParams.CSize)), int(math.Floor(loc.Second/GameParams.CSize))}][Pair[storage.EntityID,Pair[float64,float64]]{id, loc}] = pewp
+		
+		hitCoins := make([]Pair[storage.EntityID, Pair[float64,float64]], 0)
+
+		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
+			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
+				for coin, _ := range CoinMap[Pair[int, int]{i,j}] {
+					if coinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
+						hitCoins = append(hitCoins, coin)
+					}
+				}
+			}
+		}
+
+		extraCoins := 0
+
+		for _, entityID := range hitCoins {
+			extraCoins++// TODO: change this to the actual coin value
+			delete(CoinMap[Pair[int,int]{int(math.Floor(entityID.Second.First/GameParams.CSize)),int(math.Floor(entityID.Second.Second/GameParams.CSize))}], entityID)
+
+			//if err := World.Remove(entityID.First); err != nil {
+			//	return err
+			//}
+		}
+
+		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
+			comp.Loc = loc
+			comp.Coins += extraCoins
+
+			return comp
+		})
 	}
 	return nil
 }
@@ -169,6 +215,7 @@ func CreateGame(game Game) error {
 
 	Width = int(math.Ceil(GameParams.Dims.First/GameParams.CSize))
 	Height = int(math.Ceil(GameParams.Dims.Second/GameParams.CSize))
+	PlayerRadius = 100
 
 	// initializes player and item maps
 	for i := 0; i <= Width; i++ {
