@@ -231,16 +231,18 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	for _, p := range mState.presences {
-		playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() + "\"}")
-		
-		if err != nil {
-			return err
-		}
+		for _, pp := range mState.presences {
+			playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+			
+			if err != nil {
+				return err
+			}
 
-		err = dispatcher.BroadcastMessage(OK, []byte(playerState), []runtime.Presence{p}, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+			err = dispatcher.BroadcastMessage(OK, []byte(playerState), []runtime.Presence{p}, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
 	}
 
