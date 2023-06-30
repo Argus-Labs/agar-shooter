@@ -208,9 +208,9 @@ func tig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error ticking", err)
 	}
 
-	if err := SpawnCoins(); err != nil {
-		writeError(w, "error spawning coins", err)
-	}
+	//if err := SpawnCoins(); err != nil {
+	//	writeError(w, "error spawning coins", err)
+	//}
 
 	writeResult(w, "game tick completed; coins spawned")
 }

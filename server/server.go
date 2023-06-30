@@ -254,7 +254,7 @@ func SpawnCoins() error {// randomly spawn 5 coins in each cell and don't place 
 	var (
 		coinCellNum = 5
 		coinRadius = 0.1// <= GameParams.CSize/2
-		density = 0.01 // number of coins per square unit
+		density = 0.001 // number of coins per square unit
 		maxCoinsInCell = int(math.Pow(GameParams.CSize, 2)*density)
 	)
 
