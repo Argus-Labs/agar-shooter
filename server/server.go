@@ -51,10 +51,10 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			dir = Pair[float64, float64]{dir.First + move.Delta*moove.First/norm, dir.Second + move.Delta*moove.Second/norm}
 		}
 
-		lastMove := Pair[float64,float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
+		//lastMove := Pair[float64,float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
 
 		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
-			comp.Dir = lastMove// adjusts move directions
+			comp.Dir = dir// adjusts move directions TODO: preserve last input somewhere as well and check whether the last input was recently updated when making moves
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number
 
 			return comp
