@@ -39,18 +39,13 @@ type WeaponComponent struct {
 	// cooldown, ammo, damage, range
 }
 
-type Direction struct {
-	Theta float64// degree angle int with range [0,359] for player direction
-	Face Pair[float64,float64]// movement direction with range [[-1,1],[-1,1]]
-}
-
 type PlayerComponent struct {
 	Name string// username; ip for now
 	Health int// current player health (cap enforced in update loop)
 	Coins int// how much money the player has
 	Weapon Weapon// current player weapon; default is 0 for Melee
 	Loc Pair[float64, float64]// current location
-	Dir Direction// direction player faces & direction player moves; currently, both are the same
+	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
 	MoveNum int// most recently-processed move
 }
 
@@ -66,7 +61,7 @@ type BarePlayer struct {
 }
 
 func (p PlayerComponent) Simplify() BarePlayer {
-	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.Dir.Face.First > 0, p.MoveNum}
+	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.Dir.First > 0, p.MoveNum}
 }
 
 func (p PlayerComponent) String() string {
@@ -76,7 +71,7 @@ func (p PlayerComponent) String() string {
 	s += "Coins: " + strconv.Itoa(p.Coins) + "\n"
 	s += "Weapon: " + strconv.Itoa(int(p.Weapon)) + "\n"
 	s += "Loc: " + strconv.FormatFloat(float64(p.Loc.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Loc.Second), 'e', -1, 32) + "\n"
-	s += "Dir: " + strconv.FormatFloat(float64(p.Dir.Face.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Dir.Face.Second), 'e', -1, 32)
+	s += "Dir: " + strconv.FormatFloat(float64(p.Dir.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Dir.Second), 'e', -1, 32)
 
 	return s
 }
@@ -94,11 +89,12 @@ var (
 	Players			= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
 	MoveTx			= ecs.NewTransactionType[Move]()//(World, "move")
 	Width, Height	int
-	PlayerRadius	float64
 )
 
 const (
-	tickRate		= 5.0// ticks per second
+	TickRate		= 5// ticks per second
+	ClientTickRate	= 60// used to determine tickrate relative to cardinal server
+	PlayerRadius	= 5// used to determine which coins to collect
 )
 
 type Game struct {
@@ -116,6 +112,7 @@ type Move struct {
 	Left					bool
 	Right					bool
 	Input_sequence_number	int
+	Delta					float64
 }
 
 type ModPlayer struct {// for adding and removing players

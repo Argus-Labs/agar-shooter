@@ -12,16 +12,17 @@ import (
 
 // world Systems
 func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts player directions based on their movement
-	moveMap := make(map[string] Move)
+	moveMap := make(map[string] []Move)
 
 	for _, move := range MoveTx.In(q) {
-		_, contains := moveMap[move.PlayerID]
-		if !contains || moveMap[move.PlayerID].Input_sequence_number <= move.Input_sequence_number{
-			moveMap[move.PlayerID] = move
+		if _, contains := moveMap[move.PlayerID]; !contains {
+			moveMap[move.PlayerID] = []Move{move}
+		} else {
+			moveMap[move.PlayerID] = append(moveMap[move.PlayerID], move)
 		}
 	}
 
-	for name, move := range moveMap {
+	for name, moveList := range moveMap {
 		entityID, contains := Players[name]
 	
 		if !contains {
@@ -34,15 +35,27 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			return fmt.Errorf("Cardinal: unregistered player attempting to move " + str)
 		}
 
-		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
-			diff := func(a, b bool) float64 {
-				if a == b { return 0 }
-				if a && !b { return 1 }
-				return -1
-			}
 
-			comp.Dir.Face = Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}// adjusts move direction
-			comp.MoveNum = move.Input_sequence_number
+		var dir Pair[float64, float64]
+
+		diff := func(a, b bool) float64 {
+			if a == b { return 0 }
+			if a && !b { return 1 }
+			return -1
+		}
+
+		for _, move := range moveList {
+			moove := Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}
+			norm := math.Max(1, math.Sqrt(moove.First*moove.First + moove.Second*moove.Second))
+
+			dir = Pair[float64, float64]{dir.First + move.Delta*moove.First/norm, dir.Second + move.Delta*moove.Second/norm}
+		}
+
+		lastMove := Pair[float64,float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
+
+		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
+			comp.Dir = lastMove// adjusts move directions
+			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number
 
 			return comp
 		})
@@ -56,10 +69,10 @@ func bound(x float64, y float64) Pair[float64, float64]{
 }
 
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
-	norm := math.Max(1, math.Sqrt(tmpPlayer.Dir.Face.First*tmpPlayer.Dir.Face.First + tmpPlayer.Dir.Face.Second*tmpPlayer.Dir.Face.Second))
+	dir := tmpPlayer.Dir
 	coins := 0//tmpPlayer.Coins
 	const sped = 2
-	return bound(tmpPlayer.Loc.First + (sped * tmpPlayer.Dir.Face.First)/(tickRate*norm*float64(1 + coins)), tmpPlayer.Loc.Second + (sped * tmpPlayer.Dir.Face.Second)/(tickRate*norm*float64(1 + coins)))
+	return bound(tmpPlayer.Loc.First + (sped * dir.First)/(float64(1 + coins)), tmpPlayer.Loc.Second + (sped * dir.Second)/(float64(1 + coins)))
 }
 
 func coinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end] TODO: write testcase for finding this value
@@ -135,7 +148,7 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Direction{90, Pair[float64,float64]{0,0}}, 0})// default player
+	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Pair[float64,float64]{0,0}, 0})// default player
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -228,7 +241,6 @@ func CreateGame(game Game) error {
 
 	Width = int(math.Ceil(GameParams.Dims.First/GameParams.CSize))
 	Height = int(math.Ceil(GameParams.Dims.Second/GameParams.CSize))
-	PlayerRadius = 100
 
 	// initializes player and item maps
 	for i := 0; i <= Width; i++ {
@@ -241,7 +253,7 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Direction{90, Pair[float64,float64]{0,0}}, 0})// initializes player entitities through their component
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, 0})// initializes player entitities through their component
 
 		playercomp, err := PlayerComp.Get(World, Players[playername])
 
