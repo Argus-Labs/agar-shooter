@@ -128,7 +128,7 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 		presences: make(map[string]runtime.Presence),
 	}
 
-	tickRate := 5
+	tickRate := 30
 	label := ""
 
 	if _, err := CallRPCs["games/create"](ctx, logger, db, nk, "{}"); err != nil {
@@ -217,43 +217,45 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	for _, matchMap := range messageMap {
-		for opCode, matchData := range matchMap {
-			var err error
+	if m.tick%5 == 0 {
+		for _, matchMap := range messageMap {
+			for opCode, matchData := range matchMap {
+				var err error
 
-			switch opCode {
-				case MOVE: _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+				switch opCode {
+					case MOVE: _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+				}
+
+				if err != nil {
+					return err
+				}
 			}
+
+		}
+
+		// broadcast
+
+		if mState.presences == nil {
+			mState.presences = make(map[string] runtime.Presence)
+		}
+
+		for _, pp := range mState.presences {
+			playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+			
+			if err != nil {
+				return err
+			}
+
+			err = dispatcher.BroadcastMessage(OK, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 
 			if err != nil {
 				return err
 			}
 		}
 
-	}
-
-	// broadcast
-
-	if mState.presences == nil {
-		mState.presences = make(map[string] runtime.Presence)
-	}
-
-	for _, pp := range mState.presences {
-		playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-		
-		if err != nil {
-			return err
+		if _, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}"); err != nil {
+			return fmt.Errorf("Nakama: tick error: %w", err)
 		}
-
-		err = dispatcher.BroadcastMessage(OK, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if _, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}"); err != nil {
-		return fmt.Errorf("Nakama: tick error: %w", err)
 	}
 
 	m.tick++
