@@ -35,7 +35,6 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			return fmt.Errorf("Cardinal: unregistered player attempting to move " + str)
 		}
 
-
 		var dir Pair[float64, float64]
 
 		diff := func(a, b bool) float64 {

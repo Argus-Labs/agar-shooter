@@ -195,22 +195,22 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	mState, _ := state.(*MatchState)
 
 	// process last player input for each type of input
-	messageMap := make(map[string] map[int64] []byte)
+	messageMap := make(map[string] map[int64] [][]byte)
 
 	for _, match := range messages {
 		if mState.presences == nil {
 			mState.presences = make(map[string] runtime.Presence)
 		}
 
-		if mState.presences[match.GetUserId()] == nil {
-			continue
-		}
-
 		if messageMap[match.GetUserId()] == nil {
-			messageMap[match.GetUserId()] = make(map[int64] []byte)
+			messageMap[match.GetUserId()] = make(map[int64] [][]byte)
 		}
 
-		messageMap[match.GetUserId()][match.GetOpCode()] = match.GetData()
+		//if mState.presences[match.GetUserId()] == nil {
+		//	continue
+		//}
+
+		messageMap[match.GetUserId()][match.GetOpCode()] = append(messageMap[match.GetUserId()][match.GetOpCode()], match.GetData())
 
 		if _, contains := mState.presences[match.GetUserId()]; !contains {
 			return fmt.Errorf("Nakama: unregistered player is moving")
@@ -218,11 +218,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	for _, matchMap := range messageMap {
-		for opCode, matchData := range matchMap {
+		for opCode, matchDataArray := range matchMap {
 			var err error
 
 			switch opCode {
-				case MOVE: _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+				case MOVE:
+					for _, matchData := range matchDataArray {
+						_, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+					}
 			}
 
 			if err != nil {

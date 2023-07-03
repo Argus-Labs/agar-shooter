@@ -202,9 +202,9 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error initializing game", errr)
 	}
 
-	//for i := 0; i < 1; i++ {// change to > 1
-	//	SpawnCoins()
-	//}
+	for i := 0; i < 5; i++ {// change to > 1
+		SpawnCoins()
+	}
 
 	writeResult(w, "game created")
 }
