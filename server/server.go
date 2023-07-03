@@ -334,3 +334,27 @@ func SpawnCoins() error {// randomly spawn 5 coins in each cell and don't place 
 
 	return nil
 }
+
+func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
+	xloc := make([]float64, 0)
+	yloc := make([]float64, 0)
+	
+	playercomp, err := PlayerComp.Get(World, Players[player.Name])
+
+	if err != nil {
+		fmt.Errorf("Error getting location with callback function: %w", err)
+	}
+
+	playerLoc := Pair[int, int]{int(math.Floor(playercomp.Loc.First/GameParams.CSize)), int(math.Floor(playercomp.Loc.Second/GameParams.CSize))}
+
+	for i := math.Max(0, float64(playerLoc.First - 1)); i < math.Min(float64(Width), float64(playerLoc.First + 1)); i++ {
+		for j := math.Max(0, float64(playerLoc.Second - 1)); j < math.Min(float64(Height), float64(playerLoc.Second + 1)); j++ {
+			for coin, _ := range CoinMap[Pair[int,int]{int(i),int(j)}] {
+				xloc = append(xloc, coin.Second.First)
+				yloc = append(yloc, coin.Second.Second)
+			}
+		}
+	}
+
+	return Pair[[]float64, []float64]{xloc, yloc}
+}
