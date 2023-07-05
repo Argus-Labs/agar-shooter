@@ -51,6 +51,7 @@ type PlayerComponent struct {
 	Weapon Weapon// current player weapon; default is 0 for Melee
 	Loc Pair[float64, float64]// current location
 	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
+	Extract Pair[float64, float64]// extraction point; as long as the player is within some distance of the extraction point, player coins are offloaded
 	MoveNum int// most recently-processed move
 }
 
@@ -59,6 +60,8 @@ type BarePlayer struct {
 	Health int
 	Coins int
 	//Weapon int
+	//ExtractX float64
+	//ExtractY float64
 	LocX float64
 	LocY float64
 	IsRight bool
@@ -66,7 +69,7 @@ type BarePlayer struct {
 }
 
 func (p PlayerComponent) Simplify() BarePlayer {
-	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.Dir.First > 0, p.MoveNum}
+	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.Dir.First > 0, p.MoveNum}// update Simplify for weapons & extraction point
 }
 
 func (p PlayerComponent) String() string {
@@ -101,9 +104,11 @@ var (
 )
 
 const (
-	TickRate		= 5// ticks per second
-	ClientTickRate	= 60// used to determine tickrate relative to cardinal server
-	PlayerRadius	= 5// used to determine which coins to collect
+	TickRate			= 5// ticks per second
+	ClientTickRate		= 60// used to determine tickrate relative to cardinal server
+	PlayerRadius		= 5// used to determine which coins to collect
+	ExtractionRadius	= 10// determines when players are in range of their extraction point
+	sped				= 2// player speed
 )
 
 type Game struct {

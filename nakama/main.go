@@ -242,7 +242,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	for _, pp := range mState.presences {
-		playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
 		coins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
 		
 		if err != nil {

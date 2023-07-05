@@ -27,7 +27,8 @@ func main() {
 		{"games/push", handlePlayerPush},
 		{"games/pop", handlePlayerPop},
 		{"games/move", handleMakeMove},
-		{"games/status", getPlayerState},
+		{"games/state", getPlayerState},
+		{"games/status", getPlayerStatus},
 		{"games/coins", getPlayerCoins},
 		{"games/tick", tig},
 		{"games/create", createGame},
@@ -204,9 +205,21 @@ func getPlayerCoins(w http.ResponseWriter, r *http.Request) {// use in place of 
 }
 
 func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locations of players --- array of pairs of strings and location (coordinate pairs)
-	playerlist := GetPlayerStatus()
+	var player ModPlayer
 
-	writeResult(w, playerlist)// convert to string
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	comp, err := GetPlayerState(player)
+
+	if err != nil {
+		writeError(w, "could not get player state", err)
+		return
+	}
+
+	writeResult(w, comp)// convert to string
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
