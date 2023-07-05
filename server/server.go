@@ -16,8 +16,23 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 
 	for _, move := range MoveTx.In(q) {
 		if _, contains := moveMap[move.PlayerID]; !contains {
+			pcomp, err := PlayerComp.Get(World, Players[move.PlayerID])
+
+			if err != nil {
+				return err
+			}
+
+			if pcomp.MoveNum != move.Input_sequence_number - 1{
+				fmt.Printf("Difference in input sequence number is not 1; received sequence number %i after sequence number %i.",move.Input_sequence_number,pcomp.MoveNum)
+				return nil
+			}
+
 			moveMap[move.PlayerID] = []Move{move}
 		} else {
+			if num := moveMap[move.PlayerID][len(moveMap[move.PlayerID])-1].Input_sequence_number;move.Input_sequence_number != num + 1 {
+				fmt.Printf("Difference in input sequence number is not 1; received sequence number %i after sequence number %i.",move.Input_sequence_number,num)
+				return nil
+			}
 			moveMap[move.PlayerID] = append(moveMap[move.PlayerID], move)
 		}
 	}
@@ -67,6 +82,10 @@ func bound(x float64, y float64) Pair[float64, float64]{
 	return Pair[float64, float64]{math.Min(float64(GameParams.Dims.First), math.Max(0, x)), math.Min(float64(GameParams.Dims.Second), math.Max(0, y))}
 }
 
+func distance(loc1, loc2 Pair[float64, float64]) float64 {// returns distance between two coins
+	return math.Sqrt(math.Pow(loc1.First - loc2.First, 2) + math.Pow(loc1.Second - loc2.Second, 2))
+}
+
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
 	dir := tmpPlayer.Dir
 	coins := 0//tmpPlayer.Coins
@@ -87,7 +106,28 @@ func coinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest d
 	return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
 }
 
+func attack(id storage.EntityID, weapon Weapon) error {// attack a player
+	kill := false
+	var name string
+	PlayerComp.Update(World, id, func(comp PlayerComponent) PlayerComponent{// modifies player location
+		comp.Health -= Weapons[weapon].Attack
+		kill = comp.Health <= 0
+		name = comp.Name
+
+		return comp
+	})
+
+	if kill {// removes player from map if they die
+		if err := HandlePlayerPop(ModPlayer{name}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
+	attackQueue := make([]Pair[storage.EntityID, Weapon],0)
 	for playerName, id := range Players {
 		tmpPlayer, err := PlayerComp.Get(World, id)
 
@@ -96,6 +136,35 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		}
 
 		prevLoc := tmpPlayer.Loc
+
+		// attacking players; each player attacks the closest player TODO: change targetting system later
+
+		var (
+			minID storage.EntityID
+			minDistance float64
+		)
+
+		assigned := false
+
+		for closestPlayer, _ := range PlayerMap[Pair[int,int]{int(math.Floor(prevLoc.First/GameParams.Dims.First)),int(math.Floor(prevLoc.Second/GameParams.Dims.Second))}] {
+			dist := distance(closestPlayer.Second, prevLoc)
+			if closestPlayer.First != id {
+				if !assigned {
+					minID = closestPlayer.First
+					minDistance = dist
+					assigned = true
+				} else if minDistance > dist {
+					minID = closestPlayer.First
+					minDistance = dist
+				}
+			}
+		}
+
+		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
+			attackQueue = append(attackQueue, Pair[storage.EntityID, Weapon]{minID, tmpPlayer.Weapon})
+		}
+
+		// moving players
 
 		loc := move(tmpPlayer)
 
@@ -132,6 +201,13 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			return comp
 		})
 	}
+
+	for _, pair := range attackQueue {
+		if err := attack(pair.First, pair.Second); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -147,7 +223,7 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Pair[float64,float64]{0,0}, 0})// default player
+	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, -1})// default player
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -183,7 +259,8 @@ func HandlePlayerPop(player ModPlayer) error {
 }
 
 func TickTock() error {// testing function used to make the game tick
-	return World.Tick()
+	err := World.Tick()
+	return err
 }
 
 func GetPlayerState(player ModPlayer) (PlayerComponent, error) {// testing function used in place of broadcast to get state of players
@@ -252,7 +329,7 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, 0})// initializes player entitities through their component
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, -1})// initializes player entitities through their component
 
 		playercomp, err := PlayerComp.Get(World, Players[playername])
 
@@ -265,10 +342,6 @@ func CreateGame(game Game) error {
 	}
 
 	return nil
-}
-
-func distance(loc1, loc2 Pair[float64, float64]) float64 {// returns distance between two coins
-	return math.Sqrt(math.Pow(loc1.First - loc2.First, 2) + math.Pow(loc1.Second - loc2.Second, 2))
 }
 
 func SpawnCoins() error {// randomly spawn 5 coins in each cell and don't place if a coin exists nearby
