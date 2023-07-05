@@ -5,14 +5,15 @@ using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Nakama;
 using Nakama.TinyJson;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public bool gameInitialized,gameInitialized2;
     enum opcode
     {
         playerStatus = 0,
+        coinsInfo = 1,
         playerMove = 17,
     }
     struct ServerPacket
@@ -35,10 +36,11 @@ public class GameManager : MonoBehaviour
             InputNum = inputNum;
         }
     }
-    
+    public bool gameInitialized;
+    public RemotePlayer prefab;
+    private Dictionary<string,RemotePlayer> otherPlayers;
     public NakamaConnection nakamaConnection;
     public Player player;
-    public RemotePlayer player2;
     public string UserId;
     public Action<IMatchState> OnMatchStateReceived;
     // Start is called before the first frame update
@@ -53,12 +55,16 @@ public class GameManager : MonoBehaviour
     {
         await nakamaConnection.Connect();
         UserId = nakamaConnection.session.UserId;
-        nakamaConnection.socket.ReceivedMatchState += (newstate) =>
-        {
-            OnMatchStateReceived.Invoke(newstate);
-        };
-        OnMatchStateReceived += MatchStatusUpdate;
-        
+        // nakamaConnection.socket.ReceivedMatchState += (newstate) =>
+        // {
+        //     OnMatchStateReceived.Invoke(newstate);
+        // };
+        // OnMatchStateReceived += MatchStatusUpdate;
+        var mainThread = UnityMainThreadDispatcher.Instance();
+        // Setup network event handlers.
+        // nakamaConnection.socket.ReceivedMatchmakerMatched += m => mainThread.Enqueue(() => OnReceivedMatchmakerMatched(m));
+        // nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
+        nakamaConnection.socket.ReceivedMatchState += m => mainThread.Enqueue(() => MatchStatusUpdate(m));
        
     }
 
@@ -69,11 +75,6 @@ public class GameManager : MonoBehaviour
             player.enabled = true;
         }
         // TODO need 2 frame to interpolate right now just stay 
-        if (gameInitialized2 && !player2.enabled)
-        {
-            player2.transform.position = player2.prevPos;
-            player2.enabled = true;
-        }
     }
 
     private void OnApplicationQuit()
@@ -96,6 +97,8 @@ public class GameManager : MonoBehaviour
     private void MatchStatusUpdate(IMatchState newState)
     {
         
+        var enc = System.Text.Encoding.UTF8;
+        var content = enc.GetString(newState.State);
         switch ( newState.OpCode)
         {
             case ((long)0):
@@ -103,24 +106,26 @@ public class GameManager : MonoBehaviour
                 // only care about it self
                 // TODO check the userID
                 
-                var enc = System.Text.Encoding.UTF8;
-                var content = enc.GetString(newState.State);
-                // print(content);
+                print(content);
                 Dictionary<string, string> resultDict = content.FromJson<Dictionary<string, string>>();
                 ServerPacket packet = content.FromJson<ServerPacket>();
                 // handle other player
                 if (packet.Name != UserId)
                 {
-                    if (!gameInitialized2)
+                    if (!otherPlayers.ContainsKey(packet.Name))
                     {
-                        player2.prevPos = new Vector2(packet.LocX,packet.LocY);
-                        gameInitialized2 = true;
+                        RemotePlayer newPlayer = Instantiate(prefab,Vector3.one*-1f, quaternion.identity);
+                        otherPlayers.Add(packet.Name,newPlayer);
+                        newPlayer.prevPos = new Vector2(packet.LocX,packet.LocY);
+                        newPlayer.isRight = packet.IsRight;
                     }
                     else
                     {
-                        player2.prevPos = player2.newPos;
-                        player2.newPos = new Vector2(packet.LocX,packet.LocY);
-                        player2.t = 0;
+                        var otherPlayer = otherPlayers[packet.Name];
+                        otherPlayer.prevPos = otherPlayer.newPos;
+                        otherPlayer.newPos = new Vector2(packet.LocX,packet.LocY);
+                        otherPlayer.t = 0;
+                        otherPlayer.isRight = packet.IsRight;
                     }
                     
                     break;
@@ -140,6 +145,10 @@ public class GameManager : MonoBehaviour
                 }
                 player.ReceiveNewMsg(serverPayload);
                 break;
+            case 2:
+                print(content);
+                break;
+                
         }
     }
     
@@ -147,6 +156,7 @@ public class GameManager : MonoBehaviour
     {
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode,message );
     }
+    
     
     
 
