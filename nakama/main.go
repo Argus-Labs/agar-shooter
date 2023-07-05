@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	OK int64					= 0
-	CANCELED int64				= 1
+	LOCATION int64				= 0
+	COINS int64					= 1
 	UNKNOWN int64				= 2
 	INVALID_ARGUMENT int64		= 3
 	DEADLINE_EXCEEDED int64		= 4
@@ -243,12 +243,19 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	for _, pp := range mState.presences {
 		playerState, err := CallRPCs["games/status"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+		coins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
 		
 		if err != nil {
 			return err
 		}
 
-		err = dispatcher.BroadcastMessage(OK, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+		err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+
+		if err != nil {
+			return err
+		}
+
+		err = dispatcher.BroadcastMessage(COINS, []byte(coins), []runtime.Presence{pp}, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 
 		if err != nil {
 			return err

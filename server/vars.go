@@ -30,8 +30,13 @@ type Weapon int
 
 const (// add more weapons as needed
 	Melee = iota
-	Sniper
+	Slug
 )
+
+type WeaponData struct {
+	Attack int
+	Range float64
+}
 
 type WeaponComponent struct {
 	Loc Pair[float64, float64]
@@ -89,6 +94,10 @@ var (
 	Players			= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
 	MoveTx			= ecs.NewTransactionType[Move]()//(World, "move")
 	Width, Height	int
+	Weapons			= map[Weapon] WeaponData{
+						Melee: WeaponData{10, 16.0},
+						Slug: WeaponData{30, 6.9},
+					}
 )
 
 const (
