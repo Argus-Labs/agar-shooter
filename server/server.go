@@ -16,23 +16,27 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 
 	for _, move := range MoveTx.In(q) {
 		if _, contains := moveMap[move.PlayerID]; !contains {
+			/*
 			pcomp, err := PlayerComp.Get(World, Players[move.PlayerID])
 
 			if err != nil {
 				return err
 			}
-
+			
 			if pcomp.MoveNum != move.Input_sequence_number - 1{
 				fmt.Printf("Difference in input sequence number is not 1; received sequence number %i after sequence number %i.",move.Input_sequence_number,pcomp.MoveNum)
 				return nil
 			}
+			*/
 
 			moveMap[move.PlayerID] = []Move{move}
 		} else {
+			/*
 			if num := moveMap[move.PlayerID][len(moveMap[move.PlayerID])-1].Input_sequence_number;move.Input_sequence_number != num + 1 {
 				fmt.Printf("Difference in input sequence number is not 1; received sequence number %i after sequence number %i.",move.Input_sequence_number,num)
 				return nil
 			}
+			*/
 			moveMap[move.PlayerID] = append(moveMap[move.PlayerID], move)
 		}
 	}
@@ -89,7 +93,6 @@ func distance(loc1, loc2 Pair[float64, float64]) float64 {// returns distance be
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
 	dir := tmpPlayer.Dir
 	coins := 0//tmpPlayer.Coins
-	const sped = 2
 	return bound(tmpPlayer.Loc.First + (sped * dir.First)/(float64(1 + coins)), tmpPlayer.Loc.Second + (sped * dir.Second)/(float64(1 + coins)))
 }
 
@@ -197,6 +200,10 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
 			comp.Loc = loc
 			comp.Coins += extraCoins
+			
+			if distance(comp.Loc, comp.Extract) <= ExtractionRadius {// extraction point offloading
+				comp.Coins = 0
+			}
 
 			return comp
 		})
@@ -223,7 +230,8 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, -1})// default player
+	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -329,7 +337,8 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, -1})// initializes player entitities through their component
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{25,25}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
+		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 
 		playercomp, err := PlayerComp.Get(World, Players[playername])
 
