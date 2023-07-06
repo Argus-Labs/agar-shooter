@@ -121,6 +121,7 @@ var (
 						Slug: WeaponData{30, 6.9},
 					}
 	globalMut		= &sync.RWMutex{}
+	ClientView		= Pair[float64,float64]{30,20}// client viewing window
 )
 
 const (
