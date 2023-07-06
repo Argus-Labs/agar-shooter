@@ -223,7 +223,7 @@ func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locatio
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{Pair[float64,float64]{1000,1000}, 100, []string{"a", "b"}}
+	game := Game{Pair[float64,float64]{300,200}, 1, []string{"a", "b"}}
 	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter
 	if errr != nil {// error from game creation
 		writeError(w, "error initializing game", errr)
