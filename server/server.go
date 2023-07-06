@@ -432,8 +432,8 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 
 	playerLoc := Pair[int, int]{int(math.Floor(playercomp.Loc.First/GameParams.CSize)), int(math.Floor(playercomp.Loc.Second/GameParams.CSize))}
 
-	for i := math.Max(0, float64(playerLoc.First - 1)); i < math.Min(float64(Width), float64(playerLoc.First + 1)); i++ {
-		for j := math.Max(0, float64(playerLoc.Second - 1)); j < math.Min(float64(Height), float64(playerLoc.Second + 1)); j++ {
+	for i := math.Max(0, float64(playerLoc.First - 1)); i <= math.Min(float64(Width), float64(playerLoc.First + 1)); i++ {
+		for j := math.Max(0, float64(playerLoc.Second - 1)); j <= math.Min(float64(Height), float64(playerLoc.Second + 1)); j++ {
 			for coin, _ := range CoinMap[Pair[int,int]{int(i),int(j)}] {
 				xloc = append(xloc, coin.Second.First)
 				yloc = append(yloc, coin.Second.Second)
