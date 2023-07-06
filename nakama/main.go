@@ -18,7 +18,7 @@ import (
 const (
 	LOCATION int64				= 0
 	COINS int64					= 1
-	UNKNOWN int64				= 2
+	REMOVE int64				= 2
 	INVALID_ARGUMENT int64		= 3
 	DEADLINE_EXCEEDED int64		= 4
 	NOT_FOUND int64				= 5
@@ -176,16 +176,22 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
 	mState, _ := state.(*MatchState)
 
+	if mState == nil {
+		mState = &MatchState{ presences: make(map[string]runtime.Presence),}
+	}
+		if mState.presences == nil {
+			return fmt.Errorf("Nakama: no presence exists")
+		}
+
+
 	for i := 0; i < len(presences); i++ {
 		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\"" + presences[i].GetUserId() + "\"}")
 
 		if err != nil {
 			return err
 		}
-
-		if mState.presences == nil {
-			return fmt.Errorf("Nakama: no presence exists")
-		}
+		
+		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true)// broadcast player removal to all players
 
 		if _, contains := mState.presences[presences[i].GetUserId()]; contains {
 			delete(mState.presences, presences[i].GetUserId())
