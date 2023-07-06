@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"sync"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
@@ -119,6 +120,7 @@ var (
 						Melee: WeaponData{10, 16.0},
 						Slug: WeaponData{30, 6.9},
 					}
+	globalMut		= &sync.RWMutex{}
 )
 
 const (

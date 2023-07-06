@@ -182,7 +182,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
 				for coin, _ := range CoinMap[Pair[int, int]{i,j}] {
-					if CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
+					if false {//CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}
 				}
@@ -357,17 +357,16 @@ func CreateGame(game Game) error {
 	return nil
 }
 
-func SpawnCoins() error {// randomly spawn 5 coins in each cell and don't place if a coin exists nearby
+func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each cell and don't place if a coin exists nearby
 	var (
-		coinCellNum = 5
-		coinRadius = 0.1// <= GameParams.CSize/2
-		density = 0.01 // number of coins per square unit
-		maxCoinsInCell = int(math.Pow(GameParams.CSize, 2)*density)
+		coinCellNum = 1
+		coinRadius = 0.5// <= GameParams.CSize/2
+		density = 0.1// number of coins per square unit
+		maxCoinsInCell = int(math.Ceil(math.Pow(GameParams.CSize, 2)*density))
 	)
 
 	newCoins := make([]Pair[float64, float64], 0)
 	deleteList := make([]Pair[float64, float64], 0)
-	mutex := &sync.RWMutex{}
 
 	mutex.RLock()
 	for i := 0; i < Width; i++ {
