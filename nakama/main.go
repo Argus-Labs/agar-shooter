@@ -176,16 +176,22 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
 	mState, _ := state.(*MatchState)
 
-	for _, p := range presences {
-		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() + "\"}")
+	for i := 0; i < len(presences); i++ {
+		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\"" + presences[i].GetUserId() + "\"}")
 
 		if err != nil {
 			return err
 		}
-		
-		delete(mState.presences, p.GetUserId())
 
-		fmt.Println("player left: ", p.GetUserId(), "; result: ", result)
+		if mState.presences == nil {
+			return fmt.Errorf("Nakama: no presence exists")
+		}
+
+		if _, contains := mState.presences[presences[i].GetUserId()]; contains {
+			delete(mState.presences, presences[i].GetUserId())
+		}
+
+		fmt.Println("player left: ", presences[i].GetUserId(), "; result: ", result)
 	}
 
 	return mState
@@ -194,21 +200,22 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
 	mState, _ := state.(*MatchState)
 
+	if mState == nil {
+		mState = &MatchState{ presences: make(map[string]runtime.Presence),}
+	}
+	
+	if mState.presences == nil {
+		mState.presences = make(map[string] runtime.Presence)
+	}
+
 	// process last player input for each type of input
 	messageMap := make(map[string] map[int64] [][]byte)
 
 	for _, match := range messages {
-		if mState.presences == nil {
-			mState.presences = make(map[string] runtime.Presence)
-		}
 
 		if messageMap[match.GetUserId()] == nil {
 			messageMap[match.GetUserId()] = make(map[int64] [][]byte)
 		}
-
-		//if mState.presences[match.GetUserId()] == nil {
-		//	continue
-		//}
 
 		messageMap[match.GetUserId()][match.GetOpCode()] = append(messageMap[match.GetUserId()][match.GetOpCode()], match.GetData())
 
@@ -236,10 +243,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// broadcast
-
-	if mState.presences == nil {
-		mState.presences = make(map[string] runtime.Presence)
-	}
 
 	for _, pp := range mState.presences {
 		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
