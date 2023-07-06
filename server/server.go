@@ -182,7 +182,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
 				for coin, _ := range CoinMap[Pair[int, int]{i,j}] {
-					if false {//CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
+					if distance(prevLoc, coin.Second) <= PlayerRadius || distance(loc, coin.Second) <= PlayerRadius {//CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}
 				}
@@ -430,10 +430,8 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 		fmt.Errorf("Error getting location with callback function: %w", err)
 	}
 
-	playerLoc := Pair[int, int]{int(math.Floor(playercomp.Loc.First/GameParams.CSize)), int(math.Floor(playercomp.Loc.Second/GameParams.CSize))}
-
-	for i := math.Max(0, float64(playerLoc.First - 1)); i <= math.Min(float64(Width), float64(playerLoc.First + 1)); i++ {
-		for j := math.Max(0, float64(playerLoc.Second - 1)); j <= math.Min(float64(Height), float64(playerLoc.Second + 1)); j++ {
+	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First)/GameParams.CSize)); i++ {
+		for j := math.Max(0, math.Floor((playercomp.Loc.Second-ClientView.Second)/GameParams.CSize)); j <= math.Min(float64(Height), math.Ceil((playercomp.Loc.Second+ClientView.Second)/GameParams.CSize)); j++ {
 			for coin, _ := range CoinMap[Pair[int,int]{int(i),int(j)}] {
 				xloc = append(xloc, coin.Second.First)
 				yloc = append(yloc, coin.Second.Second)
