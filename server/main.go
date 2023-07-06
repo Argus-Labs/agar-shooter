@@ -223,14 +223,14 @@ func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locatio
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{Pair[float64,float64]{300,200}, 1, []string{"a", "b"}}
+	game := Game{Pair[float64,float64]{100,100}, 5, []string{"a", "b"}}
 	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter
 	if errr != nil {// error from game creation
 		writeError(w, "error initializing game", errr)
 	}
 
-	for i := 0; i < 5; i++ {// change to > 1
-		SpawnCoins()
+	for i := 0; i < 5; i++ {
+		go SpawnCoins(globalMut)
 	}
 
 	writeResult(w, "game created")
@@ -241,9 +241,9 @@ func tig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error ticking", err)
 	}
 
-	//if err := SpawnCoins(); err != nil {
-	//	writeError(w, "error spawning coins", err)
-	//}
+	if err := SpawnCoins(globalMut); err != nil {
+		writeError(w, "error spawning coins", err)
+	}
 
 	writeResult(w, "game tick completed; coins spawned")
 }

@@ -135,7 +135,7 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 		logger.Error(fmt.Errorf("Nakama: error creating game", err).Error())
 	}
 
-	time.Sleep(3*time.Second)
+	time.Sleep(5*time.Second)
 
 	return state, tickRate, label
 }
