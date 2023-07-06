@@ -72,13 +72,10 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 		lastMove := Pair[float64,float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
 
 		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
-			comp.Dir = dir// adjusts move directions TODO: preserve last input somewhere as well and check whether the last input was recently updated when making moves
+			comp.Dir = dir// adjusts move directions
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number
-			if lastMove.First > 0 {
-				comp.IsRight = true
-			}
-			if lastMove.First < 0 {
-				comp.IsRight = false
+			if lastMove.First != 0 {
+				comp.IsRight = lastMove.First > 1
 			}
 
 			return comp
@@ -102,7 +99,7 @@ func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed fun
 	return bound(tmpPlayer.Loc.First + (sped * dir.First)/(float64(1 + coins)), tmpPlayer.Loc.Second + (sped * dir.Second)/(float64(1 + coins)))
 }
 
-func coinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end] TODO: write testcase for finding this value
+func CoinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end] TODO: write testcase for finding this value
 	vec := Pair[float64, float64]{end.First-start.First, end.Second-start.Second}
 	coeff := (vec.First*coin.First + vec.Second*coin.Second)/(vec.First*vec.First + vec.Second*vec.Second)
 	proj := Pair[float64, float64]{coeff*vec.First + start.First, coeff*vec.Second + start.Second}
@@ -115,7 +112,7 @@ func coinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest d
 	return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
 }
 
-func attack(id storage.EntityID, weapon Weapon) error {// attack a player
+func attack(id storage.EntityID, weapon Weapon) error {// attack a player; TODO: change attacking to be based on IsRight
 	kill := false
 	var name string
 	PlayerComp.Update(World, id, func(comp PlayerComponent) PlayerComponent{// modifies player location
@@ -185,7 +182,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
 				for coin, _ := range CoinMap[Pair[int, int]{i,j}] {
-					if coinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
+					if CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}
 				}
@@ -236,8 +233,8 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{25,25}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1})// default player
-	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1})// default player
+	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -309,6 +306,9 @@ func CreateGame(game Game) error {
 	//if World.stateIsLoaded {
 	//	return fmt.Errorf("already loaded state")
 	//}
+	if game.CSize == 0 {
+		return fmt.Errorf("Cardinal: cellsize is zero")
+	}
 	GameParams = game
 	World.RegisterComponents(PlayerComp, CoinComp, HealthComp, WeaponComp)
 	World.AddSystem(processMoves)
@@ -316,8 +316,6 @@ func CreateGame(game Game) error {
 
 	World.LoadGameState()
 	MoveTx.SetID(0)
-	//ItemMap, err := World.Create(ItemMapComp)// creates an ItemMap entity
-	//PlayerMap, err := World.Create(PlayerMapComp)// creates a PlayerMap entity
 	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp)// creates player entities
 
 	Players = make(map[string] storage.EntityID)
@@ -343,13 +341,13 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{25,25}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1})// initializes player entitities through their component
-		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Melee, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
+		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1})// initializes player entitities through their component
+		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 
 		playercomp, err := PlayerComp.Get(World, Players[playername])
 
 		if err != nil {
-			fmt.Errorf("Error getting location with callback function: %w", err)
+			fmt.Errorf("Cardinal: Error getting location with callback function: %w", err)
 		}
 
 		newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[playername], playercomp.Loc}
@@ -445,4 +443,29 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 	}
 
 	return Pair[[]float64, []float64]{xloc, yloc}
+}
+
+func AddTestPlayer(player PlayerComponent) error {
+	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
+		return nil
+	}
+
+	playerID, err := World.Create(PlayerComp)// creates new player
+	if err != nil {
+		return fmt.Errorf("Error adding player to world: %w", err)
+	}
+	Players[player.Name] = playerID
+
+	PlayerComp.Set(World, Players[player.Name], player)// default player
+
+	playercomp, err := PlayerComp.Get(World, Players[player.Name])
+
+	if err != nil {
+		return fmt.Errorf("Error getting location with callback function: %w", err)
+	}
+
+	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
+	PlayerMap[Pair[int,int]{int(math.Floor(player.Loc.First/GameParams.CSize)),int(math.Floor(player.Loc.Second/GameParams.CSize))}][newPlayer] = pewp
+
+	return nil
 }

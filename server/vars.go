@@ -29,7 +29,8 @@ type CoinComponent struct {
 type Weapon int
 
 const (// add more weapons as needed
-	Melee = iota
+	Dud = iota - 1// empty weapon
+	Melee 
 	Slug
 )
 
@@ -60,7 +61,7 @@ type BarePlayer struct {
 	Name string
 	Health int
 	Coins int
-	//Weapon int
+	//Weapon Weapon
 	//ExtractX float64
 	//ExtractY float64
 	LocX float64
@@ -69,8 +70,23 @@ type BarePlayer struct {
 	InputNum int
 }
 
+type TestPlayer struct {
+	Name string
+	Health int
+	Coins int
+	Weapon Weapon
+	ExtractX float64
+	ExtractY float64
+	LocX float64
+	LocY float64
+}
+
 func (p PlayerComponent) Simplify() BarePlayer {
 	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum}// update Simplify for weapons & extraction point
+}
+
+func (p PlayerComponent) Testify() TestPlayer {
+	return TestPlayer{p.Name, p.Health, p.Coins, p.Weapon, p.Extract.First, p.Extract.Second, p.Loc.First, p.Loc.Second}
 }
 
 func (p PlayerComponent) String() string {
@@ -99,6 +115,7 @@ var (
 	MoveTx			= ecs.NewTransactionType[Move]()//(World, "move")
 	Width, Height	int
 	Weapons			= map[Weapon] WeaponData{
+						Dud: WeaponData{0, 0.0},
 						Melee: WeaponData{10, 16.0},
 						Slug: WeaponData{30, 6.9},
 					}
@@ -107,7 +124,7 @@ var (
 const (
 	TickRate			= 5// ticks per second
 	ClientTickRate		= 60// used to determine tickrate relative to cardinal server
-	PlayerRadius		= 5// used to determine which coins to collect
+	PlayerRadius		= 0.5// used to determine which coins to collect
 	ExtractionRadius	= 10// determines when players are in range of their extraction point
 	sped				= 2// player speed
 )
