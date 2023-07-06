@@ -75,7 +75,7 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			comp.Dir = dir// adjusts move directions
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number
 			if lastMove.First != 0 {
-				comp.IsRight = lastMove.First > 1
+				comp.IsRight = lastMove.First > 0
 			}
 
 			return comp
@@ -366,37 +366,28 @@ func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each ce
 	)
 
 	newCoins := make([]Pair[float64, float64], 0)
-	deleteList := make([]Pair[float64, float64], 0)
 
 	mutex.RLock()
 	for i := 0; i < Width; i++ {
 		for j := 0; j < Height; j++ {
 			if len(CoinMap[Pair[int,int]{i,j}]) >= maxCoinsInCell { continue }
 
-			coinSet := make(map[Pair[float64,float64]] void)// making coins near but not at the edge is fine because the expected distance between coins on opposite sides of the edge will be double the expected distance between coins on the same side
 			for k := 0; k < coinCellNum; k++ {
-				coinSet[Pair[float64,float64]{float64(i)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), float64(j)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius)}] = pewp
-			}
+				newCoin := Pair[float64,float64]{float64(i)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), float64(j)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius)}
+				keep := true
 
-			if len(deleteList) > 0 {
-				deleteList = make([]Pair[float64, float64], 0)
-			}
-			for coin,_ := range CoinMap[Pair[int,int]{i, j}] {// concurrent iteration and write
-				for coinPos, _ := range coinSet {
-					if distance(coinPos, coin.Second) <= coinRadius {
-						deleteList = append(deleteList, coinPos)
-					}
+				for coin,_ := range CoinMap[Pair[int,int]{i, j}] {// concurrent iteration and write
+					keep = keep && (distance(coin.Second, newCoin) <= coinRadius)
+				}
+
+				for player, _ := range PlayerMap[Pair[int,int]{i,j}] {
+					keep = keep && (distance(player.Second, newCoin) <= PlayerRadius+1)
+				}
+
+				if keep {
+					newCoins = append(newCoins, newCoin)
 				}
 			}
-
-			for _, coinPos := range deleteList {
-				delete(coinSet, coinPos)
-			}
-
-			for coin, _ := range coinSet {
-				newCoins = append(newCoins, coin)
-			}
-
 		}
 	}
 	mutex.RUnlock()
