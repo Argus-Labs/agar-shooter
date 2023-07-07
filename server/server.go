@@ -96,7 +96,7 @@ func distance(loc1, loc2 Pair[float64, float64]) float64 {// returns distance be
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
 	dir := tmpPlayer.Dir
 	coins := 0//tmpPlayer.Coins
-	return bound(tmpPlayer.Loc.First + (sped * dir.First)/(float64(1 + coins)), tmpPlayer.Loc.Second + (sped * dir.Second)/(float64(1 + coins)))
+	return bound(tmpPlayer.Loc.First + (sped * dir.First * math.Exp(-0.01*float64(coins))), tmpPlayer.Loc.Second + (sped * dir.Second * math.Exp(-0.01*float64(coins))))
 }
 
 func CoinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end] TODO: write testcase for finding this value
