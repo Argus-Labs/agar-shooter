@@ -32,6 +32,7 @@ func main() {
 		{"games/coins", getPlayerCoins},
 		{"games/tick", tig},
 		{"games/create", createGame},
+		{"games/offload", checkExtraction},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
@@ -110,7 +111,7 @@ func decode(r *http.Request, v any) error {
 //}
 
 func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to world
-	player := ModPlayer{}
+	player := AddPlayer{}
 
 	fmt.Println(r)
 	//
@@ -220,6 +221,19 @@ func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locatio
 	}
 
 	writeResult(w, comp)// convert to string
+}
+
+func checkExtraction(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	coins := CheckExtraction(player)
+
+	writeResult(w, coins)// convert to string
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {

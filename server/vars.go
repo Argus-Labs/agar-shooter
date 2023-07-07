@@ -151,10 +151,15 @@ type Move struct {
 	Delta					float64
 }
 
+type AddPlayer struct {// for adding and removing players
+	Name	string
+	Coins	int
+}
+
 type ModPlayer struct {// for adding and removing players
 	Name	string
 }
 
 func GetCell(loc Pair[float64,float64]) Pair[int,int] {
-	return Pair[int,int]{int(math.Floor(loc.First/GameParams.Dims.First)), int(math.Floor(loc.Second/GameParams.Dims.Second))}
+	return Pair[int,int]{int(math.Floor(loc.First/GameParams.CSize)), int(math.Floor(loc.Second/GameParams.CSize))}
 }
