@@ -73,7 +73,6 @@ public class NakamaConnection : ScriptableObject
             Debug.Log(e);
             session = await client.AuthenticateDeviceAsync(Utility.DeviceUniqueIdentifier, create: true);
         }
-
         socket = client.NewSocket();
         await socket.ConnectAsync(session,true);
         Debug.Log("Connected to Nakama server");
