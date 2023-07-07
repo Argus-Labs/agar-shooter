@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 	"sync"
+	"math"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
@@ -154,3 +155,6 @@ type ModPlayer struct {// for adding and removing players
 	Name	string
 }
 
+func GetCell(loc Pair[float64,float64]) Pair[int,int] {
+	return Pair[int,int]{int(math.Floor(loc.First/GameParams.Dims.First)), int(math.Floor(loc.Second/GameParams.Dims.Second))}
+}

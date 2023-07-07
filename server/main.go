@@ -229,7 +229,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error initializing game", errr)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 20; i++ {
 		go SpawnCoins(globalMut)
 	}
 
