@@ -46,8 +46,8 @@ func TestPewp(t *testing.T) {
 
 	// test adding player moves and making player move each tick
 	testPlayer1, testPlayer2, testPlayer3 := ModPlayer{"a"}, ModPlayer{"b"}, ModPlayer{"c"}
-	AddTestPlayer(PlayerComponent{"a", 100, 0, Melee, Pair[float64,float64]{250,250}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, true, -1})
-	AddTestPlayer(PlayerComponent{"b", 100, 0, Melee, Pair[float64,float64]{750,750}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, true, -1})
+	AddTestPlayer(PlayerComponent{"a", 100, 0, Dud, Pair[float64,float64]{250,250}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, true, -1})
+	AddTestPlayer(PlayerComponent{"b", 100, 0, Dud, Pair[float64,float64]{750,750}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, true, -1})
 
 	m := make(map[ModPlayer] []TestPlayer)
 
@@ -88,7 +88,7 @@ func TestPewp(t *testing.T) {
 	assert.Assert(t, err != nil)
 
 	fmt.Println("start push")
-	AddTestPlayer(PlayerComponent{"c", 100, 0, Melee, Pair[float64,float64]{500,500}, Pair[float64,float64]{0,0}, Pair[float64,float64]{750, 750}, true, -1})
+	AddTestPlayer(PlayerComponent{"c", 100, 0, Dud, Pair[float64,float64]{500,500}, Pair[float64,float64]{0,0}, Pair[float64,float64]{750, 750}, true, -1})
 	fmt.Println("end push")
 
 	testMove([]ModPlayer{testPlayer1, testPlayer2, testPlayer3})

@@ -95,7 +95,7 @@ func distance(loc1, loc2 Pair[float64, float64]) float64 {// returns distance be
 
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
 	dir := tmpPlayer.Dir
-	coins := 0//tmpPlayer.Coins
+	coins := tmpPlayer.Coins
 	return bound(tmpPlayer.Loc.First + (sped * dir.First * math.Exp(-0.01*float64(coins))), tmpPlayer.Loc.Second + (sped * dir.Second * math.Exp(-0.01*float64(coins))))
 }
 
@@ -204,10 +204,6 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			comp.Loc = loc
 			comp.Coins += extraCoins
 			
-			if distance(comp.Loc, comp.Extract) <= ExtractionRadius {// extraction point offloading
-				comp.Coins = 0
-			}
-
 			return comp
 		})
 	}
@@ -222,7 +218,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 }
 
 
-func HandlePlayerPush(player ModPlayer) error {
+func HandlePlayerPush(player AddPlayer) error {
 	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
 		return nil
 	}
@@ -243,7 +239,7 @@ func HandlePlayerPush(player ModPlayer) error {
 	}
 
 	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[Pair[int,int]{25/int(GameParams.CSize),25/int(GameParams.CSize)}][newPlayer] = pewp
+	PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
 
 	return nil
 }
@@ -262,7 +258,7 @@ func HandlePlayerPop(player ModPlayer) error {
 	}
 
 	oldPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	delete(PlayerMap[Pair[int,int]{int(math.Floor(playercomp.Loc.First/GameParams.CSize)), int(math.Floor(playercomp.Loc.Second/GameParams.CSize))}], oldPlayer)
+	delete(PlayerMap[GetCell(playercomp.Loc)], oldPlayer)
 
 	delete(Players, player.Name)
 
@@ -351,7 +347,7 @@ func CreateGame(game Game) error {
 		}
 
 		newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[playername], playercomp.Loc}
-		PlayerMap[Pair[int,int]{25/int(GameParams.CSize),25/int(GameParams.CSize)}][newPlayer] = pewp
+		PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
 	}
 
 	return nil
@@ -377,11 +373,11 @@ func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each ce
 				keep := true
 
 				for coin,_ := range CoinMap[Pair[int,int]{i, j}] {// concurrent iteration and write
-					keep = keep && (distance(coin.Second, newCoin) <= coinRadius)
+					keep = keep && (distance(coin.Second, newCoin) > coinRadius)
 				}
 
 				for player, _ := range PlayerMap[Pair[int,int]{i,j}] {
-					keep = keep && (distance(player.Second, newCoin) <= PlayerRadius+1)
+					keep = keep && (distance(player.Second, newCoin) > PlayerRadius+1)
 				}
 
 				if keep {
@@ -418,7 +414,7 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
 	if err != nil {
-		fmt.Errorf("Error getting location with callback function: %w", err)
+		fmt.Errorf("Error getting player component: %w", err)
 	}
 
 	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First)/GameParams.CSize)); i++ {
@@ -431,6 +427,26 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 	}
 
 	return Pair[[]float64, []float64]{xloc, yloc}
+}
+
+func CheckExtraction(player ModPlayer) int {
+	playercomp, err := PlayerComp.Get(World, Players[player.Name])
+
+	if err != nil {
+		fmt.Errorf("Error getting  player component: %w", err)
+	}
+
+	if playercomp.Coins > 0 && distance(playercomp.Loc, playercomp.Extract) <= ExtractionRadius {
+		PlayerComp.Update(World, Players[player.Name], func(comp PlayerComponent) PlayerComponent{
+			comp.Coins = 0// extraction point offloading
+
+			return comp
+		})
+
+		return playercomp.Coins
+	} else {
+		return 0
+	}
 }
 
 func AddTestPlayer(player PlayerComponent) error {
@@ -453,7 +469,7 @@ func AddTestPlayer(player PlayerComponent) error {
 	}
 
 	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[Pair[int,int]{int(math.Floor(player.Loc.First/GameParams.CSize)),int(math.Floor(player.Loc.Second/GameParams.CSize))}][newPlayer] = pewp
+	PlayerMap[GetCell(player.Loc)][newPlayer] = pewp
 
 	return nil
 }
