@@ -151,7 +151,7 @@ var (
 	globalMut				= &sync.RWMutex{}
 	ClientView				= Pair[float64,float64]{30,20}// client viewing window
 	DefaultWeapon Weapon	= Dud
-	Attacks					= make([]Triple[string, string, int], 0)
+	Attacks					= make([]AttackTriple, 0)
 )
 
 const (
@@ -178,6 +178,11 @@ type Move struct {
 	Right					bool
 	Input_sequence_number	int
 	Delta					float64
+}
+
+type AttackTriple struct {
+	AttackerID, DefenderID	string
+	Damage					int
 }
 
 type AddPlayer struct {// for adding and removing players

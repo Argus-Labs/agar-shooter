@@ -199,7 +199,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
 			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, bool]{minID, tmpPlayer.Weapon, left != tmpPlayer.IsRight})
-			Attacks = append(Attacks, Triple[string, string, int]{playerName, closestPlayerName, Weapons[tmpPlayer.Weapon].Attack})
+			Attacks = append(Attacks, AttackTriple{playerName, closestPlayerName, Weapons[tmpPlayer.Weapon].Attack})
 		}
 
 		// moving players
@@ -552,9 +552,9 @@ func AddTestPlayer(player PlayerComponent) error {
 	return nil
 }
 
-func RecentAttacks() []Triple[string, string, int] {
-	var attacks []Triple[string, string, int]
+func RecentAttacks() []AttackTriple {
+	var attacks []AttackTriple
 	copy(Attacks, attacks)
-	Attacks = make([]Triple[string, string, int], 0)
+	Attacks = make([]AttackTriple, 0)
 	return attacks;
 }
