@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Nakama.TinyJson;
+using TMPro;
 using UnityEngine;
 
 public class Player : MonoBehaviour
@@ -13,8 +14,16 @@ public class Player : MonoBehaviour
     [SerializeField] private float speed;
     [SerializeField] private bool isRight = true;
     [SerializeField] private InputProfile inputProfile;
+    [SerializeField] private TextMeshProUGUI coinText;
     private int sequenceNumber = 0;
-    CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>();
+    CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>(100);
+    public Vector2 pos = new Vector2(0, 0);
+
+    // may need introduce other parameters
+    public void PlayerInit(Vector2 pos)
+    {
+        this.pos = pos;
+    }
 
     public bool IsRight
     {
@@ -25,6 +34,13 @@ public class Player : MonoBehaviour
             transform.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
         }
     }
+
+    public float Speed
+    {
+        // get { return speed/* Mathf.Exp(-0.01f*coin)*/; }
+        get { return speed* Mathf.Exp(-0.01f*coin); }
+    }
+
     // player can use wasd to move up down left right and they can also press two button to move diagonally 
     // the direction "isRight" of the player is based on the player previous move direction default is right. Filp the player if isLeft
     struct PlayerInput
@@ -36,8 +52,9 @@ public class Player : MonoBehaviour
         public bool Left;
         public bool Right;
         public int Input_sequence_number;
+        public float Delta;
 
-        public PlayerInput(string playerID, bool up, bool down, bool left, bool right, int input_sequence_number)
+        public PlayerInput(string playerID, bool up, bool down, bool left, bool right, int input_sequence_number,float delta)
         {
             this.PlayerID = playerID;
             this.Up = up;
@@ -45,6 +62,7 @@ public class Player : MonoBehaviour
             this.Left = left;
             this.Right = right;
             this.Input_sequence_number = input_sequence_number;
+            this.Delta = delta;
         }
     }
 
@@ -53,6 +71,7 @@ public class Player : MonoBehaviour
         public PlayerInput input;
         public float deltaTime;
         public Vector2 position;
+
         public PlayerInputExtraInfo(PlayerInput input, float deltaTime, Vector2 position)
         {
             this.input = input;
@@ -69,77 +88,71 @@ public class Player : MonoBehaviour
     }
 
 
-
-    private void  Update()
+    private void Update()                       
     {
-        
-        //
-        //
-        //
-        // string inputJson = input.ToJson();
-        // inputJson = @"{
-        //     ""Player"": ""175ebc6a-c56b-4ad2-95c1-f9e98c0c8c66"",
-        //     ""Up"": true,
-        //     ""Down"": false,
-        //     ""Left"": false,
-        //     ""Right"": false
-        // }";
-        // print(inputJson);
-        // gameManager.CallRPC("games/move", inputJson);
-        // var task = gameManager.CallRPC("games/status", playerStatus.ToJson());
-        // task.ContinueWith(t =>
-        // {
-        //     var result = t.Result;
-        //     var resultJson = result.Payload;
-        //     Debug.Log(resultJson);
-        //     Dictionary<string, string> resultDict = resultJson.FromJson<Dictionary<string, string>>();
-        //     Dictionary<string, string> resultDict2 = resultDict["Loc"].FromJson<Dictionary<string, string>>();
-        //     newPos = new Vector2(float.Parse(resultDict2["First"]), float.Parse(resultDict2["Second"]));
-        //     // Debug.Log(newPos);
-        // });
+        // print(sequenceNumber);
         UploadPlayerInput();
         sequenceNumber++;
+        // update the player position on main thread
+        transform.localPosition = pos;
+        IsRight = isRight;
     }
-
 
 
     private void UploadPlayerInput()
     {
         PlayerInput input = new PlayerInput(gameManager.UserId, Input.GetKey(inputProfile.up),
-            Input.GetKey(inputProfile.down), Input.GetKey(inputProfile.left), Input.GetKey(inputProfile.right),sequenceNumber);
-        int opCode = 1;
-        gameManager.SendMessageToServer(opCode,input.ToJson());
-        ApplyInput(input);
-        pendingInputs.Enqueue(new PlayerInputExtraInfo(input, Time.deltaTime, transform.localPosition));
-
+            Input.GetKey(inputProfile.down), Input.GetKey(inputProfile.left), Input.GetKey(inputProfile.right),
+            sequenceNumber,Time.deltaTime);
+        int opCode = 17;
+        gameManager.SendMessageToServer(opCode, input.ToJson());
+        ApplyInput(input, Time.deltaTime);
+        pendingInputs.Enqueue(new PlayerInputExtraInfo(input, Time.deltaTime, pos));
     }
+    
+    // change above code to C#
+    private int diff(bool a, bool b)
+    {
+        if (a == b)
+        {
+            return 0;
+        }
 
-    private void ApplyInput(PlayerInput input)
+        if ( a && !b)
+        {
+            return 1;
+        }
+
+        return -1;
+    }
+    private void ApplyInput(PlayerInput input, float deltaTime)
     {
         // based on the input update player position and direction
-        int y= input.Up? 1 : input.Down? -1 : 0;
-        int x= input.Right? 1 : input.Left? -1 : 0;
+        int y = diff(input.Up , input.Down );
+        int x = diff(input.Right,input.Left);
         Vector2 speedVector = new Vector2(x, y).normalized;
-        if (x==1)
+        if (x == 1)
         {
             isRight = true;
         }
-        else if (x==-1)
+        else if (x == -1)
         {
             isRight = false;
         }
-        // flip the player if isLeft
-        transform.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
-        transform.Translate(speedVector * (speed * Time.deltaTime));
+
+        //2m/s
+        pos += speedVector * (Speed * deltaTime);
     }
 
     public void ReceiveNewMsg(ServerPayload payload)
     {
         // delete all the inputs that have been processed by the server
         var j = 0;
-        while (j < pendingInputs.Count) {
+        while (j < pendingInputs.Count)
+        {
             var input = pendingInputs[j];
-            if (input.input.Input_sequence_number < payload.lastProcessedInput) {
+            if (input.input.Input_sequence_number < payload.lastProcessedInput)
+            {
                 // Already processed. Its effect is already taken into account into the world update
                 // we just got, so we can drop it.
                 // pendingInputs.splice(j, 1);
@@ -147,33 +160,36 @@ public class Player : MonoBehaviour
             }
             else if (input.input.Input_sequence_number == payload.lastProcessedInput)
             {
-                if (Vector2.Distance(payload.pos,input.position)<0.05f)
+                if (Vector2.Distance(payload.pos, input.position) < 0.05f)
                 {
                     // Already processed. Its effect is already taken into account into the world update
                     // we just got, so we can drop it.
                     pendingInputs.Dequeue();
                     break;
                 }
+
                 pendingInputs.Dequeue();
-                Debug.Log("there is a difference");
-                
+                // print expected pos and actual pos and sequence number
+                Debug.Log("there is a difference:" + "Server pos:" + payload.pos + "player pos:" + input.position +
+                          "sequence number:" + payload.lastProcessedInput + "current sequence number:" +
+                          sequenceNumber);
+                pos = payload.pos;
             }
-            else {
+            else
+            {
                 // Not processed by the server yet. Re-apply it.
-                
-                
-                ApplyInput(input.input);
+                ApplyInput(input.input, input.deltaTime);
                 // update the player position in the pendingInputs
-                pendingInputs[j] = new PlayerInputExtraInfo(input.input, input.deltaTime, transform.localPosition);
+                pendingInputs[j] = new PlayerInputExtraInfo(input.input, input.deltaTime, pos);
                 j++;
             }
         }
-        
-    }
-    public void UpdatePlayerStatus(Vector2 newPos, bool isRight)
-    {
-        transform.localPosition = newPos;
-        IsRight = isRight;
     }
 
+    public void UpdateCoins(int newCoinCount)
+    {
+        coin = newCoinCount;
+        coinText.text = coin.ToString();
+        // update UI
+    }
 }

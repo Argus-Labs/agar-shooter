@@ -6,9 +6,9 @@ using UnityEngine;
 public class GenerateBulbs : MonoBehaviour
 {
     public GameObject bulb;
-    public int bulbNum = 10;
-    public float xRange = 8;
-    public float yRange = 5;
+    public int bulbNum = 1000;
+    public float xRange = 80;
+    public float yRange = 50;
 
     private void Start()
     {
