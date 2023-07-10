@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"strconv"
+	"regexp"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -38,17 +39,18 @@ const (
 )
 
 const (
-	EnvGameServer = "GAME_SERVER_ADDR"
+	EnvGameServer	= "GAME_SERVER_ADDR"
 )
 
 var (
-	CallRPCs = make(map[string] func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))// contains all RPC endpoint functions
-	Presences = make(map[string] runtime.Presence)// contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
+	CallRPCs	= make(map[string] func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))// contains all RPC endpoint functions
+	Presences	= make(map[string] runtime.Presence)// contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
+	nonnum		= regexp.MustCompile(`[^0-9]`)
 )
 
 type DBPlayer struct {
-	ID		string
-	Coins	int
+	ID				string
+	StoredCoins, CurrCoins 	int
 	// add weapon & other base information
 }
 
@@ -95,11 +97,17 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	time.Sleep(5*time.Second)
 
-	if _, checkTable := db.Query("SELECT * FROM dbplayer"); checkTable != nil {
-		if _, err := db.Query("CREATE TABLE dbplayer (id text, coins int)"); err != nil {
-			logger.Error(fmt.Errorf("Nakama: error creating table: ", err).Error())
-		}
+	if _, err := db.Query("DROP TABLE IF EXISTS dbplayer"); err != nil {
+		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error())// drop table and replace with this new table
 	}
+
+	//if _, checkTable := db.Query("SELECT * FROM dbplayer"); checkTable != nil {
+	if _, err := db.Query("CREATE TABLE dbplayer (id text, storedcoins int, currcoins int)"); err != nil {
+		logger.Error(fmt.Errorf("Nakama: error creating table: ", err).Error())
+	} else {
+		logger.Debug("Nakama: initialized Postgres table")
+	}
+	//}
 
 	return MatchState{}, tickRate, label
 }
@@ -112,7 +120,7 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
 	if presences == nil {
-		return fmt.Errorf("Nakama: no presence exists")
+		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
 
 	for _, p := range presences {
@@ -121,34 +129,39 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		// fetch any player information from db
 		pingErr := db.Ping()
 		if pingErr != nil {
-			fmt.Errorf("Nakama: error accessing database: ", pingErr)
+			logger.Error(fmt.Errorf("Nakama: error accessing database: ", pingErr).Error())
 		}
 
 		fmt.Println("Connected to database")
 
-		dbPlayer := DBPlayer{p.GetUserId(), 0}
+		var (
+			coins int
+			discard1, discard2 string
+		)
 
 		row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", p.GetUserId())
 
-		if err := row.Scan(&dbPlayer.ID, &dbPlayer.Coins); err != nil {
+		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
 			if err == sql.ErrNoRows {
 				logger.Debug("Nakama: player does not already exist in database; adding player to database")
 				
-				_, err := db.Exec("INSERT INTO dbplayer (id, coins) VALUES ($1, $2)", p.GetUserId(), 0)
+				_, err := db.Exec("INSERT INTO dbplayer (id, storedcoins, currcoins) VALUES ($1, $2, $3)", p.GetUserId(), 0, 0)
 				if err != nil {
 					logger.Error(fmt.Errorf("Nakama: error inserting player into database: ", err).Error())
 				}
 
+				coins = 0
 			} else {
-				fmt.Errorf("Nakama: error querying prior player information: ", err)
+				logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
 				return state
 			}
 		} else {
-			logger.Debug("Nakama: player exists in database")
+			logger.Debug(fmt.Sprintf("Nakama: player exists in database with coins", coins))
 		}
 		
 		// send database information to Cardinal if it exists when initializing player
-		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(dbPlayer.Coins) + "}")
+		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}"))
+		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}")
 
 		if err != nil {
 			return err
@@ -233,10 +246,27 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 
 		if intCoins > 0 {
-			if _, err = db.Exec("UPDATE dbplayer SET coins = $1 WHERE id = $2", intCoins, pp.GetUserId()); err != nil {
+			var (
+				coins int
+				discard1, discard2 string
+			)
+
+			row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", pp.GetUserId())
+
+			if err := row.Scan(&discard1, &coins, &discard2); err != nil {
+				if err != sql.ErrNoRows && err != nil {
+					logger.Error(fmt.Errorf("Nakama: error getting player information from database: ", err).Error())
+					return state
+				} else {
+					logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
+					return state
+				}
+			}
+		
+			if _, err = db.Exec("UPDATE dbplayer SET storedcoins = $1 WHERE id = $2", intCoins + coins, pp.GetUserId()); err != nil {
 				logger.Error(fmt.Errorf("Nakama: error updating player's coins: ", err).Error())
 			} else {
-				logger.Debug("Nakama: player's coins updated")
+				logger.Debug(fmt.Sprintf("Nakama: player's coins updated: ", intCoins + coins))
 			}
 		}
 
