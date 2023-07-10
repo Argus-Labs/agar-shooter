@@ -161,7 +161,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		
 		// send database information to Cardinal if it exists when initializing player
 		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}"))
-		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}")
+		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":0}")
 
 		if err != nil {
 			return err
@@ -182,7 +182,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\"" + presences[i].GetUserId() + "\"}")
 
 		if err != nil {
-			return err
+			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
 		}
 		
 		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true)// broadcast player removal to all players

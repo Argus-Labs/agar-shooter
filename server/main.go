@@ -33,6 +33,7 @@ func main() {
 		{"games/tick", tig},
 		{"games/create", createGame},
 		{"games/offload", checkExtraction},
+		{"games/attacks", recentAttacks},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
@@ -155,6 +156,8 @@ func handlePlayerPop(w http.ResponseWriter, r *http.Request) {// removes player 
 		return
 	}
 
+	HandlePlayerPop(player)
+
 	writeResult(w, "Player removal successful")
 
 }
@@ -234,6 +237,13 @@ func checkExtraction(w http.ResponseWriter, r *http.Request) {// use in place of
 	coins := CheckExtraction(player)
 
 	writeResult(w, coins)// convert to string
+}
+
+func recentAttacks(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+
+	attacks := RecentAttacks()
+
+	writeResult(w, attacks)// convert to string
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
