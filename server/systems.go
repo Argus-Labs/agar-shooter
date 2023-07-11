@@ -88,8 +88,8 @@ func bound(x float64, y float64) Pair[float64, float64]{
 	return Pair[float64, float64]{math.Min(float64(GameParams.Dims.First), math.Max(0, x)), math.Min(float64(GameParams.Dims.Second), math.Max(0, y))}
 }
 
-func distance(loc1, loc2 Pair[float64, float64]) float64 {// returns distance between two coins
-	return math.Sqrt(math.Pow(loc1.First - loc2.First, 2) + math.Pow(loc1.Second - loc2.Second, 2))
+func distance(loc1, loc2 Mult) float64 {// returns distance between two coins
+	return math.Sqrt(math.Pow(loc1.getFirst() - loc2.getFirst(), 2) + math.Pow(loc1.getSecond() - loc2.getSecond(), 2))
 }
 
 func move(tmpPlayer PlayerComponent) Pair[float64, float64] {// change speed function
@@ -142,7 +142,7 @@ func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a pl
 			return fmt.Errorf("Coin creation failed: %w", err)
 		}
 
-		CoinMap[GetCell(loc)][Pair[storage.EntityID, Pair[float64, float64]]{coinID, loc}] = pewp
+		CoinMap[GetCell(loc)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, Triple[float64,float64,int]{loc.First,loc.Second,1}}] = pewp
 		CoinComp.Set(World, coinID, CoinComponent{loc, 1})
 	}
 
@@ -210,7 +210,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		delete(PlayerMap[Pair[int,int]{int(math.Floor(prevLoc.First/GameParams.CSize)), int(math.Floor(prevLoc.Second/GameParams.CSize))}], Pair[storage.EntityID, Pair[float64,float64]]{id, prevLoc})
 		PlayerMap[Pair[int,int]{int(math.Floor(loc.First/GameParams.CSize)), int(math.Floor(loc.Second/GameParams.CSize))}][Pair[storage.EntityID,Pair[float64,float64]]{id, loc}] = pewp
 		
-		hitCoins := make([]Pair[storage.EntityID, Pair[float64,float64]], 0)
+		hitCoins := make([]Pair[storage.EntityID, Triple[float64,float64,int]], 0)
 
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {

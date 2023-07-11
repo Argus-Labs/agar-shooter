@@ -106,3 +106,9 @@ type AddPlayer struct {// for adding and removing players
 type ModPlayer struct {// for adding and removing players
 	Name	string
 }
+
+type NearbyCoin struct {// nearby coins for client retrieval
+	X, Y	float64
+	Value	int
+	
+}

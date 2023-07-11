@@ -84,7 +84,7 @@ func HandlePlayerPop(player ModPlayer) error {
 			return fmt.Errorf("Coin creation failed: %w", err)
 		}
 
-		CoinMap[GetCell(coin)][Pair[storage.EntityID, Pair[float64, float64]]{coinID, Pair[float64, float64]{coin.First, coin.Second}}] = pewp
+		CoinMap[GetCell(coin)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, Triple[float64, float64, int]{coin.First, coin.Second, 1}}] = pewp
 		CoinComp.Set(World, coinID, CoinComponent{Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
 	}
 	
@@ -161,7 +161,7 @@ func CreateGame(game Game) error {
 	// initializes player and item maps
 	for i := 0; i <= Width; i++ {
 		for j := 0; j <= Height; j++ {
-			CoinMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
+			CoinMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)
 			HealthMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
 			WeaponMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
 			PlayerMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64, float64]]] void)
@@ -193,7 +193,7 @@ func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each ce
 		maxCoinsInCell = int(math.Ceil(math.Pow(GameParams.CSize, 2)*density))
 	)
 
-	newCoins := make([]Pair[float64, float64], 0)
+	newCoins := make([]Triple[float64, float64, int], 0)
 
 	mutex.RLock()
 	for i := 0; i < Width; i++ {
@@ -201,7 +201,7 @@ func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each ce
 			if len(CoinMap[Pair[int,int]{i,j}]) >= maxCoinsInCell { continue }
 
 			for k := 0; k < coinCellNum; k++ {
-				newCoin := Pair[float64,float64]{float64(i)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), float64(j)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius)}
+				newCoin := Triple[float64,float64,int]{float64(i)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), float64(j)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), 1}
 				keep := true
 
 				for coin,_ := range CoinMap[Pair[int,int]{i, j}] {// concurrent iteration and write
@@ -232,18 +232,17 @@ func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each ce
 			return fmt.Errorf("Coin creation failed: %w", err)
 		}
 
-		CoinMap[Pair[int,int]{int(math.Floor(coin.First/GameParams.CSize)), int(math.Floor(coin.Second/GameParams.CSize))}][Pair[storage.EntityID, Pair[float64, float64]]{coinID, coin}] = pewp
-		CoinComp.Set(World, coinID, CoinComponent{coin, 1})
+		CoinMap[Pair[int,int]{int(math.Floor(coin.First/GameParams.CSize)), int(math.Floor(coin.Second/GameParams.CSize))}][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, coin}] = pewp
+		CoinComp.Set(World, coinID, CoinComponent{Pair[float64,float64]{coin.First,coin.Second}, 1})
 	}
 	mutex.Unlock()
 
 	return nil
 }
 
-func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
-	xloc := make([]float64, 0)
-	yloc := make([]float64, 0)
-	
+func NearbyCoins(player ModPlayer) []NearbyCoin {
+	coins := make([]NearbyCoin, 0)
+
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
 	if err != nil {
@@ -253,13 +252,12 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First/2)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First/2)/GameParams.CSize)); i++ {
 		for j := math.Max(0, math.Floor((playercomp.Loc.Second-ClientView.Second/2)/GameParams.CSize)); j <= math.Min(float64(Height), math.Ceil((playercomp.Loc.Second+ClientView.Second/2)/GameParams.CSize)); j++ {
 			for coin, _ := range CoinMap[Pair[int,int]{int(i),int(j)}] {
-				xloc = append(xloc, coin.Second.First)
-				yloc = append(yloc, coin.Second.Second)
+				coins = append(coins, NearbyCoin{coin.Second.First, coin.Second.Second, coin.Second.Third})
 			}
 		}
 	}
 
-	return Pair[[]float64, []float64]{xloc, yloc}
+	return coins
 }
 
 func CheckExtraction(player ModPlayer) int {
