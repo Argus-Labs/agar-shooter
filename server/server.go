@@ -468,6 +468,7 @@ func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each ce
 
 	//create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
 	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
+	// maybe make this a system so it can be run async
 
 	mutex.Lock()
 	for _, coin := range newCoins {

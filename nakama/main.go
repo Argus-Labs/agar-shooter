@@ -21,7 +21,7 @@ const (
 	LOCATION int64				= 0
 	COINS int64					= 1
 	REMOVE int64				= 2
-	INVALID_ARGUMENT int64		= 3
+	ATTACKS int64				= 3
 	DEADLINE_EXCEEDED int64		= 4
 	NOT_FOUND int64				= 5
 	ALREADY_EXISTS int64		= 6
@@ -297,6 +297,17 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	m.tick++
+	
+	// send attack information to all players
+	attacks, err := CallRPCs["games/attacks"](ctx, logger, db, nk, "{}")
+
+	if err != nil {
+		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
+	}
+
+	if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
+		return err
+	}
 	
 	return state
 }
