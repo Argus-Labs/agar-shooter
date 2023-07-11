@@ -305,8 +305,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
 	}
 
-	if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
-		return err
+	if attacks != "null\n" {
+		if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
+			return err
+		}
 	}
 	
 	return state

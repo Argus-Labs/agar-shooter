@@ -45,45 +45,9 @@ func (t Triple[any, float64, void]) getSecond() float64 {
 	return t.Second
 }
 
-type HealthComponent struct {
-	Loc Pair[float64, float64]// location
-	Val int// how much health it contains
-}
-
-type CoinComponent struct {
-	Loc Pair[float64, float64]
-	Val int// how many coins the component represents; could represent different denominations as larger or different colored coins
-}
-
-type Weapon int
-
-const (// add more weapons as needed
-	Dud = iota - 1// empty weapon
-	Melee 
-	Slug
-)
-
 type WeaponData struct {
 	Attack int
 	Range float64
-}
-
-type WeaponComponent struct {
-	Loc Pair[float64, float64]
-	Val Weapon// weapon type; TODO: implement ammo later outside of weapon component
-	// cooldown, ammo, damage, range
-}
-
-type PlayerComponent struct {
-	Name string// username; ip for now
-	Health int// current player health (cap enforced in update loop)
-	Coins int// how much money the player has
-	Weapon Weapon// current player weapon; default is 0 for Melee
-	Loc Pair[float64, float64]// current location
-	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
-	Extract Pair[float64, float64]// extraction point; as long as the player is within some distance of the extraction point, player coins are offloaded
-	IsRight bool// whether player is facing right
-	MoveNum int// most recently-processed move
 }
 
 type BarePlayer struct {
@@ -110,6 +74,36 @@ type TestPlayer struct {
 	LocY float64
 }
 
+type HealthComponent struct {
+	Loc Pair[float64, float64]// location
+	Val int// how much health it contains
+}
+
+type CoinComponent struct {
+	Loc Pair[float64, float64]
+	Val int// how many coins the component represents; could represent different denominations as larger or different colored coins
+}
+
+type Weapon int
+
+type WeaponComponent struct {
+	Loc Pair[float64, float64]
+	Val Weapon// weapon type; TODO: implement ammo later outside of weapon component
+	// cooldown, ammo, damage, range
+}
+
+type PlayerComponent struct {
+	Name string// username; ip for now
+	Health int// current player health (cap enforced in update loop)
+	Coins int// how much money the player has
+	Weapon Weapon// current player weapon; default is 0 for Melee
+	Loc Pair[float64, float64]// current location
+	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
+	Extract Pair[float64, float64]// extraction point; as long as the player is within some distance of the extraction point, player coins are offloaded
+	IsRight bool// whether player is facing right
+	MoveNum int// most recently-processed move
+}
+
 func (p PlayerComponent) Simplify() BarePlayer {
 	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum}// update Simplify for weapons & extraction point
 }
@@ -130,6 +124,12 @@ func (p PlayerComponent) String() string {
 	return s
 }
 
+
+const (// add more weapons as needed
+	Dud = iota - 1// empty weapon
+	Melee 
+	Slug
+)
 var (
 	World					= inmem.NewECSWorld()
 	CoinMap					= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of coin lists
