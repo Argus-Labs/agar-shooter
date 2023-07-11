@@ -250,8 +250,8 @@ func NearbyCoins(player ModPlayer) Pair[[]float64, []float64] {
 		fmt.Errorf("Error getting player component: %w", err)
 	}
 
-	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First)/GameParams.CSize)); i++ {
-		for j := math.Max(0, math.Floor((playercomp.Loc.Second-ClientView.Second)/GameParams.CSize)); j <= math.Min(float64(Height), math.Ceil((playercomp.Loc.Second+ClientView.Second)/GameParams.CSize)); j++ {
+	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First/2)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First/2)/GameParams.CSize)); i++ {
+		for j := math.Max(0, math.Floor((playercomp.Loc.Second-ClientView.Second/2)/GameParams.CSize)); j <= math.Min(float64(Height), math.Ceil((playercomp.Loc.Second+ClientView.Second/2)/GameParams.CSize)); j++ {
 			for coin, _ := range CoinMap[Pair[int,int]{int(i),int(j)}] {
 				xloc = append(xloc, coin.Second.First)
 				yloc = append(yloc, coin.Second.Second)

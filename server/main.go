@@ -8,18 +8,14 @@ import (
 	"fmt"
 )
 
-const EnvGameServerPort = "GAME_SERVER_PORT"// test
+const EnvGameServerPort = "GAME_SERVER_PORT"
 
 func main() {
-	// opens port
 	port := os.Getenv(EnvGameServerPort)
 	if port == "" {
 		fmt.Errorf("Must specify a port via %s", EnvGameServerPort)
 	}
 
-
-
-	// defines an array of handlers that do one of handle games, create games, and make moves
 	handlers := []struct {
 		path    string
 		handler func(http.ResponseWriter, *http.Request)
@@ -37,7 +33,6 @@ func main() {
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
-	// handles the function by taking the response, figuring out which game function to call, and calling it
 	paths := []string{}
 
 
@@ -51,7 +46,6 @@ func main() {
 		if err := enc.Encode(paths); err != nil {
 			writeError(w, "can't marshal list", err)
 		}
-
 	})
 
 	log.Printf("Starting server on port %s\n", port)
@@ -84,7 +78,7 @@ func decode(r *http.Request, v any) error {
 	return nil
 }
 
-func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to world
+func handlePlayerPush(w http.ResponseWriter, r *http.Request) {
 	player := AddPlayer{}
 
 	fmt.Println(r)
@@ -110,7 +104,7 @@ func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to
 	writeResult(w, "Player registration successful")
 }
 
-func handlePlayerPop(w http.ResponseWriter, r *http.Request) {// removes player from world
+func handlePlayerPop(w http.ResponseWriter, r *http.Request) {
 	player := ModPlayer{}
 
 	if err := decode(r, &player); err != nil {
@@ -129,8 +123,7 @@ func handlePlayerPop(w http.ResponseWriter, r *http.Request) {// removes player 
 
 }
 
-// write player addition, removal, and update loop
-func handleMakeMove(w http.ResponseWriter, r *http.Request) {// add move to transaction queue
+func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 	moves := Move{}
 
 	if err := decode(r, &moves); err != nil {
@@ -140,10 +133,10 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {// add move to tran
 
 	HandleMakeMove(moves)
 
-	writeResult(w, "move registered")// also write the location of each player by playername
+	writeResult(w, "move registered")
 }
 
-func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+func getPlayerState(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 
 	if err := decode(r, &player); err != nil {
@@ -159,10 +152,10 @@ func getPlayerState(w http.ResponseWriter, r *http.Request) {// use in place of 
 		return
 	}
 
-	writeResult(w, bareplayer)// convert to string
+	writeResult(w, bareplayer)
 }
 
-func getPlayerCoins(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+func getPlayerCoins(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 
 	if err := decode(r, &player); err != nil {
@@ -172,7 +165,7 @@ func getPlayerCoins(w http.ResponseWriter, r *http.Request) {// use in place of 
 
 	coins := NearbyCoins(player)
 
-	writeResult(w, coins)// convert to string
+	writeResult(w, coins)
 }
 
 func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locations of players --- array of pairs of strings and location (coordinate pairs)
@@ -190,10 +183,10 @@ func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locatio
 		return
 	}
 
-	writeResult(w, comp)// convert to string
+	writeResult(w, comp)
 }
 
-func checkExtraction(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+func checkExtraction(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 
 	if err := decode(r, &player); err != nil {
@@ -203,21 +196,20 @@ func checkExtraction(w http.ResponseWriter, r *http.Request) {// use in place of
 
 	coins := CheckExtraction(player)
 
-	writeResult(w, coins)// convert to string
+	writeResult(w, coins)
 }
 
-func recentAttacks(w http.ResponseWriter, r *http.Request) {// use in place of broadcast to get player state for now
+func recentAttacks(w http.ResponseWriter, r *http.Request) {
 
 	attacks := RecentAttacks()
 
-	writeResult(w, attacks)// convert to string
+	writeResult(w, attacks)
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
 	game := Game{Pair[float64,float64]{100,100}, 5, []string{}}// removed {"a","b"}
-	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter
-	if errr != nil {// error from game creation
-		writeError(w, "error initializing game", errr)
+	if err := CreateGame(game); err != nil {
+		writeError(w, "error initializing game", err)
 	}
 
 	for i := 0; i < 5; i++ {

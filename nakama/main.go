@@ -23,7 +23,7 @@ const (
 	REMOVE int64				= 2
 	ATTACKS int64				= 3
 	DEADLINE_EXCEEDED int64		= 4
-	NOT_FOUND int64				= 5
+	DED int64					= 5
 	ALREADY_EXISTS int64		= 6
 	PERMISSION_DENIED int64		= 7
 	RESOURCE_EXHAUSTED int64	= 8
@@ -239,15 +239,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	m.tick++
 
-	kickList := make([]string, 0)
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
+	kickList := make([]string, 0)
 	for _, pp := range Presences {
 		// get player state
 		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
 		
 		if err != nil {// assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())	
-			dispatcher.MatchKick([]runtime.Presence{pp})// TODO kick everyone afterwards
 		} else {// send everyone player state & send player its nearby coins
 			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 			
@@ -261,7 +260,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 
-			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
 
 			if err != nil {
 				return err
@@ -308,7 +307,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	// kick all dead players
 	for _, pid := range kickList {
-		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})// TODO kick everyone afterwards
+		if err := dispatcher.BroadcastMessage(DED, []byte(""), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
+			return err
+		}
+		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
 		delete(Presences, pid)
 	}
 
