@@ -24,7 +24,7 @@ const (
 	ATTACKS int64				= 3
 	DEADLINE_EXCEEDED int64		= 4
 	DED int64					= 5
-	ALREADY_EXISTS int64		= 6
+	TESTADDHEALTH int64			= 6
 	PERMISSION_DENIED int64		= 7
 	RESOURCE_EXHAUSTED int64	= 8
 	FAILED_PRECONDITION int64	= 9
@@ -202,7 +202,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	messageMap := make(map[string] map[int64] [][]byte)
 
 	for _, match := range messages {
-
 		if messageMap[match.GetUserId()] == nil {
 			messageMap[match.GetUserId()] = make(map[int64] [][]byte)
 		}
@@ -211,6 +210,12 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		if _, contains := Presences[match.GetUserId()]; !contains {
 			return fmt.Errorf("Nakama: unregistered player is moving")
+		}
+
+		if match.GetOpCode() == TESTADDHEALTH {
+			if _, err := CallRPCs["games/testaddhealth"](ctx, logger, db, nk, "{\"Name\":\"" + match.GetUserId() + "\"}"); err != nil {
+				logger.Error(fmt.Errorf("Nakama: error adding health:", err).Error())
+			}
 		}
 	}
 
@@ -221,7 +226,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			switch opCode {
 				case MOVE:
 					for _, matchData := range matchDataArray {
-						_, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData))// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+						if _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData)); err != nil {// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+							logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
+						}
+							
 					}
 			}
 

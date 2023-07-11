@@ -2,7 +2,16 @@ This is a sample gameplay server that uses Nakama to proxy gameplay requests to 
 # Vampire-Farming Game created with Cardinal, Unity, & Nakama
 The purpose of this game is to use the Cardinal ECS game development library and verify that Cardinal operations work well with distributed client-server interfaces like Nakama. The theme of the game is vampire/farming with most game interaction occurring in the vampire part of the game and individual character growth in the farming part of the game. Server and client files are described below, as are features of the game.
 ## Server
-Server code is located in [server](server). The `.go` files contain the server code and testcases while the Dockerfilee contains commands for [start.sh](start.sh) to run.
+Server code is located in [server](server). The `.go` files contain the server code and testcases while the Dockerfilee contains commands for [start.sh](start.sh) to run. We describe the function of the following `.go` files:
+* [main.go](server/main.go)
+* [endpoints.go](server/endpoints.go)
+* [server.go](server/server.go)
+* [vars.go](server/vars.go)
+* [structs.go](server/structs.go)
+* [components.go](server/components.go)
+* [beeg_test.go](server/beeg_test.go)
+
+`beeg_test.go` contains testcases verifying that various game operations work as intended on Cardinal.
 
 ## Unity
 Client code is located in [Client](Client).
