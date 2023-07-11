@@ -231,8 +231,43 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	// broadcast && offload coins
+	// call tick (could cause players to die, but we're fine as long as we check immediately after), then get player statuses and broadcast to everyone & offload coins; after this, send attack information to all existing players
+	// tick
+	if _, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}"); err != nil {
+		return fmt.Errorf("Nakama: tick error: %w", err)
+	}
+
+	m.tick++
+
+	kickList := make([]string, 0)
+	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	for _, pp := range Presences {
+		// get player state
+		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+		
+		if err != nil {// assume that an error here means the player is dead
+			kickList = append(kickList, pp.GetUserId())	
+			dispatcher.MatchKick([]runtime.Presence{pp})// TODO kick everyone afterwards
+		} else {// send everyone player state & send player its nearby coins
+			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+			
+			if err != nil {
+				return err
+			}
+
+			nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+
+			if err != nil {
+				return err
+			}
+
+			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+
+			if err != nil {
+				return err
+			}
+		}
+		
 		// offload coins to database
 		coins, err := CallRPCs["games/offload"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
 		var intCoins int
@@ -269,35 +304,15 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				logger.Debug(fmt.Sprintf("Nakama: player's coins updated: ", intCoins + coins))
 			}
 		}
-
-		// get player state and nearby coins
-		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-		nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-		
-		if err != nil {
-			return err
-		}
-
-		err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-
-		if err != nil {
-			return err
-		}
-
-		err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-
-		if err != nil {
-			return err
-		}
 	}
 
-	// tick
-	if _, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}"); err != nil {
-		return fmt.Errorf("Nakama: tick error: %w", err)
+	// kick all dead players
+	for _, pid := range kickList {
+		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})// TODO kick everyone afterwards
+		delete(Presences, pid)
 	}
 
-	m.tick++
-	
+
 	// send attack information to all players
 	attacks, err := CallRPCs["games/attacks"](ctx, logger, db, nk, "{}")
 
@@ -306,6 +321,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	if attacks != "null\n" {
+		logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
 		if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
 			return err
 		}
