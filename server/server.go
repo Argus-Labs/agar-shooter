@@ -308,8 +308,5 @@ func AddTestPlayer(player PlayerComponent) error {
 }
 
 func RecentAttacks() []AttackTriple {
-	var attacks []AttackTriple
-	copy(attacks, Attacks)
-	Attacks = make([]AttackTriple, 0)
-	return attacks
+	return Attacks
 }

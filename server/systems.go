@@ -157,6 +157,8 @@ func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a pl
 
 func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
 	attackQueue := make([]Triple[storage.EntityID, Weapon, bool],0)
+	Attacks = make([]AttackTriple, 0)
+
 	for playerName, id := range Players {
 		tmpPlayer, err := PlayerComp.Get(World, id)
 

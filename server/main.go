@@ -84,43 +84,10 @@ func decode(r *http.Request, v any) error {
 	return nil
 }
 
-//// need to figure out how to use these three functions; just need to modify the functions/endpoints we use and the clientside nakama code handles the rest
-//func handleCreateGame(w http.ResponseWriter, r *http.Request) {
-//	var gameData Game
-//	if err := decode(r, &gameData); err != nil {
-//		writeError(w, "decode failed", err)
-//		return
-//	}
-//
-//	for _, playername := range GameParams.Players {
-//		if playername == "" {
-//			writeError(w, "must name all players", nil)
-//			return
-//		}
-//	}
-//
-//	// only creates things after checking that there are no errors with the gameParams input
-//	err := HandleCreateGame(gameData)
-//
-//	if err != nil {
-//		writeError(w, "error initializing world: ", err)
-//		return
-//	}
-//
-//	w.WriteHeader(200)// outputs success
-//	writeResult(w, "success")// also write the location of each player by playername
-//}
-
 func handlePlayerPush(w http.ResponseWriter, r *http.Request) {// adds player to world
 	player := AddPlayer{}
 
 	fmt.Println(r)
-	//
-	//b, errr := ioutil.ReadAll(r.Body)
-	//if errr != nil {
-	//	panic(errr)
-	//}
-	//fmt.Println("request: ", string(b))
 
 	if err := decode(r, &player); err != nil {
 		writeError(w, "invalid player name format given: ", err)
@@ -247,7 +214,7 @@ func recentAttacks(w http.ResponseWriter, r *http.Request) {// use in place of b
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{Pair[float64,float64]{100,100}, 5, []string{"a", "b"}}
+	game := Game{Pair[float64,float64]{100,100}, 5, []string{}}// removed {"a","b"}
 	errr := CreateGame(game)// move this to somewhere with an http.ResponseWriter
 	if errr != nil {// error from game creation
 		writeError(w, "error initializing game", errr)
