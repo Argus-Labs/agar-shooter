@@ -10,6 +10,7 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
+// Non-Cardinal game structs & interfaces
 type void struct{}
 var pewp void
 
@@ -18,7 +19,11 @@ type Mult interface {
 	getSecond() float64
 }
 
-type Pair[T1 any, T2 any] struct {
+func GetCell(loc Mult) Pair[int,int] {
+	return Pair[int,int]{int(math.Floor(loc.getFirst()/GameParams.CSize)), int(math.Floor(loc.getSecond()/GameParams.CSize))}
+}
+
+type Pair[T1 any, T2 any] struct {// inherits Mult
 	First T1
 	Second T2
 }
@@ -31,7 +36,7 @@ func (p Pair[any, float64]) getSecond() float64 {
 	return p.Second
 }
 
-type Triple[T1 any, T2 any, T3 any] struct {
+type Triple[T1 any, T2 any, T3 any] struct {// inherits Mult
 	First T1
 	Second T2
 	Third T3
@@ -44,6 +49,8 @@ func (t Triple[float64, any, void]) getFirst() float64 {
 func (t Triple[any, float64, void]) getSecond() float64 {
 	return t.Second
 }
+
+type Weapon int
 
 type WeaponData struct {
 	Attack int
@@ -74,6 +81,40 @@ type TestPlayer struct {
 	LocY float64
 }
 
+type Game struct {
+	Dims	Pair[float64, float64]
+	CSize	float64// cell size
+	Players	[]string// list of players
+}
+
+var GameParams Game
+
+type Move struct {
+	PlayerID				string
+	Up						bool
+	Down					bool
+	Left					bool
+	Right					bool
+	Input_sequence_number	int
+	Delta					float64
+}
+
+type AttackTriple struct {
+	AttackerID, DefenderID	string
+	Damage					int
+}
+
+type AddPlayer struct {// for adding and removing players
+	Name	string
+	Coins	int
+}
+
+type ModPlayer struct {// for adding and removing players
+	Name	string
+}
+
+
+// Cardinal component structs
 type HealthComponent struct {
 	Loc Pair[float64, float64]// location
 	Val int// how much health it contains
@@ -84,7 +125,6 @@ type CoinComponent struct {
 	Val int// how many coins the component represents; could represent different denominations as larger or different colored coins
 }
 
-type Weapon int
 
 type WeaponComponent struct {
 	Loc Pair[float64, float64]
@@ -124,7 +164,7 @@ func (p PlayerComponent) String() string {
 	return s
 }
 
-
+// Variables, weapons, and global constants
 const (// add more weapons as needed
 	Dud = iota - 1// empty weapon
 	Melee 
@@ -161,39 +201,3 @@ const (
 	ExtractionRadius	= 10// determines when players are in range of their extraction point
 	sped				= 2// player speed
 )
-
-type Game struct {
-	Dims	Pair[float64, float64]
-	CSize	float64// cell size
-	Players	[]string// list of players
-}
-
-var GameParams Game
-
-type Move struct {
-	PlayerID				string
-	Up						bool
-	Down					bool
-	Left					bool
-	Right					bool
-	Input_sequence_number	int
-	Delta					float64
-}
-
-type AttackTriple struct {
-	AttackerID, DefenderID	string
-	Damage					int
-}
-
-type AddPlayer struct {// for adding and removing players
-	Name	string
-	Coins	int
-}
-
-type ModPlayer struct {// for adding and removing players
-	Name	string
-}
-
-func GetCell(loc Mult) Pair[int,int] {
-	return Pair[int,int]{int(math.Floor(loc.getFirst()/GameParams.CSize)), int(math.Floor(loc.getSecond()/GameParams.CSize))}
-}

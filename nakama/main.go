@@ -324,7 +324,7 @@ func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.
 
 func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
-		logger.Debug("Got request for %q", currEndpoint)
+		//logger.Debug("Got request for %q", currEndpoint)
 
 		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(payload))
 		if err != nil {
