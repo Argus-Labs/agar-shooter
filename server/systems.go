@@ -199,7 +199,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		}
 
 		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, bool]{minID, tmpPlayer.Weapon, left != tmpPlayer.IsRight})
+			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, bool]{minID, tmpPlayer.Weapon, left == tmpPlayer.IsRight})
 			Attacks = append(Attacks, AttackTriple{playerName, closestPlayerName, Weapons[tmpPlayer.Weapon].Attack})
 		}
 

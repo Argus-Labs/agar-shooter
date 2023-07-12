@@ -15,6 +15,7 @@ const (// add more weapons as needed
 	Slug
 )
 var (
+	GameParams				Game
 	World					= inmem.NewECSWorld()
 	CoinMap					= make(map[Pair[int, int]] map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)// maps cells to sets of coin lists
 	HealthMap				= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of healthpack lists
