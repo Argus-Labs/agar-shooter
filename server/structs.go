@@ -81,8 +81,6 @@ type Game struct {
 	Players	[]string// list of players
 }
 
-var GameParams Game
-
 type Move struct {
 	PlayerID				string
 	Up						bool
