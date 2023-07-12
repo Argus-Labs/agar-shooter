@@ -8,6 +8,7 @@ Server code is located in [server](server). The `.go` files contain the server c
 * [vars.go](server/vars.go)
 * [structs.go](server/structs.go)
 * [components.go](server/components.go)
+* [systems.go](server/systems.go)
 * [beeg_test.go](server/beeg_test.go)
 
 `beeg_test.go` contains testcases verifying that various game operations work as intended on Cardinal.
@@ -16,7 +17,11 @@ Server code is located in [server](server). The `.go` files contain the server c
 `server.go` contains the functions called by the endpoint functions. The endpoint functions parse the client request and send the requisite data to the server functions, which output data. The endpoint functions then package this into a response and send it back to Nakama. This file also contains an add player function `AddTestPlayer` used only for server testing.
 `vars.go` contains all global variables and constants used by the server during the game. This includes the Cardinal ECSWorld object; coin, health, weapon, and player maps and components; a transaction queue; the number of cells that span the grid; a map of weapons; a mutex for allowing asynchronous coin addition and removal; a pair representing the size of a client's POV on the game board, and a list of recently-executed attacks.
 `structs.go` contains all game-related structs and their struct methods that are not Cardinal component structs. This includes pairs, triples, an interface for the two, weapon structs, player structs for sending information and testing, game structs, and item structs
-`components.go` 
+`components.go` contains ECS component structs for use in directly interacting with Cardinal, specifically a health, coin, wepaon, and player component as well as the necessary struct methods.
+`systems.go` contains the Cardinal systems used to update entities during each game tick as well as helper functions used to make running these systems easier to understand. The current systems are
+* `processMoves`: a system for taking all player inputs sent within the last tick and simulating them at the tickrate at which they were sent rather than the server tickrate, saving the resulting direction 
+* `makeMoves`: a system that applies the direct
+
 ## Unity
 Client code is located in [Client](Client).
 

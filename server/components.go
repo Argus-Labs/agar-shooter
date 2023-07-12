@@ -28,6 +28,7 @@ type PlayerComponent struct {
 	Weapon Weapon// current player weapon; default is 0 for Melee
 	Loc Pair[float64, float64]// current location
 	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
+	LastMove Pair[float64, float64]// last player move; this must be a pair of ints in [[-1,1],[-1,1]]
 	Extract Pair[float64, float64]// extraction point; as long as the player is within some distance of the extraction point, player coins are offloaded
 	IsRight bool// whether player is facing right
 	MoveNum int// most recently-processed move

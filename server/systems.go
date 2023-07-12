@@ -9,6 +9,12 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
+func diff(a, b bool) float64 {
+	if a == b { return 0 }
+	if a && !b { return 1 }
+	return -1
+}
+
 // world Systems
 func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts player directions based on their movement
 	moveMap := make(map[string] []Move)
@@ -55,12 +61,6 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 
 		var dir Pair[float64, float64]
 
-		diff := func(a, b bool) float64 {
-			if a == b { return 0 }
-			if a && !b { return 1 }
-			return -1
-		}
-
 		for _, move := range moveList {
 			moove := Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}
 			norm := math.Max(1, math.Sqrt(moove.First*moove.First + moove.Second*moove.Second))
@@ -68,14 +68,28 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			dir = Pair[float64, float64]{dir.First + move.Delta*moove.First/norm, dir.Second + move.Delta*moove.Second/norm}
 		}
 
-		lastMove := Pair[float64,float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
+		lastMove := Pair[float64, float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
 
 		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {// modifies player direction struct
 			comp.Dir = dir// adjusts move directions
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number
+			comp.LastMove = lastMove
 			if lastMove.First != 0 {
 				comp.IsRight = lastMove.First > 0
 			}
+
+			return comp
+		})
+	}
+
+	for player, entityID := range Players {
+		_, contains := moveMap[player]
+		if contains {
+			continue
+		}
+
+		PlayerComp.Update(World, entityID, func(comp PlayerComponent) PlayerComponent {
+			comp.Dir = comp.LastMove
 
 			return comp
 		})
