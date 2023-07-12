@@ -84,7 +84,7 @@ func HandlePlayerPop(player ModPlayer) error {
 			return fmt.Errorf("Coin creation failed: %w", err)
 		}
 
-		CoinMap[GetCell(coin)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, Triple[float64, float64, int]{coin.First, coin.Second, 1}}] = pewp
+		CoinMap[GetCell(coin)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, Triple[float64, float64, int]{coin.First, coin.Second, coin.Third}}] = pewp
 		CoinComp.Set(World, coinID, CoinComponent{Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
 	}
 	
