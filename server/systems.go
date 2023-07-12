@@ -125,7 +125,7 @@ func CoinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest d
 	return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
 }
 
-func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a player; TODO: change attacking to be based on IsRight
+func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a player
 	kill := false
 	coins := false
 	var loc Pair[float64, float64]
@@ -214,7 +214,13 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
 			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, bool]{minID, tmpPlayer.Weapon, left == tmpPlayer.IsRight})
-			Attacks = append(Attacks, AttackTriple{playerName, closestPlayerName, Weapons[tmpPlayer.Weapon].Attack})
+			attackVal := 0
+			if left == tmpPlayer.IsRight && tmpPlayer.Loc > 0 {
+				attackVal = -1
+			} else {
+				attackVal = Weapons[tmpPlayer.Weapon].Attack
+			}
+			Attacks = append(Attacks, AttackTriple{playerName, closestPlayerName, attackVal})
 		}
 
 		// moving players

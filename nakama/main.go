@@ -70,14 +70,9 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return err
 	}
 
-	matchId, err := nk.MatchCreate(ctx, "singleton_match", map[string]interface{}{})// calls the newMatch function, then calls MatchInit on the result
-
-	if err != nil {
+	if _, err := nk.MatchCreate(ctx, "singleton_match", map[string]interface{}{}); err != nil {// calls the newMatch function, then calls MatchInit on the result
 		return err
 	}
-
-	logger.Debug("MATCH ID: ", matchId)
-	//fmt.Println("Nakama db: ", db)
 
 	return nil
 }
@@ -98,16 +93,14 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 	time.Sleep(5*time.Second)
 
 	if _, err := db.Query("DROP TABLE IF EXISTS dbplayer"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error())// drop table and replace with this new table
+		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error())// drop table and replace with new table
 	}
 
-	//if _, checkTable := db.Query("SELECT * FROM dbplayer"); checkTable != nil {
 	if _, err := db.Query("CREATE TABLE dbplayer (id text, storedcoins int, currcoins int)"); err != nil {
 		logger.Error(fmt.Errorf("Nakama: error creating table: ", err).Error())
 	} else {
 		logger.Debug("Nakama: initialized Postgres table")
 	}
-	//}
 
 	return MatchState{}, tickRate, label
 }
@@ -159,7 +152,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 			logger.Debug(fmt.Sprintf("Nakama: player exists in database with coins", coins))
 		}
 		
-		// send database information to Cardinal if it exists when initializing player
+		// send player database information to Cardinal if it exists when initializing player
 		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}"))
 		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":0}")
 
@@ -198,7 +191,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 }
 
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-	// process last player input for each type of input
+	// process player input for each type of input
 	messageMap := make(map[string] map[int64] [][]byte)
 
 	for _, match := range messages {

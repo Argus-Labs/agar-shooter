@@ -20,7 +20,10 @@ Server code is located in [server](server). The `.go` files contain the server c
 `components.go` contains ECS component structs for use in directly interacting with Cardinal, specifically a health, coin, wepaon, and player component as well as the necessary struct methods.  
 `systems.go` contains the Cardinal systems used to update entities during each game tick as well as helper functions used to make running these systems easier to understand. The current systems are
 * `processMoves`: a system for taking all player inputs sent within the last tick and simulating them at the tickrate at which they were sent rather than the server tickrate, saving the resulting direction 
-* `makeMoves`: a system that applies the direct
+* `makeMoves`: a system that finds the nearest neighbor of each player, stores all attacks between players, applies the average direction of all inputs processed within the last tick to each player, finds all coins close enough to the line segment between the previous location and the current location and gives them to the player, then executes all player attacks  
+
+### Server Optimizations
+The code currently checks for player attacks, coin collection and insertion, and nearby coins naively --- coins are stored in a map of cells where each cell corresponds to some area of the game board and finding the player-player and coin-coin nearest neighbor is done by iterating over all players or coins, respectively, in the cells neighboring a player and checking whether the closest player is too close. This could be sped up in two ways: each object only checks nearby objects within some radius (within some weapon range, for example), and each object queries the nearest neighbor faster than naively iterating over all other players. We can solve the second problem using a 2d-BST or quadtree --- if we were to use a quadtree, we would need to limit the precision of player coordinates when storing them in the tree becauase the depth of the tree is linear in the number of players divided by the minimum distance between two players. Thus, when two players are sufficiently close to each other, we can add them to a queue or map
 
 ## Unity
 Client code is located in [Client](Client).
