@@ -132,7 +132,7 @@ func attack(id storage.EntityID, weapon Weapon, hurt bool, attacker, defender st
 	var name string
 
 	if err := PlayerComp.Update(World, id, func(comp PlayerComponent) PlayerComponent{// modifies player location
-		if !hurt && comp.Coins > 0 {
+		if hurt && comp.Coins > 0 {
 			comp.Coins--
 			coins = true
 		} else{
