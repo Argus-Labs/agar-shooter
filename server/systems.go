@@ -125,7 +125,7 @@ func CoinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest d
 	return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
 }
 
-func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a player
+func attack(id storage.EntityID, weapon Weapon, hurt bool, attacker, defender string) error {// attack a player
 	kill := false
 	coins := false
 	var loc Pair[float64, float64]
@@ -158,6 +158,10 @@ func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a pl
 
 		CoinMap[GetCell(loc)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, Triple[float64,float64,int]{loc.First,loc.Second,1}}] = pewp
 		CoinComp.Set(World, coinID, CoinComponent{loc, 1})
+
+		Attacks = append(Attacks, AttackTriple{attacker, defender, -1})
+	} else {// adds attack to display queue if it was executed
+		Attacks = append(Attacks, AttackTriple{attacker, defender, Weapons[weapon].Attack})
 	}
 
 	if kill {// removes player from map if they die
@@ -170,7 +174,7 @@ func attack(id storage.EntityID, weapon Weapon, hurt bool) error {// attack a pl
 }
 
 func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
-	attackQueue := make([]Triple[storage.EntityID, Weapon, bool],0)
+	attackQueue := make([]Triple[storage.EntityID, Weapon, Triple[bool, string, string]],0)
 	Attacks = make([]AttackTriple, 0)
 
 	for playerName, id := range Players {
@@ -213,18 +217,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		}
 
 		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, bool]{minID, tmpPlayer.Weapon, left == tmpPlayer.IsRight})
-			attackVal := 0
-			attackedPlayer, err := PlayerComp.Get(World, minID)
-			if err != nil {
-				return err
-			}
-			if left == tmpPlayer.IsRight && attackedPlayer.Coins > 0 {
-				attackVal = -1
-			} else {
-				attackVal = Weapons[tmpPlayer.Weapon].Attack
-			}
-			Attacks = append(Attacks, AttackTriple{playerName, closestPlayerName, attackVal})
+			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{minID, tmpPlayer.Weapon, Triple[bool, string, string]{left == tmpPlayer.IsRight, playerName, closestPlayerName}})
 		}
 
 		// moving players
@@ -272,7 +265,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 	}
 
 	for _, triple := range attackQueue {
-		if err := attack(triple.First, triple.Second, triple.Third); err != nil {
+		if err := attack(triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
 			return err
 		}
 	}
