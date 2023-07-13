@@ -68,7 +68,7 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 
 			dir = Pair[float64, float64]{dir.First + move.Delta*moove.First/norm, dir.Second + move.Delta*moove.Second/norm}
 			if moove.First != 0 {
-				isRight = moove > 0
+				isRight = moove.First > 0
 			}
 		}
 
