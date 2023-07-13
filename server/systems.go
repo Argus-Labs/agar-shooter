@@ -60,12 +60,16 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 		}
 
 		var dir Pair[float64, float64]
+		isRight := false
 
 		for _, move := range moveList {
 			moove := Pair[float64,float64]{diff(move.Right, move.Left), diff(move.Up, move.Down)}
 			norm := math.Max(1, math.Sqrt(moove.First*moove.First + moove.Second*moove.Second))
 
 			dir = Pair[float64, float64]{dir.First + move.Delta*moove.First/norm, dir.Second + move.Delta*moove.Second/norm}
+			if moove.First != 0 {
+				isRight = moove > 0
+			}
 		}
 
 		lastMove := Pair[float64, float64]{diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down)}
@@ -75,7 +79,7 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number
 			comp.LastMove = lastMove
 			if lastMove.First != 0 {
-				comp.IsRight = lastMove.First > 0
+				comp.IsRight = isRight
 			}
 
 			return comp
