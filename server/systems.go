@@ -125,14 +125,14 @@ func CoinProjDist(start, end, coin Pair[float64, float64]) float64 {// closest d
 	return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
 }
 
-func attack(id storage.EntityID, weapon Weapon, hurt bool, attacker, defender string) error {// attack a player
+func attack(id storage.EntityID, weapon Weapon, left bool, attacker, defender string) error {// attack a player
 	kill := false
 	coins := false
 	var loc Pair[float64, float64]
 	var name string
 
 	if err := PlayerComp.Update(World, id, func(comp PlayerComponent) PlayerComponent{// modifies player location
-		if hurt && comp.Coins > 0 {
+		if left == comp.IsRight && comp.Coins > 0 {
 			comp.Coins--
 			coins = true
 		} else{
@@ -211,13 +211,13 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 					minDistance = dist
 					closestPlayerName = closestPlayer.Name
 					assigned = true
-					left = closestPlayer.Loc.First <= tmpPlayer.Loc.First
+					left = tmpPlayer.Loc.First <= closestPlayer.Loc.First
 				}
 			}
 		}
 
 		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{minID, tmpPlayer.Weapon, Triple[bool, string, string]{left == tmpPlayer.IsRight, playerName, closestPlayerName}})
+			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{minID, tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, closestPlayerName}})
 		}
 
 		// moving players
