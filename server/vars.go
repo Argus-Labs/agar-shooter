@@ -3,6 +3,7 @@ package main
 
 import (
 	"sync"
+	"math"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
@@ -33,10 +34,13 @@ var (
 								Melee: WeaponData{4, 4.0},
 								Slug: WeaponData{3, 6.9},
 							}
-	globalMut				= &sync.RWMutex{}
+	mutex					= &sync.RWMutex{}
 	ClientView				= Pair[float64,float64]{30,20}// client viewing window
 	DefaultWeapon Weapon	= Melee
 	Attacks					= make([]AttackTriple, 0)
+	maxCoinsInCell			= func() int { return int(GameParams.CSize*GameParams.CSize/(3*coinRadius*coinRadius*math.Pi)) }
+	maxCoins				= func() int { return int(math.Min(float64(maxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second/GameParams.CSize/GameParams.CSize/4 + float64(3*len(Players)), float64(MAXENTITIES - len(Players))))}
+	totalCoins				= 0
 )
 
 const (
@@ -45,4 +49,8 @@ const (
 	PlayerRadius		= 0.5// used to determine which coins to collect
 	ExtractionRadius	= 10// determines when players are in range of their extraction point
 	sped				= 2// player speed
+	coinRadius			= 0.5// <= GameParams.CSize/2
+	maxCoinsPerTick		= 1000
+	MAXENTITIES			= 4607704
+	InitRepeatSpawn		= 1
 )

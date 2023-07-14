@@ -155,9 +155,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error initializing game", err)
 	}
 
-	for i := 0; i < 5; i++ {
-		go SpawnCoins(globalMut)
-	}
+	for i := 0; i < InitRepeatSpawn; i++ { go SpawnCoins() }
 
 	writeResult(w, "game created")
 }
@@ -167,7 +165,7 @@ func tig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error ticking", err)
 	}
 
-	if err := SpawnCoins(globalMut); err != nil {
+	if err := SpawnCoins(); err != nil {
 		writeError(w, "error spawning coins", err)
 	}
 
