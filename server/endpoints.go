@@ -150,7 +150,7 @@ func recentAttacks(w http.ResponseWriter, r *http.Request) {
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{Pair[float64,float64]{100,100}, 5, []string{}}// removed {"a","b"}
+	game := Game{Pair[float64,float64]{100,100}, 5, []string{}}//"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}}// removed {"a","b"}
 	if err := CreateGame(game); err != nil {
 		writeError(w, "error initializing game", err)
 	}

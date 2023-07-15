@@ -7,6 +7,8 @@ import (
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
+	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
 )
 
 func diff(a, b bool) float64 {
@@ -217,17 +219,32 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			}
 		}
 
-		if assigned && minDistance <= Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{minID, tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, closestPlayerName}})
+		// get nearest neighbor using kdtree
+		knn := kd.KNN[*P](PlayerTree, vector.V{prevLoc.First, prevLoc.Second}, 1, func(q *P) bool { return true })
+		if len(knn) > 0 && minID == minID && closestPlayerName == closestPlayerName {
+			nearestPlayerComp, err := PlayerComp.Get(World, Players[knn[0].Name])
+			if err != nil {
+				return fmt.Errorf("Cardinal: error fetching player: %w", err)
+			}
+			if assigned && distance(nearestPlayerComp.Loc, prevLoc) <= Weapons[tmpPlayer.Weapon].Range {
+				attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{Players[knn[0].Name], tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
+			}
 		}
 
-		// moving players
+
+		// moving players --- this is the only place players move, so modifying player tree values must only occur here (outside of inserts and deletes)
 
 		loc := move(tmpPlayer)
 
 		delete(PlayerMap[GetCell(prevLoc)], Pair[storage.EntityID, Pair[float64,float64]]{id, prevLoc})
 		PlayerMap[GetCell(loc)][Pair[storage.EntityID,Pair[float64,float64]]{id, loc}] = pewp
-		
+
+		// moves player in kdtree
+		point := &P{vector.V{prevLoc.First, prevLoc.Second}, playerName}
+		PlayerTree.Remove(point.P(), point.Equal)
+		PlayerTree.Insert(&P{vector.V{loc.First,loc.Second}, playerName})
+
+		// collects all hit coins
 		hitCoins := make([]Pair[storage.EntityID, Triple[float64,float64,int]], 0)
 
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {

@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"time"
+	"github.com/downflux/go-geometry/nd/vector"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
@@ -45,7 +46,7 @@ func RemoveCoin(coinID Pair[storage.EntityID, Triple[float64, float64, int]]) (i
 	return coin.Val, nil
 }
 
-func HandlePlayerPush(player AddPlayer) error {
+func PushPlayer(player PlayerComponent) error {
 	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
 		fmt.Println("Player already exists; not pushing again")
 		return nil
@@ -57,8 +58,7 @@ func HandlePlayerPush(player AddPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, true, -1})// default player
-	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	PlayerComp.Set(World, Players[player.Name], player)
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -69,7 +69,29 @@ func HandlePlayerPush(player AddPlayer) error {
 	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
 	PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
 
+	// adds player to kdtree
+	PlayerTree.Insert(&P{vector.V{playercomp.Loc.First,playercomp.Loc.Second}, playercomp.Name})
+
 	return nil
+}
+
+func PopPlayer(player PlayerComponent) error {
+	oldPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], player.Loc}
+	delete(PlayerMap[GetCell(player.Loc)], oldPlayer)
+
+	delete(Players, player.Name)
+	
+	// removes player to kdtree; should only remove a single node
+	point := &P{vector.V{player.Loc.First, player.Loc.Second}, player.Name}
+	PlayerTree.Remove(point.P(), point.Equal)
+	
+	return nil
+}
+
+func HandlePlayerPush(player AddPlayer) error {
+	playerComp := PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, true, -1}
+	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	return PushPlayer(playerComp)
 }
 
 func HandlePlayerPop(player ModPlayer) error {
@@ -118,13 +140,8 @@ func HandlePlayerPop(player ModPlayer) error {
 			return err
 		}
 	}
-	
-	oldPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	delete(PlayerMap[GetCell(playercomp.Loc)], oldPlayer)
 
-	delete(Players, player.Name)
-
-	return nil
+	return PopPlayer(playercomp)
 }
 
 func TickTock() error {// testing function used to make the game tick
@@ -200,17 +217,12 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1})// initializes player entities through their component
+		playercomp := PlayerComponent{playername, 100, 0, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
 		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 
-		playercomp, err := PlayerComp.Get(World, Players[playername])
-
-		if err != nil {
-			fmt.Errorf("Cardinal: Error getting location with callback function: %w", err)
+		if err := PushPlayer(playercomp); err != nil {
+			return err
 		}
-
-		newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[playername], playercomp.Loc}
-		PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
 	}
 
 	return nil
@@ -294,31 +306,10 @@ func CheckExtraction(player ModPlayer) int {
 	}
 }
 
-func AddTestPlayer(player PlayerComponent) error {
-	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
-		return nil
-	}
-
-	playerID, err := World.Create(PlayerComp)// creates new player
-	if err != nil {
-		return fmt.Errorf("Error adding player to world: %w", err)
-	}
-	Players[player.Name] = playerID
-
-	PlayerComp.Set(World, Players[player.Name], player)// default player
-
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-
-	if err != nil {
-		return fmt.Errorf("Error getting location with callback function: %w", err)
-	}
-
-	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[GetCell(player.Loc)][newPlayer] = pewp
-
-	return nil
-}
 
 func RecentAttacks() []AttackTriple {
+	if rand.Float64() > 0.95 {
+		PlayerTree.Balance()
+	}
 	return Attacks
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
+
+	"github.com/downflux/go-kd/kd"
 )
 
 const (// add more weapons as needed
@@ -22,6 +24,7 @@ var (
 	HealthMap				= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of healthpack lists
 	WeaponMap				= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of weapon lists
 	PlayerMap				= make(map[Pair[int,int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of player name-location pairs
+	PlayerTree				= kd.New[*P](kd.O[*P]{ []*P{}, 2, 16, })
 	PlayerComp				= ecs.NewComponentType[PlayerComponent]()
 	CoinComp				= ecs.NewComponentType[CoinComponent]()
 	HealthComp				= ecs.NewComponentType[HealthComponent]()

@@ -307,10 +307,26 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// kick all dead players
+	var (
+		coins int
+		discard1, discard2 string
+	)
 	for _, pid := range kickList {
-		if err := dispatcher.BroadcastMessage(DED, []byte(""), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
+		row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", pid)
+
+		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
+			if err != sql.ErrNoRows && err != nil {
+				logger.Error(fmt.Errorf("Nakama: error getting player information from database: ", err).Error())
+			} else {
+				logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
+			}
+			coins = -1
+		}
+
+		if err := dispatcher.BroadcastMessage(DED, []byte(strconv.Itoa(coins)), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
 			return err
 		}
+
 		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
 		delete(Presences, pid)
 	}
