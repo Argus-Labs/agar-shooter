@@ -19,11 +19,13 @@ func bound(x float64, y float64) types.Pair[float64, float64] {
 	}
 }
 
-func distance(loc1, loc2 types.Mult) float64 { // returns distance between two coins
+// returns distance between two coins
+func distance(loc1, loc2 types.Mult) float64 {
 	return math.Sqrt(math.Pow(loc1.getFirst()-loc2.getFirst(), 2) + math.Pow(loc1.getSecond()-loc2.getSecond(), 2))
 }
 
-func move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] { // change speed function
+// change speed function
+func move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	dir := tmpPlayer.Dir
 	coins := tmpPlayer.Coins
 	return bound(tmpPlayer.Loc.First+(game.sped*dir.First*math.Exp(-0.01*float64(coins))), tmpPlayer.Loc.Second+(sped*dir.Second*math.Exp(-0.01*float64(coins))))
@@ -56,7 +58,8 @@ func CoinProjDist(start, end types.Pair[float64, float64], coin types.Triple[flo
 	}
 }
 
-func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error { // attack a player
+// attack a player
+func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
 	kill := false
 	coins := false
 	var loc types.Pair[float64, float64]
@@ -100,12 +103,13 @@ func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defen
 	return nil
 }
 
-func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error { // moves player based on the coin-speed
+// moves player based on the coin-speed
+func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {
 	attackQueue := make([]types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
 
 	for playerName, id := range game.Players {
-		tmpPlayer, err := game.PlayerComp.Get(World, id)
+		tmpPlayer, err := components.Player.Get(World, id)
 
 		if err != nil {
 			return err
@@ -144,7 +148,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error { // moves playe
 		}
 
 		if assigned && minDistance <= game.Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, types.Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{minID, tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, closestPlayerName}})
+			attackQueue = append(attackQueue, types.Triple[storage.EntityID, Weapon, types.Triple[bool, string, string]]{minID, tmpPlayer.Weapon, types.Triple[bool, string, string]{left, playerName, closestPlayerName}})
 		}
 
 		// moving players
@@ -154,7 +158,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error { // moves playe
 		delete(PlayerMap[GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{id, prevLoc})
 		PlayerMap[GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{id, loc}] = pewp
 
-		hitCoins := make([]Pair[storage.EntityID, Triple[float64, float64, int]], 0)
+		hitCoins := make([]Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 
 		for i := int(math.Floor(prevLoc.First / GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second / GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
@@ -177,7 +181,8 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error { // moves playe
 
 		}
 
-		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent { // modifies player location
+		// modifies player location
+		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent {
 			comp.Loc = loc
 			comp.Coins += extraCoins
 

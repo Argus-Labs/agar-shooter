@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/argus-labs/new-game/msg"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
@@ -18,11 +19,11 @@ func diff(a, b bool) float64 {
 	return -1
 }
 
-// world Systems
-func processMoves(World *ecs.World, q *ecs.TransactionQueue) error { // adjusts player directions based on their movement
-	moveMap := make(map[string][]Move)
+// adjusts player directions based on their movement
+func MoveSystem(World *ecs.World, q *ecs.TransactionQueue) error {
+	moveMap := make(map[string][]msg.MovePlayerMsg)
 
-	for _, move := range MoveTx.In(q) {
+	for _, move := range msg.TxMovePlayer.In(q) {
 		if _, contains := moveMap[move.PlayerID]; !contains {
 			/*
 				pcomp, err := PlayerComp.Get(World, Players[move.PlayerID])
@@ -37,7 +38,7 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error { // adjusts 
 				}
 			*/
 
-			moveMap[move.PlayerID] = []Move{move}
+			moveMap[move.PlayerID] = []msg.MovePlayerMsg{move}
 		} else {
 			/*
 				if num := moveMap[move.PlayerID][len(moveMap[move.PlayerID])-1].Input_sequence_number;move.Input_sequence_number != num + 1 {

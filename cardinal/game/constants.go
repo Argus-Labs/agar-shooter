@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/argus-labs/new-game/types"
-	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
@@ -18,30 +17,26 @@ const ( // add more weapons as needed
 )
 
 var (
-	GameParams    types.Game
-	World         = inmem.NewECSWorld()
-	CoinMap       = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, Triple[float64, float64, int]]]void) // maps cells to sets of coin lists
-	HealthMap     = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]void)  // maps cells to sets of healthpack lists
-	WeaponMap     = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]void)  // maps cells to sets of weapon lists
-	PlayerMap     = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]void)  // maps cells to sets of player name-location types.Pairs
-	PlayerComp    = ecs.NewComponentType[PlayerComponent]()
-	CoinComp      = ecs.NewComponentType[CoinComponent]()
-	HealthComp    = ecs.NewComponentType[HealthComponent]()
-	WeaponComp    = ecs.NewComponentType[HealthComponent]()
+	GameParams types.Game
+	World      = inmem.NewECSWorld()
+	CoinMap    = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.void) // maps cells to sets of coin lists
+	HealthMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of healthpack lists
+	WeaponMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of weapon lists
+	PlayerMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of player name-location types.Pairs
+
 	Players       = make(map[string]storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
-	MoveTx        = ecs.NewTransactionType[Move]()    //(World, "move")
 	Width, Height int
-	Weapons       = map[Weapon]WeaponData{
-		Dud:   WeaponData{0, 0.0},
-		Melee: WeaponData{4, 4.0},
-		Slug:  WeaponData{3, 6.9},
+	Weapons       = map[types.Weapon]types.WeaponData{
+		Dud:   types.WeaponData{0, 0.0},
+		Melee: types.WeaponData{4, 4.0},
+		Slug:  types.WeaponData{3, 6.9},
 	}
-	mutex                 = &sync.RWMutex{}
-	ClientView            = types.Pair[float64, float64]{30, 20} // client viewing window
-	DefaultWeapon  Weapon = Melee
-	Attacks               = make([]AttackTriple, 0)
-	maxCoinsInCell        = func() int { return int(GameParams.CSize * GameParams.CSize / (3 * coinRadius * coinRadius * math.Pi)) }
-	maxCoins              = func() int {
+	mutex                       = &sync.RWMutex{}
+	ClientView                  = types.Pair[float64, float64]{30, 20} // client viewing window
+	DefaultWeapon  types.Weapon = Melee
+	Attacks                     = make([]types.AttackTriple, 0)
+	maxCoinsInCell              = func() int { return int(GameParams.CSize * GameParams.CSize / (3 * coinRadius * coinRadius * math.Pi)) }
+	maxCoins                    = func() int {
 		return int(math.Min(float64(maxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second/GameParams.CSize/GameParams.CSize/4+float64(3*len(Players)), float64(MAXENTITIES-len(Players))))
 	}
 	totalCoins = 0

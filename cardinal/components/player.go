@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/argus-labs/new-game/types"
+	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
 type PlayerComponent struct {
@@ -18,6 +19,8 @@ type PlayerComponent struct {
 	IsRight  bool                         // whether player is facing right
 	MoveNum  int                          // most recently-processed move
 }
+
+var Player = ecs.NewComponentType[PlayerComponent]()
 
 func (p PlayerComponent) Simplify() types.BarePlayer {
 	return types.BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum} // update Simplify for weapons & extraction point

@@ -17,16 +17,6 @@ type Game struct {
 	Players []string // list of players
 }
 
-type Move struct {
-	PlayerID              string
-	Up                    bool
-	Down                  bool
-	Left                  bool
-	Right                 bool
-	Input_sequence_number int
-	Delta                 float64
-}
-
 type AttackTriple struct {
 	AttackerID, DefenderID string
 	Damage                 int

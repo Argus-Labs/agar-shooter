@@ -10,7 +10,7 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
-func AddCoin(coin Triple[float64, float64, int]) (int, error) {
+func AddCoin(coin types.Triple[float64, float64, int]) (int, error) {
 	coinID, err := World.Create(CoinComp)
 	CoinComp.Set(World, coinID, CoinComponent{types.Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
 
@@ -19,14 +19,14 @@ func AddCoin(coin Triple[float64, float64, int]) (int, error) {
 	}
 
 	mutex.Lock()
-	CoinMap[GetCell(coin)][types.Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, coin}] = pewp
+	CoinMap[GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = pewp
 	mutex.Unlock()
 	totalCoins++
 
 	return coin.Third, nil
 }
 
-func RemoveCoin(coinID types.Pair[storage.EntityID, Triple[float64, float64, int]]) (int, error) {
+func RemoveCoin(coinID types.Pair[storage.EntityID, types.Triple[float64, float64, int]]) (int, error) {
 	coin, err := CoinComp.Get(World, coinID.First)
 
 	if err != nil {
@@ -113,7 +113,7 @@ func HandlePlayerPop(player ModPlayer) error {
 		}
 
 		peep := bound(playercomp.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), playercomp.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
-		newCoins = append(newCoins, Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
+		newCoins = append(newCoins, types.Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
 		start++
 	}
 
@@ -196,7 +196,7 @@ func CreateGame(game Game) error {
 	// initializes player and item maps
 	for i := 0; i <= Width; i++ {
 		for j := 0; j <= Height; j++ {
-			CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, Triple[float64, float64, int]]]void)
+			CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]void)
 			HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]void)
 			WeaponMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]void)
 			PlayerMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]void)
@@ -224,7 +224,7 @@ func SpawnCoins() error { // spawn coins randomly over the board until the coin 
 	coinsToAdd := math.Min(float64(maxCoins()-totalCoins), float64(maxCoinsPerTick))
 
 	for coinsToAdd > 0 { // generate coins if we haven't reached the max density
-		newCoin := Triple[float64, float64, int]{coinRadius + rand.Float64()*(GameParams.Dims.First-2*coinRadius), coinRadius + rand.Float64()*(GameParams.Dims.Second-2*coinRadius), 1} // random location over range where coins can actually be generated
+		newCoin := types.Triple[float64, float64, int]{coinRadius + rand.Float64()*(GameParams.Dims.First-2*coinRadius), coinRadius + rand.Float64()*(GameParams.Dims.Second-2*coinRadius), 1} // random location over range where coins can actually be generated
 		keep := true
 		coinRound := GetCell(newCoin)
 		if len(CoinMap[coinRound]) >= maxCoinsInCell() {

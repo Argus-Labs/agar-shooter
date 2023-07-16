@@ -2,8 +2,6 @@ package types
 
 import (
 	"math"
-
-	"github.com/argus-labs/new-game/game"
 )
 
 type Mult interface {
@@ -11,8 +9,8 @@ type Mult interface {
 	getSecond() float64
 }
 
-func GetCell(loc Mult) Pair[int, int] {
-	return Pair[int, int]{int(math.Floor(loc.getFirst() / game.GameParams.CSize)), int(math.Floor(loc.getSecond() / game.GameParams.CSize))}
+func GetCell(loc Mult, cellSize float64) Pair[int, int] {
+	return Pair[int, int]{int(math.Floor(loc.getFirst() / cellSize)), int(math.Floor(loc.getSecond() / cellSize))}
 }
 
 type Pair[T1 any, T2 any] struct { // inherits Mult
