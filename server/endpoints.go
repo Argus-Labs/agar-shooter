@@ -127,6 +127,19 @@ func checkExtraction(w http.ResponseWriter, r *http.Request) {
 	writeResult(w, coins)
 }
 
+func getExtractionPoint(w http.ResponseWriter, r *http.Request) {
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	extract := GetExtractionPoint(player)
+
+	writeResult(w, fmt.Sprintf("{\"X\":%f, \"Y\":%f}", extract.First, extract.Second))
+}
+
 func testAddHealth(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 

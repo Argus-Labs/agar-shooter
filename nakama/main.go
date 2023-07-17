@@ -25,7 +25,7 @@ const (
 	DEADLINE_EXCEEDED int64		= 4
 	DED int64					= 5
 	TESTADDHEALTH int64			= 6
-	PERMISSION_DENIED int64		= 7
+	EXTRACTION_POINT int64		= 7
 	RESOURCE_EXHAUSTED int64	= 8
 	FAILED_PRECONDITION int64	= 9
 	ABORTED int64				= 10
@@ -249,22 +249,24 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if err != nil {// assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())	
 		} else {// send everyone player state & send player its nearby coins
-			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-			
-			if err != nil {
+			if err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true); err != nil {// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-
-			if err != nil {
+			if nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 				return err
+			} else {
+				if err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
 			}
 
-			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
-
-			if err != nil {
+			if extractionPoint, err := CallRPCs["games/extract"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 				return err
+			} else {
+				if err = dispatcher.BroadcastMessage(EXTRACTION_POINT, []byte(extractionPoint), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
 			}
 		}
 		

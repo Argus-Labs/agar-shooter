@@ -29,6 +29,7 @@ func main() {
 		{"games/tick", tig},
 		{"games/create", createGame},
 		{"games/offload", checkExtraction},
+		{"games/extract", getExtractionPoint},
 		{"games/attacks", recentAttacks},
 		{"games/testaddhealth", testAddHealth},
 	}

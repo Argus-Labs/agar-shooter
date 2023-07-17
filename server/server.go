@@ -290,6 +290,16 @@ func NearbyCoins(player ModPlayer) []NearbyCoin {
 	return coins
 }
 
+func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {
+	playercomp, err := PlayerComp.Get(World, Players[player.Name])
+	
+	if err != nil {
+		fmt.Errorf("Error getting player component: %w", err)
+	}
+
+	return playercomp.Extract
+}
+
 func CheckExtraction(player ModPlayer) int {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
