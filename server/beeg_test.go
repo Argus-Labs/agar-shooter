@@ -4,6 +4,8 @@ import (
 	"testing"
 	"net/http"
 	"fmt"
+	"math/rand"
+	"strconv"
 
 	"gotest.tools/v3/assert"
 )
@@ -28,6 +30,7 @@ func (m Message) WriteHeader(statusCode int) {
 func TestPewp(t *testing.T) {
 	// test game initialization
 	const LENGTH = 1000
+	const ATTACKPLAYERS = 100
 	game := Game{Pair[float64,float64]{LENGTH,LENGTH}, 1, []string{}}
 	
 	var err error
@@ -167,6 +170,74 @@ func TestPewp(t *testing.T) {
 	testMove([]ModPlayer{testPlayer2, testPlayer3})
 	assert.Assert(t, m[testPlayer2][len(m[testPlayer2])-2].LocX == m[testPlayer2][len(m[testPlayer2])-1].LocX)
 	assert.Assert(t, m[testPlayer2][len(m[testPlayer2])-2].LocY == m[testPlayer2][len(m[testPlayer2])-1].LocY)
+
+	// test nearest player: choose a random configuration of players and verify that the players' healths are as expected
+	// insert ATTACKPLAYERS players with non-dud weapons, tick, compare with expected player healths, and repeat until at most one player is left standing
+	HandlePlayerPop(testPlayer2)
+	HandlePlayerPop(testPlayer3)
+
+	livePlayers := make(map[string] Triple[float64, float64, int])
+
+	for i := 0; i < ATTACKPLAYERS; i++ {
+		livePlayers[strconv.Itoa(i)] = Triple[float64, float64, int]{rand.Float64()*LENGTH, rand.Float64()*LENGTH, 100}
+		PushPlayer(PlayerComponent{strconv.Itoa(i), livePlayers[strconv.Itoa(i)].Third, 0, Melee, Pair[float64, float64]{livePlayers[strconv.Itoa(i)].First, livePlayers[strconv.Itoa(i)].Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0, 0}, true, -1})
+	}
+
+	sim := func() bool {
+		attacks := 0
+		kill := make([]string, 0)
+		for player, loc := range livePlayers {
+			closestPlayer := "-1"
+			for otherplayer, otherloc := range livePlayers {
+				if otherplayer != player && (closestPlayer == "-1" || distance(loc, otherloc) < distance(loc, livePlayers[closestPlayer])) {
+					closestPlayer = otherplayer
+				}
+			}
+
+			if closestPlayer != "-1" && distance(loc, livePlayers[closestPlayer]) <= Weapons[Melee].Range {
+				livePlayers[closestPlayer] = Triple[float64, float64, int]{livePlayers[closestPlayer].First, livePlayers[closestPlayer].Second, livePlayers[closestPlayer].Third - Weapons[Melee].Attack}
+				attacks++
+			}
+		}
+
+		for player, loc := range livePlayers {
+			if loc.Third <= 0 {
+				kill = append(kill, player)
+			}
+		}
+
+		for _, killed := range kill {
+			delete(livePlayers, killed)
+		}
+
+		return attacks == 0
+	}
+
+	comp := func() bool {// compares simulated player map to serverside player map; if 
+		serverMap := make(map[string] Triple[float64, float64, int])
+		for i := 0; i < ATTACKPLAYERS; i++ {
+			if p, err = GetPlayerState(ModPlayer{strconv.Itoa(i)}); err == nil {
+				serverMap[strconv.Itoa(i)] = Triple[float64, float64, int]{p.Loc.First, p.Loc.Second, p.Health}
+			}
+		}
+
+		eq := len(serverMap) == len(livePlayers)
+		for player, loc := range livePlayers {
+			eq = eq && loc == serverMap[player]
+		}
+		
+		return eq
+	}
+
+	for len(livePlayers) > 1 {
+		if noMoreAttacks := sim(); noMoreAttacks {
+			break
+		}
+		TickTock()
+		assert.Assert(t, comp())
+		fmt.Println("Still attacking")
+	}
+
 
 	fmt.Println("Tests successfully passed")
 }
