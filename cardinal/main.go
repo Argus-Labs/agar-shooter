@@ -14,11 +14,11 @@ func main() {
 
 	// NOTE: Uses a Redis container
 	// Best to use this for testing with Retool
-	world := utils.NewDevWorld()
+	// world := utils.NewDevWorld()
 
 	// NOTE: If you want to use an in-memory Redis, use this instead.
 	// This is the easiest way to run Cardinal locally, but doen't work with Retool.
-	// world := utils.NewInmemWorld()
+	world := utils.NewInmemWorld()
 
 	// Register components
 	// NOTE: You must register your components here,

@@ -67,3 +67,11 @@ func WriteResult(w http.ResponseWriter, v any) {
 		return
 	}
 }
+
+func Decode(r *http.Request, v any) error {
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(v); err != nil {
+		return err
+	}
+	return nil
+}
