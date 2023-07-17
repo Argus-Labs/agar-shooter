@@ -27,12 +27,12 @@ var (
 	Players       = make(map[string]storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
 	Width, Height int
 	Weapons       = map[types.Weapon]types.WeaponData{
-		Dud:   types.WeaponData{0, 0.0},
-		Melee: types.WeaponData{4, 4.0},
-		Slug:  types.WeaponData{3, 6.9},
+		Dud:   types.WeaponData{Attack: 0, Range: 0.0},
+		Melee: types.WeaponData{Attack: 4, Range: 4.0},
+		Slug:  types.WeaponData{Attack: 3, Range: 6.9},
 	}
 	mutex                       = &sync.RWMutex{}
-	ClientView                  = types.Pair[float64, float64]{30, 20} // client viewing window
+	ClientView                  = types.Pair[float64, float64]{First: 30, Second: 20} // client viewing window
 	DefaultWeapon  types.Weapon = Melee
 	Attacks                     = make([]types.AttackTriple, 0)
 	maxCoinsInCell              = func() int { return int(GameParams.CSize * GameParams.CSize / (3 * coinRadius * coinRadius * math.Pi)) }
