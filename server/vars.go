@@ -23,7 +23,6 @@ var (
 	CoinMap					= make(map[Pair[int, int]] map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)// maps cells to sets of coin lists
 	HealthMap				= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of healthpack lists
 	WeaponMap				= make(map[Pair[int, int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of weapon lists
-	PlayerMap				= make(map[Pair[int,int]] map[Pair[storage.EntityID, Pair[float64,float64]]] void)// maps cells to sets of player name-location pairs
 	PlayerTree				= kd.New[*P](kd.O[*P]{ []*P{}, 2, 16, })
 	PlayerComp				= ecs.NewComponentType[PlayerComponent]()
 	CoinComp				= ecs.NewComponentType[CoinComponent]()
@@ -56,4 +55,5 @@ const (
 	maxCoinsPerTick		= 1000
 	MAXENTITIES			= 4607704
 	InitRepeatSpawn		= 1
+	balanceFactor		= 3// multiple of min tree depth after which we should rebalance; the higher, the fewer spikes in processing time there will be at the cost of higher average processing time for lots of players
 )

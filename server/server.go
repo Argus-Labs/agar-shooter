@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
@@ -66,9 +67,6 @@ func PushPlayer(player PlayerComponent) error {
 		fmt.Errorf("Error getting location with callback function: %w", err)
 	}
 
-	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
-
 	// adds player to kdtree
 	PlayerTree.Insert(&P{vector.V{playercomp.Loc.First,playercomp.Loc.Second}, playercomp.Name})
 
@@ -76,9 +74,6 @@ func PushPlayer(player PlayerComponent) error {
 }
 
 func PopPlayer(player PlayerComponent) error {
-	oldPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], player.Loc}
-	delete(PlayerMap[GetCell(player.Loc)], oldPlayer)
-
 	delete(Players, player.Name)
 	
 	// removes player to kdtree; should only remove a single node
@@ -212,7 +207,6 @@ func CreateGame(game Game) error {
 			CoinMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)
 			HealthMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
 			WeaponMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
-			PlayerMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64, float64]]] void)
 		}
 	}
 
@@ -245,8 +239,18 @@ func SpawnCoins() error {// spawn coins randomly over the board until the coin c
 				}
 				mutex.RUnlock()
 
-				for player, _ := range PlayerMap[Pair[int,int]{int(i), int(j)}] {
-					keep = keep && (distance(player.Second, newCoin) > PlayerRadius+1+coinRadius)
+				knn := kd.KNN[*P](PlayerTree, vector.V{newCoin.First, newCoin.Second}, 1, func(q *P) bool {
+					return true
+				})
+
+				if len(knn) > 0 {
+					nearestPlayerComp, err := PlayerComp.Get(World, Players[knn[0].Name])
+
+					if err != nil {
+						return fmt.Errorf("Cardinal: player obtain: %w", err)
+					}
+
+					keep = keep && (distance(nearestPlayerComp.Loc, newCoin) > PlayerRadius+1+coinRadius)
 				}
 			}
 		}

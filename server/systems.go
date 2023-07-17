@@ -179,6 +179,7 @@ func attack(id storage.EntityID, weapon Weapon, left bool, attacker, defender st
 func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
 	attackQueue := make([]Triple[storage.EntityID, Weapon, Triple[bool, string, string]],0)
 	Attacks = make([]AttackTriple, 0)
+	maxDepth := 0
 
 	for playerName, id := range Players {
 		tmpPlayer, err := PlayerComp.Get(World, id)
@@ -190,54 +191,29 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		prevLoc := tmpPlayer.Loc
 
 		// attacking players; each player attacks the closest player TODO: change targetting system later
-
-		var (
-			minID storage.EntityID
-			minDistance float64
-			closestPlayerName string
-			left bool
-		)
-
-		assigned := false
-
-		for _, closestPlayerID := range Players {
-			if closestPlayerID != id {
-				closestPlayer, err := PlayerComp.Get(World, closestPlayerID)
-				if err != nil {
-					return err
-				}
-			
-				dist := distance(closestPlayer.Loc, prevLoc)
-
-				if !assigned || minDistance > dist {
-					minID = closestPlayerID
-					minDistance = dist
-					closestPlayerName = closestPlayer.Name
-					assigned = true
-					left = tmpPlayer.Loc.First <= closestPlayer.Loc.First
-				}
-			}
-		}
-
 		// get nearest neighbor using kdtree
-		knn := kd.KNN[*P](PlayerTree, vector.V{prevLoc.First, prevLoc.Second}, 1, func(q *P) bool { return true })
-		if len(knn) > 0 && minID == minID && closestPlayerName == closestPlayerName {
-			nearestPlayerComp, err := PlayerComp.Get(World, Players[knn[0].Name])
+		depth := 0
+		knn := kd.KNN[*P](PlayerTree, vector.V{prevLoc.First, prevLoc.Second}, 2, func(q *P) bool {
+			depth++
+			return true
+		})
+
+		if maxDepth < depth { maxDepth = depth }
+
+		if len(knn) > 1 {
+			nearestPlayerComp, err := PlayerComp.Get(World, Players[knn[1].Name])
+			left := tmpPlayer.Loc.First <= nearestPlayerComp.Loc.First
 			if err != nil {
 				return fmt.Errorf("Cardinal: error fetching player: %w", err)
 			}
-			if assigned && distance(nearestPlayerComp.Loc, prevLoc) <= Weapons[tmpPlayer.Weapon].Range {
+			if distance(nearestPlayerComp.Loc, prevLoc) <= Weapons[tmpPlayer.Weapon].Range {
 				attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{Players[knn[0].Name], tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
 			}
 		}
 
-
 		// moving players --- this is the only place players move, so modifying player tree values must only occur here (outside of inserts and deletes)
 
 		loc := move(tmpPlayer)
-
-		delete(PlayerMap[GetCell(prevLoc)], Pair[storage.EntityID, Pair[float64,float64]]{id, prevLoc})
-		PlayerMap[GetCell(loc)][Pair[storage.EntityID,Pair[float64,float64]]{id, loc}] = pewp
 
 		// moves player in kdtree
 		point := &P{vector.V{prevLoc.First, prevLoc.Second}, playerName}
@@ -280,6 +256,10 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		if err := attack(triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
 			return err
 		}
+	}
+
+	if float64(maxDepth) > 1 + balanceFactor*math.Log(float64(len(Players))) {
+		PlayerTree.Balance()
 	}
 
 	return nil
