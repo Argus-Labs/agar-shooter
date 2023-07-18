@@ -25,7 +25,7 @@ const (
 	DEADLINE_EXCEEDED int64		= 4
 	DED int64					= 5
 	TESTADDHEALTH int64			= 6
-	PERMISSION_DENIED int64		= 7
+	EXTRACTION_POINT int64		= 7
 	RESOURCE_EXHAUSTED int64	= 8
 	FAILED_PRECONDITION int64	= 9
 	ABORTED int64				= 10
@@ -249,22 +249,24 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if err != nil {// assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())	
 		} else {// send everyone player state & send player its nearby coins
-			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-			
-			if err != nil {
+			if err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true); err != nil {// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-
-			if err != nil {
+			if nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 				return err
+			} else {
+				if err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
 			}
 
-			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
-
-			if err != nil {
+			if extractionPoint, err := CallRPCs["games/extract"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 				return err
+			} else {
+				if err = dispatcher.BroadcastMessage(EXTRACTION_POINT, []byte(extractionPoint), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
 			}
 		}
 		
@@ -307,10 +309,26 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// kick all dead players
+	var (
+		coins int
+		discard1, discard2 string
+	)
 	for _, pid := range kickList {
-		if err := dispatcher.BroadcastMessage(DED, []byte(""), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
+		row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", pid)
+
+		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
+			if err != sql.ErrNoRows && err != nil {
+				logger.Error(fmt.Errorf("Nakama: error getting player information from database: ", err).Error())
+			} else {
+				logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
+			}
+			coins = -1
+		}
+
+		if err := dispatcher.BroadcastMessage(DED, []byte(strconv.Itoa(coins)), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
 			return err
 		}
+
 		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
 		delete(Presences, pid)
 	}
@@ -343,7 +361,7 @@ func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.
 
 func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
-		//logger.Debug("Got request for %q", currEndpoint)
+		if currEndpoint != "games/tick" && currEndpoint != "games/attacks" { logger.Debug("Got request for %q", currEndpoint) }
 
 		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(payload))
 		if err != nil {

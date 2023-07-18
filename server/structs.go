@@ -3,6 +3,7 @@ package main
 
 import (
 	"math"
+	"github.com/downflux/go-geometry/nd/vector"
 )
 
 type void struct{}
@@ -15,6 +16,19 @@ type Mult interface {
 
 func GetCell(loc Mult) Pair[int,int] {
 	return Pair[int,int]{int(math.Floor(loc.getFirst()/GameParams.CSize)), int(math.Floor(loc.getSecond()/GameParams.CSize))}
+}
+
+type P struct {
+	p   vector.V
+	Name string
+}
+
+func (p *P) P() vector.V {
+	return p.p
+}
+
+func (p *P) Equal(q *P) bool {
+	return vector.Within(p.P(), q.P()) && p.Name == q.Name
 }
 
 type Pair[T1 any, T2 any] struct {// inherits Mult

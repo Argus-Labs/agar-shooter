@@ -127,6 +127,19 @@ func checkExtraction(w http.ResponseWriter, r *http.Request) {
 	writeResult(w, coins)
 }
 
+func getExtractionPoint(w http.ResponseWriter, r *http.Request) {
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	extract := GetExtractionPoint(player)
+
+	writeResult(w, fmt.Sprintf("{\"X\":%f, \"Y\":%f}", extract.First, extract.Second))
+}
+
 func testAddHealth(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 
@@ -150,14 +163,12 @@ func recentAttacks(w http.ResponseWriter, r *http.Request) {
 }
 
 func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{Pair[float64,float64]{100,100}, 5, []string{}}// removed {"a","b"}
+	game := Game{Pair[float64,float64]{100,100}, 5, []string{}}//"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}}// removed {"a","b"}
 	if err := CreateGame(game); err != nil {
 		writeError(w, "error initializing game", err)
 	}
 
-	for i := 0; i < 5; i++ {
-		go SpawnCoins(globalMut)
-	}
+	for i := 0; i < InitRepeatSpawn; i++ { go SpawnCoins() }
 
 	writeResult(w, "game created")
 }
@@ -167,7 +178,7 @@ func tig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error ticking", err)
 	}
 
-	if err := SpawnCoins(globalMut); err != nil {
+	if err := SpawnCoins(); err != nil {
 		writeError(w, "error spawning coins", err)
 	}
 

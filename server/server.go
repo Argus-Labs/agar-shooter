@@ -4,12 +4,50 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sync"
+	"time"
+	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
-func HandlePlayerPush(player AddPlayer) error {
+func AddCoin(coin Triple[float64, float64, int]) (int, error) {
+	coinID, err := World.Create(CoinComp)
+	CoinComp.Set(World, coinID, CoinComponent{Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
+
+	if err != nil {
+		return -1, fmt.Errorf("Coin creation failed: %w", err)
+	}
+
+	mutex.Lock()
+	CoinMap[GetCell(coin)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, coin}] = pewp
+	mutex.Unlock()
+	totalCoins++
+
+	return coin.Third, nil
+}
+
+func RemoveCoin(coinID Pair[storage.EntityID, Triple[float64, float64, int]]) (int, error) {
+	coin, err := CoinComp.Get(World, coinID.First)
+
+	if err != nil {
+		return -1, fmt.Errorf("Cardinal: could not get coin entity: %w", err)
+	}
+
+	mutex.Lock()
+	delete(CoinMap[Pair[int,int]{int(math.Floor(coinID.Second.First/GameParams.CSize)),int(math.Floor(coinID.Second.Second/GameParams.CSize))}], coinID)
+	mutex.Unlock()
+
+	if err := World.Remove(coinID.First); err != nil {
+		return -1, err
+	}
+
+	totalCoins--
+	
+	return coin.Val, nil
+}
+
+func PushPlayer(player PlayerComponent) error {
 	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
 		fmt.Println("Player already exists; not pushing again")
 		return nil
@@ -21,8 +59,7 @@ func HandlePlayerPush(player AddPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, true, -1})// default player
-	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	PlayerComp.Set(World, Players[player.Name], player)
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -30,10 +67,26 @@ func HandlePlayerPush(player AddPlayer) error {
 		fmt.Errorf("Error getting location with callback function: %w", err)
 	}
 
-	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
+	// adds player to kdtree
+	PlayerTree.Insert(&P{vector.V{playercomp.Loc.First,playercomp.Loc.Second}, playercomp.Name})
 
 	return nil
+}
+
+func PopPlayer(player PlayerComponent) error {
+	delete(Players, player.Name)
+	
+	// removes player to kdtree; should only remove a single node
+	point := &P{vector.V{player.Loc.First, player.Loc.Second}, player.Name}
+	PlayerTree.Remove(point.P(), point.Equal)
+	
+	return nil
+}
+
+func HandlePlayerPush(player AddPlayer) error {
+	playerComp := PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, true, -1}
+	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	return PushPlayer(playerComp)
 }
 
 func HandlePlayerPop(player ModPlayer) error {
@@ -78,23 +131,12 @@ func HandlePlayerPop(player ModPlayer) error {
 	}
 
 	for _, coin := range newCoins {
-		coinID, err := World.Create(CoinComp)
-
-		if err != nil {
-			return fmt.Errorf("Coin creation failed: %w", err)
+		if _, err := AddCoin(coin); err != nil {
+			return err
 		}
-
-		CoinMap[GetCell(coin)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, Triple[float64, float64, int]{coin.First, coin.Second, coin.Third}}] = pewp
-		CoinComp.Set(World, coinID, CoinComponent{Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
 	}
-	
 
-	oldPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	delete(PlayerMap[GetCell(playercomp.Loc)], oldPlayer)
-
-	delete(Players, player.Name)
-
-	return nil
+	return PopPlayer(playercomp)
 }
 
 func TickTock() error {// testing function used to make the game tick
@@ -134,6 +176,7 @@ func CreateGame(game Game) error {
 	//if World.stateIsLoaded {
 	//	return fmt.Errorf("already loaded state")
 	//}
+	rand.Seed(time.Now().UnixNano())
 	if game.CSize == 0 {
 		return fmt.Errorf("Cardinal: cellsize is zero")
 	}
@@ -164,78 +207,65 @@ func CreateGame(game Game) error {
 			CoinMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)
 			HealthMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
 			WeaponMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
-			PlayerMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64, float64]]] void)
 		}
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1})// initializes player entitities through their component
+		playercomp := PlayerComponent{playername, 100, 0, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
 		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 
-		playercomp, err := PlayerComp.Get(World, Players[playername])
-
-		if err != nil {
-			fmt.Errorf("Cardinal: Error getting location with callback function: %w", err)
+		if err := PushPlayer(playercomp); err != nil {
+			return err
 		}
-
-		newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[playername], playercomp.Loc}
-		PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
 	}
 
 	return nil
 }
 
-func SpawnCoins(mutex *sync.RWMutex) error {// randomly spawn 5 coins in each cell and don't place if a coin exists nearby
-	var (
-		coinCellNum = 1
-		coinRadius = 0.5// <= GameParams.CSize/2
-		density = 0.1// number of coins per square unit
-		maxCoinsInCell = int(math.Ceil(math.Pow(GameParams.CSize, 2)*density))
-	)
+func SpawnCoins() error {// spawn coins randomly over the board until the coin cap has been met
+	coinsToAdd := math.Min(float64(maxCoins() - totalCoins), float64(maxCoinsPerTick))
 
-	newCoins := make([]Triple[float64, float64, int], 0)
+	for coinsToAdd > 0 {// generate coins if we haven't reached the max density
+		newCoin := Triple[float64,float64,int]{coinRadius + rand.Float64()*(GameParams.Dims.First-2*coinRadius), coinRadius + rand.Float64()*(GameParams.Dims.Second-2*coinRadius), 1}// random location over range where coins can actually be generated
+		keep := true
+		coinRound := GetCell(newCoin)
+		if len(CoinMap[coinRound]) >= maxCoinsInCell() { continue }
 
-	mutex.RLock()
-	for i := 0; i < Width; i++ {
-		for j := 0; j < Height; j++ {
-			if len(CoinMap[Pair[int,int]{i,j}]) >= maxCoinsInCell { continue }
-
-			for k := 0; k < coinCellNum; k++ {
-				newCoin := Triple[float64,float64,int]{float64(i)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), float64(j)*GameParams.CSize + coinRadius + rand.Float64()*(GameParams.CSize-2*coinRadius), 1}
-				keep := true
-
-				for coin,_ := range CoinMap[Pair[int,int]{i, j}] {// concurrent iteration and write
-					keep = keep && (distance(coin.Second, newCoin) > coinRadius)
+		for i := math.Max(0, float64(coinRound.First-1)); i <= math.Min(float64(Width), float64(coinRound.First+1)); i++ {
+			for j := math.Max(0, float64(coinRound.Second-1)); i <= math.Min(float64(Height), float64(coinRound.Second+1)); i++ {
+				mutex.RLock()
+				for coin,_ := range CoinMap[Pair[int,int]{int(i), int(j)}] {
+					keep = keep && (distance(coin.Second, newCoin) > 2*coinRadius)
 				}
+				mutex.RUnlock()
 
-				for player, _ := range PlayerMap[Pair[int,int]{i,j}] {
-					keep = keep && (distance(player.Second, newCoin) > PlayerRadius+1)
-				}
+				knn := kd.KNN[*P](PlayerTree, vector.V{newCoin.First, newCoin.Second}, 1, func(q *P) bool {
+					return true
+				})
 
-				if keep {
-					newCoins = append(newCoins, newCoin)
+				if len(knn) > 0 {
+					nearestPlayerComp, err := PlayerComp.Get(World, Players[knn[0].Name])
+
+					if err != nil {
+						return fmt.Errorf("Cardinal: player obtain: %w", err)
+					}
+
+					keep = keep && (distance(nearestPlayerComp.Loc, newCoin) > PlayerRadius+1+coinRadius)
 				}
 			}
 		}
+		if keep {
+			if _, err := AddCoin(newCoin); err != nil {
+				return err
+			}
+
+			coinsToAdd--
+		}
 	}
-	mutex.RUnlock()
 
 	//create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
 	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
 	// maybe make this a system so it can be run async
-
-	mutex.Lock()
-	for _, coin := range newCoins {
-		coinID, err := World.Create(CoinComp)
-
-		if err != nil {
-			return fmt.Errorf("Coin creation failed: %w", err)
-		}
-
-		CoinMap[Pair[int,int]{int(math.Floor(coin.First/GameParams.CSize)), int(math.Floor(coin.Second/GameParams.CSize))}][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, coin}] = pewp
-		CoinComp.Set(World, coinID, CoinComponent{Pair[float64,float64]{coin.First,coin.Second}, 1})
-	}
-	mutex.Unlock()
 
 	return nil
 }
@@ -260,6 +290,16 @@ func NearbyCoins(player ModPlayer) []NearbyCoin {
 	return coins
 }
 
+func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {
+	playercomp, err := PlayerComp.Get(World, Players[player.Name])
+	
+	if err != nil {
+		fmt.Errorf("Error getting player component: %w", err)
+	}
+
+	return playercomp.Extract
+}
+
 func CheckExtraction(player ModPlayer) int {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -280,31 +320,10 @@ func CheckExtraction(player ModPlayer) int {
 	}
 }
 
-func AddTestPlayer(player PlayerComponent) error {
-	if _, contains := Players[player.Name]; contains {// player already exists; don't do anything
-		return nil
-	}
-
-	playerID, err := World.Create(PlayerComp)// creates new player
-	if err != nil {
-		return fmt.Errorf("Error adding player to world: %w", err)
-	}
-	Players[player.Name] = playerID
-
-	PlayerComp.Set(World, Players[player.Name], player)// default player
-
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-
-	if err != nil {
-		return fmt.Errorf("Error getting location with callback function: %w", err)
-	}
-
-	newPlayer := Pair[storage.EntityID, Pair[float64,float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[GetCell(player.Loc)][newPlayer] = pewp
-
-	return nil
-}
 
 func RecentAttacks() []AttackTriple {
+	if rand.Float64() > 0.95 {
+		PlayerTree.Balance()
+	}
 	return Attacks
 }
