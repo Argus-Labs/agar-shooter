@@ -43,6 +43,11 @@ public class Player : MonoBehaviour
         get { return speed* Mathf.Exp(-0.01f*coin); }
     }
 
+    public int Coin
+    {
+        get { return coin; }
+    }
+
     // player can use wasd to move up down left right and they can also press two button to move diagonally 
     // the direction "isRight" of the player is based on the player previous move direction default is right. Filp the player if isLeft
     struct PlayerInput

@@ -75,6 +75,12 @@ public class GameManager : MonoBehaviour
     public Transform introScreen;
     public Transform gameOverScreen;
     #endregion
+    
+    public ScoreBoard scoreBoard;
+    public float refreshRate = 1f;
+    private float refreshTimer = 0f;
+
+    public int scoreboardSize = 5;
 
     // Start is called before the first frame update
     private void Awake()
@@ -136,6 +142,25 @@ public class GameManager : MonoBehaviour
         {
             AddHealth();
         }
+
+        if (!gameInitialized)
+        {
+            return;
+        }
+        // refresh the score board every 1 second
+        refreshTimer += Time.deltaTime;
+        if (refreshTimer > refreshRate)
+        {
+            refreshTimer = 0f;
+            Dictionary<string, int> players = new Dictionary<string, int>();
+            foreach (KeyValuePair<string, RemotePlayer> otherPlayer in otherPlayers)
+            {
+                players.Add(otherPlayer.Key, otherPlayer.Value.coin);
+            }
+            players.Add(UserId, player.Coin);
+            scoreBoard.Refresh(players, UserId, scoreboardSize);
+        }
+        
     }
 
     private void OnApplicationQuit()
@@ -193,6 +218,7 @@ public class GameManager : MonoBehaviour
                         newPlayer.transform.position = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
+                        newPlayer.coin = packet.Coins;
                         newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float)packet.Name.GetHashCode() / int.MaxValue), 0.75f, 0.75f));
 
                     }
@@ -204,6 +230,7 @@ public class GameManager : MonoBehaviour
                         otherPlayer.newPos = new Vector2(packet.LocX, packet.LocY);
                         otherPlayer.t = 0;
                         otherPlayer.isRight = packet.IsRight;
+                        otherPlayer.coin = packet.Coins;
                         otherPlayer.UpdateHealth(packet.Health);
                     }
 

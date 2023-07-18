@@ -8,6 +8,7 @@ public class RemotePlayer : MonoBehaviour
     public float t = 0f;
     public int serverTickRate = 5;
     public bool isRight = true;
+    public int coin = 0;
     public string userID;
     public Transform sprite;
     public Slider healthBar;
