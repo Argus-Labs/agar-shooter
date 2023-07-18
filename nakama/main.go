@@ -83,7 +83,7 @@ func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime
 
 func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
 
-	tickRate := 5
+	tickRate := 15
 	label := ""
 
 	if _, err := CallRPCs["games/create"](ctx, logger, db, nk, "{}"); err != nil {
