@@ -9,25 +9,9 @@ public class ScoreBoard : MonoBehaviour
     // players dictionary contains player name and score
     // playerSelf is the player name of the current player
     // scoreboardSize is the number of line fit in the scoreText
-    private void Start()
-    {
-        // Test data
-        Dictionary<string, int> players = new Dictionary<string, int>()
-        {
-            { "Player1", 500 },
-            { "Player2", 800 },
-            { "Player3", 700 },
-            { "Player4", 600 },
-            { "Player5", 900 },
-        };
 
-        string playerSelf = "Player3";
-        int scoreboardSize = 5;
-
-        Refresh(players, playerSelf, scoreboardSize);
-    }
     
-    public void Refresh(Dictionary<string, int> players, string playerSelf, int scoreboardSize)
+    public int Refresh(Dictionary<string, int> players, string playerSelf, int scoreboardSize)
     {
         // based on players dictionary, update the scoreText format "1. player1" just rank and name player itself must be in the output 
         // if player count <= scoreboardSize display all players
@@ -39,12 +23,12 @@ public class ScoreBoard : MonoBehaviour
         if (!selfInList)
         {
             Debug.LogError("ScoreBoard:Cannot find the playerSelf in the players");
-            return;
+            return -1;
         }
         if (scoreboardSize < 0)
         {
             Debug.LogError("ScoreBoard: Scoreboard size should be a positive number.");
-            return;
+            return -1;
         }
         bool enoughSpace = playerList.Count <= scoreboardSize;
         int count = Mathf.Min(playerList.Count, scoreboardSize);
@@ -82,7 +66,8 @@ public class ScoreBoard : MonoBehaviour
         }
 
         scoreText.text = newText;
-        
+        return selfRank+1;
+
     }
     
 }

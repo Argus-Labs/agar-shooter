@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using Nakama;
 using Nakama.TinyJson;
+using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
@@ -61,26 +63,44 @@ public class GameManager : MonoBehaviour
     public Player player;
     public string UserId;
     public Action<IMatchState> OnMatchStateReceived;
+    
+    [Header("PoolingObjects")]
+    #region PoolingObjects
 
-    public List<Transform> coins;
-
-    public GameObject coinPrefab;
-
+    public List<SpriteRenderer> coins;
+    public List<Sprite> coinSprites;
+    public SpriteRenderer coinPrefab;
     public Transform coinsParent;
     public DamageTextSpawner dmgTextSpawner;
     public AttackAnimSpawner attackAnimSpawner;
 
+
+    #endregion
+   
+    [Header("UI")]
+
     #region DifferentScreen
-    public Transform startScreen;
+
+    [FormerlySerializedAs("startScreen")]
+    public Transform loadingScreen;
+
     public Transform introScreen;
     public Transform gameOverScreen;
+    public TextMeshProUGUI bestRankText;
+    public TextMeshProUGUI bestScoreText;
+    private int bestRank = 0;
+    private int bestScore = 0;
+
     #endregion
-    
+
+    # region scoreBoard
+
     public ScoreBoard scoreBoard;
     public float refreshRate = 1f;
     private float refreshTimer = 0f;
-
     public int scoreboardSize = 5;
+
+    #endregion
 
     // Start is called before the first frame update
     private void Awake()
@@ -89,30 +109,38 @@ public class GameManager : MonoBehaviour
         Application.targetFrameRate = 60;
     }
 
-    async void Start()
+    void Start()
     {
-        startScreen.gameObject.SetActive(true);
+        introScreen.gameObject.SetActive(true);
+    }
+
+    public async void StartGame()
+    {
+        loadingScreen.gameObject.SetActive(true);
         await nakamaConnection.Connect();
         UserId = nakamaConnection.session.UserId;
         var mainThread = UnityMainThreadDispatcher.Instance();
         otherPlayers = new Dictionary<string, RemotePlayer>();
         for (int i = 0; i < 200; i++)
         {
-            var temp = Instantiate(coinPrefab, coinsParent);
-            temp.SetActive(false);
-            coins.Add(temp.transform);
+            SpriteRenderer temp = Instantiate(coinPrefab, coinsParent);
+            temp.gameObject.SetActive(false);
+            coins.Add(temp);
         }
 
         // nakamaConnection.socket.ReceivedMatchmakerMatched += m => mainThread.Enqueue(() => OnReceivedMatchmakerMatched(m));
         nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
         nakamaConnection.socket.ReceivedMatchState += m => mainThread.Enqueue(() => MatchStatusUpdate(m));
+
+        bestRank = int.MaxValue;
+        bestScore = int.MinValue;
     }
 
     private void OnReceivedMatchPresence(IMatchPresenceEvent matchPresenceEvent)
     {
         foreach (var join in matchPresenceEvent.Joins)
         {
-            print("join:"+join.UserId);
+            print("join:" + join.UserId);
         }
 
         foreach (var leave in matchPresenceEvent.Leaves)
@@ -131,12 +159,6 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (gameInitialized && !player.enabled)
-        {
-            player.enabled = true;
-            startScreen.gameObject.SetActive(false);
-            introScreen.gameObject.SetActive(true);
-        }
         // detect key "o" to call addHealth
         if (Input.GetKeyDown(KeyCode.O))
         {
@@ -147,6 +169,7 @@ public class GameManager : MonoBehaviour
         {
             return;
         }
+
         // refresh the score board every 1 second
         refreshTimer += Time.deltaTime;
         if (refreshTimer > refreshRate)
@@ -157,10 +180,19 @@ public class GameManager : MonoBehaviour
             {
                 players.Add(otherPlayer.Key, otherPlayer.Value.coin);
             }
+
             players.Add(UserId, player.Coin);
-            scoreBoard.Refresh(players, UserId, scoreboardSize);
+            int currRank = scoreBoard.Refresh(players, UserId, scoreboardSize);
+            if (currRank < bestRank)
+            {
+                bestRank = currRank;
+            }
+
+            if (player.Coin > bestScore)
+            {
+                bestScore = player.Coin;
+            }
         }
-        
     }
 
     private void OnApplicationQuit()
@@ -184,11 +216,12 @@ public class GameManager : MonoBehaviour
     {
         var enc = System.Text.Encoding.UTF8;
         var content = enc.GetString(newState.State);
-        if (content=="null\n")
+        if (content == "null\n")
         {
             // print($"useless info opcode:{newState.OpCode}");
             return;
         }
+
         switch (newState.OpCode)
         {
             case ((long) opcode.playerStatus):
@@ -219,12 +252,11 @@ public class GameManager : MonoBehaviour
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
                         newPlayer.coin = packet.Coins;
-                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float)packet.Name.GetHashCode() / int.MaxValue), 0.75f, 0.75f));
-
+                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.Name.GetHashCode() / int.MaxValue),
+                            0.75f, 0.75f));
                     }
                     else
                     {
-                   
                         RemotePlayer otherPlayer = otherPlayers[packet.Name];
                         otherPlayer.prevPos = otherPlayer.newPos;
                         otherPlayer.newPos = new Vector2(packet.LocX, packet.LocY);
@@ -249,7 +281,10 @@ public class GameManager : MonoBehaviour
                     gameInitialized = true;
                     player.PlayerInit(serverPayload.pos);
                     // assign a color based on UserID
-                    player.SetColor(Color.HSVToRGB(Mathf.Abs((float) UserId.GetHashCode()) / int.MaxValue, 0.75f, 0.75f));
+                    player.SetColor(
+                        Color.HSVToRGB(Mathf.Abs((float) UserId.GetHashCode()) / int.MaxValue, 0.75f, 0.75f));
+                    player.enabled = true;
+                    loadingScreen.gameObject.SetActive(false);
                     break;
                 }
 
@@ -278,15 +313,22 @@ public class GameManager : MonoBehaviour
                     if (i < coinsInfo.Count)
                     {
                         coins[i].gameObject.SetActive(true);
-                        coins[i].position = new Vector3( coinsInfo[i].X, coinsInfo[i].Y, 0);
+                        coins[i].transform.position = new Vector3(coinsInfo[i].X, coinsInfo[i].Y, 0);
                         // if the coin value is not 1 set the color to sky blue
-                        if (coinsInfo[i].Value != 1)
+                        switch (coinsInfo[i].Value)
                         {
-                            coins[i].GetComponent<SpriteRenderer>().color = Color.cyan;
-                        }
-                        else
-                        {
-                            coins[i].GetComponent<SpriteRenderer>().color = Color.yellow;
+                            case 1:
+                                coins[i].sprite = coinSprites[0];
+                                break;
+                            case 5:
+                                coins[i].sprite = coinSprites[1];
+                                break;
+                            case 10:
+                                coins[i].sprite = coinSprites[2];
+                                break;
+                            default:
+                                Debug.LogError($"Invalid coin value{coinsInfo[i].Value}");
+                                break;
                         }
                     }
                     else
@@ -296,7 +338,7 @@ public class GameManager : MonoBehaviour
                 }
 
                 break;
-            case (long)opcode.attack:
+            case (long) opcode.attack:
                 List<Attack> attackInfos;
                 try
                 {
@@ -308,6 +350,7 @@ public class GameManager : MonoBehaviour
                     Console.WriteLine(e);
                     throw;
                 }
+
                 print(content);
                 foreach (var attackInfo in attackInfos)
                 {
@@ -323,9 +366,10 @@ public class GameManager : MonoBehaviour
                         {
                             return;
                         }
+
                         origin = otherPlayers[attackInfo.AttackerID].transform.position;
                     }
-                    
+
                     // target is defender transform position
                     if (attackInfo.DefenderID == UserId)
                     {
@@ -337,19 +381,29 @@ public class GameManager : MonoBehaviour
                         {
                             return;
                         }
+
                         target = otherPlayers[attackInfo.DefenderID].transform.position;
                     }
-                    attackAnimSpawner.Create(origin,target,attackInfo.Damage);
+
+                    attackAnimSpawner.Create(origin, target, attackInfo.Damage);
                 }
+
                 break;
-            case (long)opcode.die:
+            case (long) opcode.die:
                 Debug.Log("You die");
 #if UNITY_EDITOR
                 // UnityEditor.EditorApplication.isPlaying = false;
                 gameOverScreen.gameObject.SetActive(true);
+                SetFinalScore();
+                player.enabled = false;
+
 #endif
                 // Application.Quit();
                 gameOverScreen.gameObject.SetActive(true);
+                SetFinalScore();
+                player.enabled = false;
+
+
                 break;
         }
     }
@@ -362,10 +416,17 @@ public class GameManager : MonoBehaviour
     public void AddHealth()
     {
         print("AddHealth");
-        SendMessageToServer((int)opcode.addHealth, "");
+        SendMessageToServer((int) opcode.addHealth, "");
     }
+
     public void Restart()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void SetFinalScore()
+    {
+        bestRankText.text = bestRank.ToString();
+        bestScoreText.text = bestScore.ToString();
     }
 }
