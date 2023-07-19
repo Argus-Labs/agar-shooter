@@ -207,7 +207,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 				return fmt.Errorf("Cardinal: error fetching player: %w", err)
 			}
 			if distance(nearestPlayerComp.Loc, prevLoc) <= Weapons[tmpPlayer.Weapon].Range {
-				attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{Players[knn[0].Name], tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
+				attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{Players[knn[1].Name], tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
 			}
 		}
 
