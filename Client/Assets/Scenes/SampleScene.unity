@@ -222,7 +222,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 2100000, guid: f90f07a66d2efa34cb144956b27c65d7, type: 2}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -4861,6 +4861,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 581323599}
     m_Modifications:
+    - target: {fileID: 803416013337632946, guid: 6ff73e47ebcc0e040881f2ced29fa5a9, type: 3}
+      propertyPath: m_text
+      value: "1. playerA\n2. psad\n3. who \n4. Done\n<color=green><b>39. Win</b></color>
+        \n"
+      objectReference: {fileID: 0}
     - target: {fileID: 5512291886127758085, guid: 6ff73e47ebcc0e040881f2ced29fa5a9, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
