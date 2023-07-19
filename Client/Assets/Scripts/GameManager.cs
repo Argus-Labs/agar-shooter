@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using Nakama;
 using Nakama.TinyJson;
+using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
@@ -70,18 +72,22 @@ public class GameManager : MonoBehaviour
     public DamageTextSpawner dmgTextSpawner;
     public AttackAnimSpawner attackAnimSpawner;
 
+    [Header("UI")] 
     #region DifferentScreen
-    public Transform startScreen;
+    [FormerlySerializedAs("startScreen")] public Transform loadingScreen;
     public Transform introScreen;
     public Transform gameOverScreen;
+    public TextMeshProUGUI bestRankText;
+    public TextMeshProUGUI bestScoreText;
+    private int bestRank = 0;
+    private int bestScore = 0;
     #endregion
-    
+    # region scoreBoard
     public ScoreBoard scoreBoard;
     public float refreshRate = 1f;
     private float refreshTimer = 0f;
-
     public int scoreboardSize = 5;
-
+    #endregion
     // Start is called before the first frame update
     private void Awake()
     {
@@ -91,7 +97,12 @@ public class GameManager : MonoBehaviour
 
     async void Start()
     {
-        startScreen.gameObject.SetActive(true);
+        introScreen.gameObject.SetActive(true);
+    }
+
+    public async void StartGame()
+    {
+        loadingScreen.gameObject.SetActive(true);
         await nakamaConnection.Connect();
         UserId = nakamaConnection.session.UserId;
         var mainThread = UnityMainThreadDispatcher.Instance();
@@ -106,6 +117,9 @@ public class GameManager : MonoBehaviour
         // nakamaConnection.socket.ReceivedMatchmakerMatched += m => mainThread.Enqueue(() => OnReceivedMatchmakerMatched(m));
         nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
         nakamaConnection.socket.ReceivedMatchState += m => mainThread.Enqueue(() => MatchStatusUpdate(m));
+
+        bestRank = int.MaxValue;
+        bestScore = int.MinValue;
     }
 
     private void OnReceivedMatchPresence(IMatchPresenceEvent matchPresenceEvent)
@@ -131,12 +145,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (gameInitialized && !player.enabled)
-        {
-            player.enabled = true;
-            startScreen.gameObject.SetActive(false);
-            introScreen.gameObject.SetActive(true);
-        }
+    
         // detect key "o" to call addHealth
         if (Input.GetKeyDown(KeyCode.O))
         {
@@ -158,7 +167,15 @@ public class GameManager : MonoBehaviour
                 players.Add(otherPlayer.Key, otherPlayer.Value.coin);
             }
             players.Add(UserId, player.Coin);
-            scoreBoard.Refresh(players, UserId, scoreboardSize);
+            int currRank = scoreBoard.Refresh(players, UserId, scoreboardSize);
+            if (currRank < bestRank)
+            {
+                bestRank = currRank;
+            }
+            if (player.Coin > bestScore)
+            {
+                bestScore = player.Coin;
+            }
         }
         
     }
@@ -250,6 +267,8 @@ public class GameManager : MonoBehaviour
                     player.PlayerInit(serverPayload.pos);
                     // assign a color based on UserID
                     player.SetColor(Color.HSVToRGB(Mathf.Abs((float) UserId.GetHashCode()) / int.MaxValue, 0.75f, 0.75f));
+                    player.enabled = true;
+                    loadingScreen.gameObject.SetActive(false);
                     break;
                 }
 
@@ -347,9 +366,16 @@ public class GameManager : MonoBehaviour
 #if UNITY_EDITOR
                 // UnityEditor.EditorApplication.isPlaying = false;
                 gameOverScreen.gameObject.SetActive(true);
+                SetFinalScore();
+                player.enabled = false;
+              
 #endif
                 // Application.Quit();
                 gameOverScreen.gameObject.SetActive(true);
+                SetFinalScore();
+                player.enabled = false;
+
+
                 break;
         }
     }
@@ -367,5 +393,11 @@ public class GameManager : MonoBehaviour
     public void Restart()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void SetFinalScore()
+    {
+        bestRankText.text = bestRank.ToString();
+        bestScoreText.text = bestScore.ToString();
     }
 }
