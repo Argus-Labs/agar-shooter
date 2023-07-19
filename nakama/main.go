@@ -329,6 +329,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 
+		if err := dispatcher.BroadcastMessage(REMOVE, []byte(pid), nil, nil, true); err != nil {// broadcast player removal to all players
+			return err
+		}
+
 		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
 		delete(Presences, pid)
 	}
