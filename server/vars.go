@@ -49,7 +49,7 @@ const (
 	TickRate			= 15// ticks per second
 	ClientTickRate		= 60// used to determine tickrate relative to cardinal server
 	PlayerRadius		= 0.5// used to determine which coins to collect
-	ExtractionRadius	= 10// determines when players are in range of their extraction point
+	ExtractionRadius	= -1// determines when players are in range of their extraction point
 	sped				= 2// player speed
 	coinRadius			= 0.5// <= GameParams.CSize/2
 	maxCoinsPerTick		= 1000

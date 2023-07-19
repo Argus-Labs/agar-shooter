@@ -218,11 +218,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 			switch opCode {
 				case MOVE:
-					for _, matchData := range matchDataArray {
+					for _, matchData := range matchDataArray {// because this just adds the move to the transaction queue, if a handling error occurs here, it's because lots of inputs are processed at once nakama-side. the RPC call itself is very efficient, so nakama likely cannot handle all of the inputs being received from the client at the same time
 						if _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData)); err != nil {// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
 							logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 						}
-							
 					}
 			}
 
