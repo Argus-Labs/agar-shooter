@@ -27,7 +27,7 @@ const (
 	TESTADDHEALTH int64			= 6
 	EXTRACTION_POINT int64		= 7
 	MAX_COINS int64				= 8
-	FAILED_PRECONDITION int64	= 9
+	NICKNAME int64				= 9
 	ABORTED int64				= 10
 	OUT_OF_RANGE int64			= 11
 	UNIMPLEMENTED int64			= 12
@@ -43,9 +43,94 @@ const (
 )
 
 var (
-	CallRPCs	= make(map[string] func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))// contains all RPC endpoint functions
-	Presences	= make(map[string] runtime.Presence)// contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
-	nonnum		= regexp.MustCompile(`[^0-9]`)
+	CallRPCs		= make(map[string] func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))// contains all RPC endpoint functions
+	Presences		= make(map[string] runtime.Presence)// contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
+	nonnum			= regexp.MustCompile(`[^0-9]`)
+	IDNameMap		= make(map[string] string)
+	NameTakenMap	= map[string] bool {
+		"Alice": false,
+		"Bob": false,
+		"Charlie": false,
+		"David": false,
+		"Emma": false,
+		"Frank": false,
+		"Grace": false,
+		"Henry": false,
+		"Isabella": false,
+		"Jack": false,
+		"Kate": false,
+		"Liam": false,
+		"Mia": false,
+		"Noah": false,
+		"Olivia": false,
+		"Paul": false,
+		"Quinn": false,
+		"Ryan": false,
+		"Sophia": false,
+		"Tom": false,
+        "Uma": false,
+		"Vincent": false,
+		"Willow": false,
+		"Xander": false,
+		"Yara": false,
+		"Zara": false,
+		"Adam": false,
+		"Benjamin": false,
+		"Chloe": false,
+		"Dylan": false,
+        "Eva": false,
+		"Finn": false,
+		"Georgia": false,
+		"Hannah": false,
+		"Isaac": false,
+		"Julia": false,
+		"Kai": false,
+		"Lily": false,
+		"Matthew": false,
+		"Nora": false,
+        "Owen": false,
+		"Penelope": false,
+		"Quincy": false,
+		"Riley": false,
+		"Sofia": false,
+		"Tucker": false,
+		"Ursula": false,
+		"Victor": false,
+		"Willa": false,
+		"Xenia": false,
+        "Yasmine": false,
+		"Zoe": false,
+		"Andrew": false,
+		"Bella": false,
+		"Caleb": false,
+		"Daniel": false,
+		"Emily": false,
+		"Faith": false,
+		"Gabriel": false,
+		"Hazel": false,
+        "Ian": false,
+		"Jacob": false,
+		"Katherine": false,
+		"Leo": false,
+		"Michael": false,
+		"Nathan": false,
+		"Oliver": false,
+		"Patrick": false,
+		"Quentin": false,
+		"Rachel": false,
+        "Samuel": false,
+		"Thomas": false,
+		"Ulysses": false,
+		"Victoria": false,
+		"William": false,
+		"Xavier": false,
+		"Yvette": false,
+		"Zachary": false,
+		"Amelia": false,
+		"Ben": false,
+        "Charlotte": false,
+		"Eleanor": false,
+    };
 )
 
 type DBPlayer struct {
@@ -83,7 +168,7 @@ func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime
 
 func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
 
-	tickRate := 15
+	tickRate := 10
 	label := ""
 
 	if _, err := CallRPCs["games/create"](ctx, logger, db, nk, "{}"); err != nil {
@@ -154,13 +239,35 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		
 		// send player database information to Cardinal if it exists when initializing player
 		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}"))
-		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":0}")
+		_, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":0}")
 
 		if err != nil {
 			return err
 		}
 
-		fmt.Println("player joined: ", p.GetUserId(), "; result: ", result)
+		// assign name
+		name := ""
+		for name == "" {
+			for nameqq, val := range NameTakenMap {
+				if !val {
+					name = nameqq
+					break
+				}
+			}
+		}
+
+		if name == "" {
+			logger.Error("Cannot assign name")
+		} else {
+			IDNameMap[p.GetUserId()] = name
+			NameTakenMap[name] = true
+		}
+
+		if err = dispatcher.BroadcastMessage(NICKNAME, []byte(name), []runtime.Presence{p}, nil, true); err != nil {
+			return err
+		}
+
+		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name)
 	}
 
 	return MatchState{}
@@ -185,7 +292,13 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 		}
 
 		fmt.Println("player left: ", presences[i].GetUserId(), "; result: ", result)
+
+		// nickname stuff
+		NameTakenMap[IDNameMap[presences[i].GetUserId()]] = false;
+		delete(IDNameMap, presences[i].GetUserId())
+
 	}
+	
 
 	return MatchState{}
 }
