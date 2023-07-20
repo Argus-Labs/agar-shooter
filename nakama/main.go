@@ -272,6 +272,8 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	stringmap += "]"
 	if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
 		return err
+	} else {
+		logger.Info(stringmap)
 	}
 
 	return MatchState{}
@@ -310,7 +312,10 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	
 	if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
 		return err
+	} else {
+		logger.Info(stringmap)
 	}
+
 
 	return MatchState{}
 }
