@@ -265,17 +265,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name)
 	}
 
-	stringmap := "["
-	for key, val := range IDNameMap {
-		stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"}"
-	}
-	stringmap += "]"
-	if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
-		return err
-	} else {
-		logger.Info(stringmap)
-	}
-
 	return MatchState{}
 }
 
@@ -303,19 +292,6 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 		NameTakenMap[IDNameMap[presences[i].GetUserId()]] = false;
 		delete(IDNameMap, presences[i].GetUserId())
 	}
-
-	stringmap := "["
-	for key, val := range IDNameMap {
-		stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"}"
-	}
-	stringmap += "]"
-	
-	if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
-		return err
-	} else {
-		logger.Info(stringmap)
-	}
-
 
 	return MatchState{}
 }
@@ -486,6 +462,21 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
 		if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
 			return err
+		}
+	}
+
+	// broadcast player nicknames
+	if len(IDNameMap) > 0 {
+		stringmap := "["
+		for key, val := range IDNameMap {
+			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"}"
+		}
+		stringmap += "]"
+		
+		if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
+			return err
+		} else {
+			logger.Info(stringmap)
 		}
 	}
 	
