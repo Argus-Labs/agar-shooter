@@ -8,9 +8,6 @@ public class ScoreBoard : MonoBehaviour
 
     // players dictionary contains player name and score
     // playerSelf is the player name of the current player
-    // scoreboardSize is the number of line fit in the scoreText
-
-    
     public int Refresh(Dictionary<string, int> players, string playerSelf, int scoreboardSize)
     {
         // based on players dictionary, update the scoreText format "1. player1" just rank and name player itself must be in the output 
@@ -40,9 +37,12 @@ public class ScoreBoard : MonoBehaviour
             string playerName = playerList[i];
             if (selfRank == i)
             {
-                newText += $"<b>{rank}. {playerName}</b>\n";
+                newText += $"<color=green><b>{rank}. {playerName}</b></color>\n";
             }
-            else
+            else if (rank == 1)
+            {
+                newText += $"<color=red>{rank}. {playerName}</color>\n";
+            }
             {
                 newText += $"{rank}. {playerName}\n";
             }
@@ -53,7 +53,7 @@ public class ScoreBoard : MonoBehaviour
             string playerName = playerList[count - 1];
             if (selfRank == count - 1)
             {
-                newText += $"<b>{count}. {playerName}</b>";
+                newText += $"<color=green><b>{count}. {playerName}</b></color>";
             }
             else
             {
@@ -62,7 +62,7 @@ public class ScoreBoard : MonoBehaviour
         }
         else
         {
-            newText += $"<b>{selfRank+1}. {playerSelf}</b>";
+            newText += $"<color=green><b>{selfRank+1}. {playerSelf}</b></color>";
         }
 
         scoreText.text = newText;

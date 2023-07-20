@@ -1,4 +1,5 @@
 ﻿using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,13 +7,14 @@ public class RemotePlayer : MonoBehaviour
 {
     public Vector2 newPos, prevPos;
     public float t = 0f;
-    public int serverTickRate = 5;
+    public int serverTickRate = 10;
     public bool isRight = true;
     public int coin = 0;
     public string userID;
     public Transform sprite;
     public Slider healthBar;
     public SpriteRenderer body;
+    public TextMeshProUGUI nameText;
     // lerp between prevPos and newPos
 
     private void Start()
@@ -44,5 +46,9 @@ public class RemotePlayer : MonoBehaviour
     {
         print(hsvToRGB);
         body.color = hsvToRGB;
+    }
+    public void SetName(string name)
+    {
+        nameText.text = name;
     }
 }

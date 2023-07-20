@@ -20,7 +20,7 @@ public class Player : MonoBehaviour
     private int sequenceNumber = 0;
     CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>(100);
     public Vector2 pos = new Vector2(0, 0);
-
+    public TextMeshProUGUI nameText;
     // may need introduce other parameters
     public void PlayerInit(Vector2 pos)
     {
@@ -214,5 +214,10 @@ public class Player : MonoBehaviour
     public void UpdatePosText(string newPos)
     {
         posText.text = newPos;
+    }
+
+    public void UpdateNameText(string newName)
+    {
+        nameText.text = newName;
     }
 }

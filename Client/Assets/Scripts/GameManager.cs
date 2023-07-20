@@ -17,6 +17,7 @@ public class GameManager : MonoBehaviour
         attack = 3,
         die = 5,
         addHealth = 6,
+        playerName = 9,
         playerMove = 17,
     }
 
@@ -54,6 +55,12 @@ public class GameManager : MonoBehaviour
         public float X;
         public float Y;
         public int Value;
+    }
+
+    struct PlayerName
+    {
+        public string UserId;
+        public string Name;
     }
 
     public bool gameInitialized;
@@ -106,7 +113,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         // let the game run 60fps
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = 59;
     }
 
     void Start()
@@ -178,11 +185,11 @@ public class GameManager : MonoBehaviour
             Dictionary<string, int> players = new Dictionary<string, int>();
             foreach (KeyValuePair<string, RemotePlayer> otherPlayer in otherPlayers)
             {
-                players.Add(otherPlayer.Key, otherPlayer.Value.coin);
+                players.Add(otherPlayer.Value.nameText.text, otherPlayer.Value.coin);
             }
 
-            players.Add(UserId, player.Coin);
-            int currRank = scoreBoard.Refresh(players, UserId, scoreboardSize);
+            players.Add(player.nameText.text, player.Coin);
+            int currRank = scoreBoard.Refresh(players, player.nameText.text, scoreboardSize);
             if (currRank < bestRank)
             {
                 bestRank = currRank;
@@ -243,7 +250,7 @@ public class GameManager : MonoBehaviour
                 // handle other player
                 if (packet.Name != UserId)
                 {
-                    print("content: " + content);
+                    // print("content: " + content);
                     if (!otherPlayers.ContainsKey(packet.Name))
                     {
                         RemotePlayer newPlayer = Instantiate(prefab, Vector3.one * -1f, quaternion.identity);
@@ -252,6 +259,7 @@ public class GameManager : MonoBehaviour
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
                         newPlayer.coin = packet.Coins;
+                        // newPlayer.SetName(packet.Name);
                         newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.Name.GetHashCode() / int.MaxValue),
                             0.75f, 0.75f));
                     }
@@ -351,7 +359,6 @@ public class GameManager : MonoBehaviour
                     throw;
                 }
 
-                print(content);
                 foreach (var attackInfo in attackInfos)
                 {
                     Vector2 origin, target;
@@ -388,6 +395,39 @@ public class GameManager : MonoBehaviour
                     attackAnimSpawner.Create(origin, target, attackInfo.Damage);
                 }
 
+                break;
+            
+            case (long) opcode.playerName:
+                print(content);
+                List<PlayerName> playerNames;
+                try
+                {
+                    playerNames = content.FromJson<List<PlayerName>>();
+                }
+                catch (Exception e)
+                {
+                    print("content: " + content);
+                    Console.WriteLine(e);
+                    throw;
+                }
+                print(playerNames);
+                foreach (PlayerName playerName in playerNames)
+                {
+                    if (playerName.UserId == UserId)
+                    {
+                        player.UpdateNameText(playerName.Name);
+                    }
+                    else
+                    {
+                        if ( !otherPlayers.ContainsKey(playerName.UserId) )
+                        {
+                            return;
+                        }
+                    
+                        otherPlayers[playerName.UserId].SetName(playerName.Name);
+                    }
+                }
+                
                 break;
             case (long) opcode.die:
                 Debug.Log("You die");
