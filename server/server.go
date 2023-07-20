@@ -53,6 +53,9 @@ func PushPlayer(player PlayerComponent) error {
 		return nil
 	}
 
+	//TODO remove after demo
+	PlayerMaxCoins[player.Name] = 0
+
 	playerID, err := World.Create(PlayerComp)// creates new player
 	if err != nil {
 		return fmt.Errorf("Error adding player to world: %w", err)
@@ -69,6 +72,7 @@ func PushPlayer(player PlayerComponent) error {
 
 	// adds player to kdtree
 	PlayerTree.Insert(&P{vector.V{playercomp.Loc.First,playercomp.Loc.Second}, playercomp.Name})
+
 
 	return nil
 }
@@ -301,6 +305,8 @@ func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {
 }
 
 func CheckExtraction(player ModPlayer) int {
+	return PlayerMaxCoins[player.Name]//TODO remove after demo
+	/*
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
 	if err != nil {
@@ -318,6 +324,7 @@ func CheckExtraction(player ModPlayer) int {
 	} else {
 		return 0
 	}
+	*/
 }
 
 

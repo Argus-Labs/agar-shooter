@@ -190,8 +190,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		prevLoc := tmpPlayer.Loc
 
-		// attacking players; each player attacks the closest player TODO: change targetting system later
-		// get nearest neighbor using kdtree
+		// attacking players; each player attacks the closest player as determined by kdtree TODO: change targetting system later
 		depth := 0
 		knn := kd.KNN[*P](PlayerTree, vector.V{prevLoc.First, prevLoc.Second}, 2, func(q *P) bool {
 			depth++
@@ -212,10 +211,8 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		}
 
 		// moving players --- this is the only place players move, so modifying player tree values must only occur here (outside of inserts and deletes)
-
 		loc := move(tmpPlayer)
 
-		// moves player in kdtree
 		point := &P{vector.V{prevLoc.First, prevLoc.Second}, playerName}
 		PlayerTree.Remove(point.P(), point.Equal)
 		PlayerTree.Insert(&P{vector.V{loc.First,loc.Second}, playerName})
@@ -247,6 +244,7 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
 			comp.Loc = loc
 			comp.Coins += extraCoins
+			if PlayerMaxCoins[playerName] < comp.Coins { PlayerMaxCoins[playerName] = comp.Coins }
 			
 			return comp
 		})

@@ -28,6 +28,7 @@ var (
 	CoinComp				= ecs.NewComponentType[CoinComponent]()
 	HealthComp				= ecs.NewComponentType[HealthComponent]()
 	WeaponComp				= ecs.NewComponentType[HealthComponent]()
+	PlayerMaxCoins			= make(map[string] int)// used only for demo purposes TODO: remove after demo
 	Players					= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
 	MoveTx					= ecs.NewTransactionType[Move]()//(World, "move")
 	Width, Height			int

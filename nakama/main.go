@@ -26,7 +26,7 @@ const (
 	DED int64					= 5
 	TESTADDHEALTH int64			= 6
 	EXTRACTION_POINT int64		= 7
-	RESOURCE_EXHAUSTED int64	= 8
+	MAX_COINS int64				= 8
 	FAILED_PRECONDITION int64	= 9
 	ABORTED int64				= 10
 	OUT_OF_RANGE int64			= 11
@@ -264,6 +264,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			} else {
 				if err = dispatcher.BroadcastMessage(EXTRACTION_POINT, []byte(extractionPoint), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
+			}
+
+			if intCoins, err := CallRPCs["games/offload"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
+				return err
+			} else {
+				if err = dispatcher.BroadcastMessage(MAX_COINS, []byte(intCoins), nil, nil, true); err != nil {// send max coins to all players
 					return err
 				}
 			}
