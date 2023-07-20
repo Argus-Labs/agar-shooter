@@ -13,6 +13,7 @@ import (
 	"time"
 	"strconv"
 	"regexp"
+	"math"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -46,7 +47,99 @@ var (
 	CallRPCs		= make(map[string] func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))// contains all RPC endpoint functions
 	Presences		= make(map[string] runtime.Presence)// contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
 	nonnum			= regexp.MustCompile(`[^0-9]`)
-	IDNameMap		= make(map[string] string)
+	IDNameArr		= []string{
+		"Alice",
+		"Bob",
+		"Charlie",
+		"David",
+		"Emma",
+		"Frank",
+		"Grace",
+		"Henry",
+		"Isabella",
+		"Jack",
+		"Kate",
+		"Liam",
+		"Mia",
+		"Noah",
+		"Olivia",
+		"Paul",
+		"Quinn",
+		"Ryan",
+		"Sophia",
+		"Tom",
+		"Uma",
+		"Vincent",
+		"Willow",
+		"Xander",
+		"Yara",
+		"Zara",
+		"Adam",
+		"Benjamin",
+		"Chloe",
+		"Dylan",
+		"Eva",
+		"Finn",
+		"Georgia",
+		"Hannah",
+		"Isaac",
+		"Julia",
+		"Kai",
+		"Lily",
+		"Matthew",
+		"Nora",
+		"Owen",
+		"Penelope",
+		"Quincy",
+		"Riley",
+		"Sofia",
+		"Tucker",
+		"Ursula",
+		"Victor",
+		"Willa",
+		"Xenia",
+		"Yasmine",
+		"Zoe",
+		"Andrew",
+		"Bella",
+		"Caleb",
+		"Daniel",
+		"Emily",
+		"Faith",
+		"Gabriel",
+		"Hazel",
+		"Ian",
+		"Jacob",
+		"Katherine",
+		"Leo",
+		"Michael",
+		"Nathan",
+		"Oliver",
+		"Patrick",
+		"Quentin",
+		"Rachel",
+		"Samuel",
+		"Thomas",
+		"Ulysses",
+		"Victoria",
+		"William",
+		"Xavier",
+		"Yvette",
+		"Zachary",
+		"Amelia",
+		"Ben",
+		"Charlotte",
+		"Eleanor",
+}
+	NameToNickname		= make(map[string] string)
+	rollHash		= func(s string) int {
+		hash := 0
+		for i, c := range s {
+			hash = (hash + int(c)*int(math.Pow(26, float64(i%10))))%(1e9+7)
+		}
+
+		return hash
+	}
 	NameTakenMap	= map[string] bool {
 		"Alice": false,
 		"Bob": false,
@@ -68,7 +161,7 @@ var (
 		"Ryan": false,
 		"Sophia": false,
 		"Tom": false,
-        "Uma": false,
+		"Uma": false,
 		"Vincent": false,
 		"Willow": false,
 		"Xander": false,
@@ -78,7 +171,7 @@ var (
 		"Benjamin": false,
 		"Chloe": false,
 		"Dylan": false,
-        "Eva": false,
+		"Eva": false,
 		"Finn": false,
 		"Georgia": false,
 		"Hannah": false,
@@ -88,7 +181,7 @@ var (
 		"Lily": false,
 		"Matthew": false,
 		"Nora": false,
-        "Owen": false,
+		"Owen": false,
 		"Penelope": false,
 		"Quincy": false,
 		"Riley": false,
@@ -98,7 +191,7 @@ var (
 		"Victor": false,
 		"Willa": false,
 		"Xenia": false,
-        "Yasmine": false,
+		"Yasmine": false,
 		"Zoe": false,
 		"Andrew": false,
 		"Bella": false,
@@ -108,7 +201,7 @@ var (
 		"Faith": false,
 		"Gabriel": false,
 		"Hazel": false,
-        "Ian": false,
+		"Ian": false,
 		"Jacob": false,
 		"Katherine": false,
 		"Leo": false,
@@ -118,7 +211,7 @@ var (
 		"Patrick": false,
 		"Quentin": false,
 		"Rachel": false,
-        "Samuel": false,
+		"Samuel": false,
 		"Thomas": false,
 		"Ulysses": false,
 		"Victoria": false,
@@ -128,7 +221,7 @@ var (
 		"Zachary": false,
 		"Amelia": false,
 		"Ben": false,
-        "Charlotte": false,
+		"Charlotte": false,
 		"Eleanor": false,
     };
 )
@@ -245,23 +338,22 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 
-		// assign name
+		// assign name deterministically
 		name := ""
-		for name == "" {
-			for nameqq, val := range NameTakenMap {
-				if !val {
-					name = nameqq
-					break
-				}
+		if len(Presences) > len(IDNameArr) {
+			logger.Error("Nakama: too many players in the game")
+			break
+		}
+		for i := rollHash(p.GetUserId())%len(IDNameArr); ; i = (i+1)%len(IDNameArr) {
+			if !NameTakenMap[IDNameArr[i]] {
+				name = IDNameArr[i]
+				break
 			}
 		}
 
-		if name == "" {
-			logger.Error("Cannot assign name")
-		} else {
-			IDNameMap[p.GetUserId()] = name
-			NameTakenMap[name] = true
-		}
+		NameTakenMap[name] = true
+		NameToNickname[p.GetUserId()] = name
+
 		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name)
 	}
 
@@ -289,8 +381,8 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 		fmt.Println("player left: ", presences[i].GetUserId(), "; result: ", result)
 
 		// nickname stuff
-		NameTakenMap[IDNameMap[presences[i].GetUserId()]] = false;
-		delete(IDNameMap, presences[i].GetUserId())
+		NameTakenMap[NameToNickname[presences[i].GetUserId()]] = false;
+		delete(NameToNickname, presences[i].GetUserId())
 	}
 
 	return MatchState{}
@@ -466,17 +558,15 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// broadcast player nicknames
-	if len(IDNameMap) > 0 {
+	if len(NameToNickname) > 0 {
 		stringmap := "["
-		for key, val := range IDNameMap {
-			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"}"
+		for key, val := range NameToNickname {
+			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"},"
 		}
 		stringmap += "]"
 		
 		if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
 			return err
-		} else {
-			logger.Info(stringmap)
 		}
 	}
 	
