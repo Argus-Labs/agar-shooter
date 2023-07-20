@@ -563,7 +563,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		for key, val := range NameToNickname {
 			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"},"
 		}
-		stringmap += "]"
+		stringmap = stringmap[:len(stringmap)-1] + "]"
 		
 		if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
 			return err
