@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/argus-labs/world-engine/game/sample_game_server/server/game"
+	"github.com/argus-labs/world-engine/game/sample_game_server/server/utils"
 	"log"
 	"net/http"
 	"os"
-	"fmt"
 )
 
 const EnvGameServerPort = "GAME_SERVER_PORT"
@@ -20,23 +22,22 @@ func main() {
 		path    string
 		handler func(http.ResponseWriter, *http.Request)
 	}{
-		{"games/push", handlePlayerPush},
-		{"games/pop", handlePlayerPop},
-		{"games/move", handleMakeMove},
-		{"games/state", getPlayerState},
-		{"games/status", getPlayerStatus},
-		{"games/coins", getPlayerCoins},
-		{"games/tick", tig},
-		{"games/create", createGame},
-		{"games/offload", checkExtraction},
-		{"games/extract", getExtractionPoint},
-		{"games/attacks", recentAttacks},
-		{"games/testaddhealth", testAddHealth},
+		{"games/push", game.HandlePlayerPush},
+		{"games/pop", game.HandlePlayerPop},
+		{"games/move", game.HandleMakeMove},
+		{"games/state", game.GetPlayerState},
+		{"games/status", game.GetPlayerStatus},
+		{"games/coins", game.GetPlayerCoins},
+		{"games/tick", game.Tig},
+		{"games/create", game.CreateGame},
+		{"games/offload", game.CheckExtraction},
+		{"games/extract", game.GetExtractionPoint},
+		{"games/attacks", game.RecentAttacks},
+		{"games/testaddhealth", game.TestAddHealth},
 	}
 
 	log.Printf("Attempting to register %d handlers\n", len(handlers))
 	paths := []string{}
-
 
 	for _, h := range handlers {
 		http.HandleFunc("/"+h.path, h.handler)
@@ -46,36 +47,11 @@ func main() {
 		enc := json.NewEncoder(w)
 
 		if err := enc.Encode(paths); err != nil {
-			writeError(w, "can't marshal list", err)
+			utils.WriteError(w, "can't marshal list", err)
 		}
 	})
 
 	log.Printf("Starting server on port %s\n", port)
 
 	http.ListenAndServe(":"+port, nil)
-}
-
-func writeError(w http.ResponseWriter, msg string, err error) {
-	w.WriteHeader(500)// error
-	fmt.Fprintf(w, "%s: %v", msg, err)
-}
-
-func writeResult(w http.ResponseWriter, v any) {
-	w.WriteHeader(200)// success
-	if s, ok := v.(string); ok {
-		v = struct{ Msg string }{Msg: s}
-	}
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(v); err != nil {
-		writeError(w, "can't encode", err)
-		return
-	}
-}
-
-func decode(r *http.Request, v any) error {
-	dec := json.NewDecoder(r.Body)
-	if err := dec.Decode(v); err != nil {
-		return err
-	}
-	return nil
 }
