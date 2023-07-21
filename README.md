@@ -23,7 +23,7 @@ Server code is located in [server](server). The `.go` files contain the server c
 * `makeMoves`: a system that finds the nearest neighbor of each player, stores all attacks between players, applies the average direction of all inputs processed within the last tick to each player, finds all coins close enough to the line segment between the previous location and the current location and gives them to the player, then executes all player attacks 
 * `beeg_test.go` contains testcases verifying that various game operations work as intended on Cardinal.  
 
-### Server Optimizations
+## Server Optimizations
 The current coding framework incorporates functions to assess player attacks, manage coin collection and insertion, and identify nearby coins. However, this process could benefit from optimization.
 
 Coins are currently stored in a map of cells, each corresponding to a specific area on the game board. To find the nearest player-player and coin-coin, we iterate over all players or coins in the neighboring cells of a player. Then, we evaluate whether the closest player is too close.
