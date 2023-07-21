@@ -10,6 +10,8 @@ require (
 require (
 	github.com/downflux/go-geometry v0.16.0
 	github.com/downflux/go-kd v1.0.5
+	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05
+	github.com/rs/zerolog v1.29.1
 )
 
 require (
@@ -22,7 +24,6 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/redis/go-redis/v9 v9.0.2 // indirect
-	github.com/rs/zerolog v1.29.1 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 )
