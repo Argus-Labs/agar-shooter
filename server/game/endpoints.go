@@ -20,7 +20,6 @@ func HandlePlayerPush(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, contains := Players[player.Name]; contains {
-		return
 		utils.WriteError(w, "player name already exists", nil)
 		return
 	}
