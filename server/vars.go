@@ -34,7 +34,7 @@ var (
 	Width, Height			int
 	Weapons					= map[Weapon] WeaponData{
 								Dud: WeaponData{0, 0.0},
-								Melee: WeaponData{4, 4.0},
+								Melee: WeaponData{2, 4.0},
 								Slug: WeaponData{3, 6.9},
 							}
 	mutex					= &sync.RWMutex{}
