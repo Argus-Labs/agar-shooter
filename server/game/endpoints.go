@@ -48,7 +48,7 @@ func HandlePlayerPop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_handlePlayerPop(player)
+	HandlePlayerPopInternal(player)
 
 	utils.WriteResult(w, "Player removal successful")
 

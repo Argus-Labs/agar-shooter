@@ -23,7 +23,7 @@ func AddCoin(coin types.Triple[float64, float64, int]) (int, error) {
 	}
 
 	mutex.Lock()
-	CoinMap[types.GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = types.pewp
+	CoinMap[types.GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = types.Pewp
 	mutex.Unlock()
 	totalCoins++
 
@@ -95,7 +95,7 @@ func _handlePlayerPush(player types.AddPlayer) error {
 	return PushPlayer(playerComp)
 }
 
-func _handlePlayerPop(player types.ModPlayer) error {
+func HandlePlayerPopInternal(player types.ModPlayer) error {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func _handlePlayerPop(player types.ModPlayer) error {
 			}
 		}
 
-		peep := systems.bound(playercomp.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), playercomp.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
+		peep := systems.Bound(playercomp.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), playercomp.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
 		newCoins = append(newCoins, types.Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
 		start++
 	}
@@ -181,46 +181,46 @@ func _handleMakeMove(move types.Move) {
 	MoveTx.AddToQueue(World, move) // adds "move" transaction to World transaction queue
 }
 
-func _createGame(game types.Game) error {
+func _createGame(_game types.Game) error {
 	//if World.stateIsLoaded {
 	//	return fmt.Errorf("already loaded state")
 	//}
 	rand.Seed(time.Now().UnixNano())
-	if game.CSize == 0 {
+	if _game.CSize == 0 {
 		return fmt.Errorf("Cardinal: cellsize is zero")
 	}
-	game.GameParams = game
-	game.World.RegisterComponents(game.PlayerComp, game.CoinComp, game.HealthComp, game.WeaponComp)
-	game.World.AddSystem(systems.processMoves)
-	game.World.AddSystem(systems.makeMoves)
+	GameParams = _game
+	World.RegisterComponents(PlayerComp, CoinComp, HealthComp, WeaponComp)
+	World.AddSystem(systems.ProcessMoves)
+	World.AddSystem(systems.MakeMoves)
 
-	game.World.LoadGameState()
-	game.MoveTx.SetID(0)
-	playerIDs, err := game.World.CreateMany(len(game.GameParams.Players), game.PlayerComp) // creates player entities
+	World.LoadGameState()
+	MoveTx.SetID(0)
+	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp) // creates player entities
 
-	game.Players = make(map[string]storage.EntityID)
-	for i, playername := range game.GameParams.Players { // associates storage.EntityIDs with each player
-		game.Players[playername] = playerIDs[i]
+	Players = make(map[string]storage.EntityID)
+	for i, playername := range GameParams.Players { // associates storage.EntityIDs with each player
+		Players[playername] = playerIDs[i]
 	}
 
 	if err != nil {
 		return fmt.Errorf("Error initializing game objects: %w", err)
 	}
 
-	game.Width = int(math.Ceil(game.GameParams.Dims.First / game.GameParams.CSize))
-	game.Height = int(math.Ceil(game.GameParams.Dims.Second / game.GameParams.CSize))
+	Width = int(math.Ceil(GameParams.Dims.First / GameParams.CSize))
+	Height = int(math.Ceil(GameParams.Dims.Second / GameParams.CSize))
 
 	// initializes player and item maps
-	for i := 0; i <= game.Width; i++ {
-		for j := 0; j <= game.Height; j++ {
-			game.CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.void)
-			game.HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)
-			game.WeaponMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)
+	for i := 0; i <= Width; i++ {
+		for j := 0; j <= Height; j++ {
+			CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void)
+			HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
+			WeaponMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
 		}
 	}
 
-	for _, playername := range game.GameParams.Players {
-		playercomp := component.PlayerComponent{playername, 100, 0, game.DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{rand.Float64() * game.GameParams.Dims.First, rand.Float64() * game.GameParams.Dims.Second}, true, -1} // initializes player entities through their component
+	for _, playername := range GameParams.Players {
+		playercomp := component.PlayerComponent{playername, 100, 0, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{rand.Float64() * GameParams.Dims.First, rand.Float64() * GameParams.Dims.Second}, true, -1} // initializes player entities through their component
 		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 
 		if err := PushPlayer(playercomp); err != nil {
@@ -246,7 +246,7 @@ func SpawnCoins() error { // spawn coins randomly over the board until the coin 
 			for j := math.Max(0, float64(coinRound.Second-1)); i <= math.Min(float64(Height), float64(coinRound.Second+1)); i++ {
 				mutex.RLock()
 				for coin, _ := range CoinMap[types.Pair[int, int]{int(i), int(j)}] {
-					keep = keep && (systems.distance(coin.Second, newCoin) > 2*coinRadius)
+					keep = keep && (systems.Distance(coin.Second, newCoin) > 2*coinRadius)
 				}
 				mutex.RUnlock()
 
@@ -261,7 +261,7 @@ func SpawnCoins() error { // spawn coins randomly over the board until the coin 
 						return fmt.Errorf("Cardinal: player obtain: %w", err)
 					}
 
-					keep = keep && (systems.distance(nearestPlayerComp.Loc, newCoin) > PlayerRadius+1+coinRadius)
+					keep = keep && (systems.Distance(nearestPlayerComp.Loc, newCoin) > PlayerRadius+1+coinRadius)
 				}
 			}
 		}

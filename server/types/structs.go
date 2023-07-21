@@ -7,26 +7,28 @@ import (
 	"math"
 )
 
-type void struct{}
+type Void struct{}
 
-var pewp void
+var Pewp Void
 
 type Mult interface {
-	getFirst() float64
-	getSecond() float64
+	GetFirst() float64
+	GetSecond() float64
 }
 
 func GetCell(loc Mult) Pair[int, int] {
-	return Pair[int, int]{int(math.Floor(loc.getFirst() / main.GameParams.CSize)), int(math.Floor(loc.getSecond() / main.GameParams.CSize))}
+	return Pair[int, int]{int(math.Floor(loc.GetFirst() / main.GameParams.CSize)), int(math.Floor(loc.GetSecond() / main.GameParams.CSize))}
 }
 
 type P struct {
-	p    vector.V
-	Name string
+	// Note(Namra): renamed to PTest cuz it wasn't exporting
+	// and I don't know what "p" is so we call it "Test" for now
+	PTest vector.V
+	Name  string
 }
 
 func (p *P) P() vector.V {
-	return p.p
+	return p.PTest
 }
 
 func (p *P) Equal(q *P) bool {
@@ -38,11 +40,11 @@ type Pair[T1 any, T2 any] struct { // inherits Mult
 	Second T2
 }
 
-func (p Pair[float64, any]) getFirst() float64 {
+func (p Pair[float64, any]) GetFirst() float64 {
 	return p.First
 }
 
-func (p Pair[any, float64]) getSecond() float64 {
+func (p Pair[any, float64]) GetSecond() float64 {
 	return p.Second
 }
 
@@ -52,11 +54,11 @@ type Triple[T1 any, T2 any, T3 any] struct { // inherits Mult
 	Third  T3
 }
 
-func (t Triple[float64, any, void]) getFirst() float64 {
+func (t Triple[float64, any, void]) GetFirst() float64 {
 	return t.First
 }
 
-func (t Triple[any, float64, void]) getSecond() float64 {
+func (t Triple[any, float64, void]) GetSecond() float64 {
 	return t.Second
 }
 

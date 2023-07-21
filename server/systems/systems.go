@@ -111,18 +111,18 @@ func ProcessMoves(World *ecs.World, q *ecs.TransactionQueue) error { // adjusts 
 	return nil
 }
 
-func bound(x float64, y float64) types.Pair[float64, float64] {
+func Bound(x float64, y float64) types.Pair[float64, float64] {
 	return types.Pair[float64, float64]{math.Min(float64(game.GameParams.Dims.First), math.Max(0, x)), math.Min(float64(game.GameParams.Dims.Second), math.Max(0, y))}
 }
 
-func distance(loc1, loc2 types.Mult) float64 { // returns distance between two coins
-	return math.Sqrt(math.Pow(loc1.getFirst()-loc2.getFirst(), 2) + math.Pow(loc1.getSecond()-loc2.getSecond(), 2))
+func Distance(loc1, loc2 types.Mult) float64 { // returns distance between two coins
+	return math.Sqrt(math.Pow(loc1.GetFirst()-loc2.GetFirst(), 2) + math.Pow(loc1.GetSecond()-loc2.GetSecond(), 2))
 }
 
 func move(tmpPlayer component.PlayerComponent) types.Pair[float64, float64] { // change speed function
 	dir := tmpPlayer.Dir
 	coins := tmpPlayer.Coins
-	return bound(tmpPlayer.Loc.First+(game.sped*dir.First*math.Exp(-0.01*float64(coins))), tmpPlayer.Loc.Second+(game.sped*dir.Second*math.Exp(-0.01*float64(coins))))
+	return Bound(tmpPlayer.Loc.First+(game.Sped*dir.First*math.Exp(-0.01*float64(coins))), tmpPlayer.Loc.Second+(game.Sped*dir.Second*math.Exp(-0.01*float64(coins))))
 }
 
 func CoinProjDist(start, end types.Pair[float64, float64], coin types.Triple[float64, float64, int]) float64 { // closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defined by [start,end]
@@ -163,7 +163,7 @@ func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defen
 
 	if coins {
 		randfloat := rand.Float64() * 2 * math.Pi
-		loc = bound(loc.First+3*math.Cos(randfloat), loc.Second+3*math.Sin(randfloat))
+		loc = Bound(loc.First+3*math.Cos(randfloat), loc.Second+3*math.Sin(randfloat))
 
 		if _, err := game.AddCoin(types.Triple[float64, float64, int]{loc.First, loc.Second, 1}); err != nil {
 			return err
@@ -175,7 +175,7 @@ func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defen
 	}
 
 	if kill { // removes player from map if they die
-		if err := game.HandlePlayerPop(types.ModPlayer{name}); err != nil {
+		if err := game.HandlePlayerPopInternal(types.ModPlayer{name}); err != nil {
 			return err
 		}
 	}
@@ -214,7 +214,7 @@ func MakeMoves(World *ecs.World, q *ecs.TransactionQueue) error { // moves playe
 			if err != nil {
 				return fmt.Errorf("Cardinal: error fetching player: %w", err)
 			}
-			if distance(nearestPlayerComp.Loc, prevLoc) <= game.Weapons[tmpPlayer.Weapon].Range {
+			if Distance(nearestPlayerComp.Loc, prevLoc) <= game.Weapons[tmpPlayer.Weapon].Range {
 				attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{game.Players[knn[1].Name], tmpPlayer.Weapon, types.Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
 			}
 		}
@@ -267,7 +267,7 @@ func MakeMoves(World *ecs.World, q *ecs.TransactionQueue) error { // moves playe
 		}
 	}
 
-	if float64(maxDepth) > 1+game.balanceFactor*math.Log(float64(len(game.Players))) {
+	if float64(maxDepth) > 1+game.BalanceFactor*math.Log(float64(len(game.Players))) {
 		game.PlayerTree.Balance()
 	}
 

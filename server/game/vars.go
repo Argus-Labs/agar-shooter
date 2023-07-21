@@ -23,9 +23,9 @@ const ( // add more weapons as needed
 var (
 	GameParams     types.Game
 	World          = inmem.NewECSWorld()
-	CoinMap        = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.void) // maps cells to sets of coin lists
-	HealthMap      = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of healthpack lists
-	WeaponMap      = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of weapon lists
+	CoinMap        = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of coin lists
+	HealthMap      = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of healthpack lists
+	WeaponMap      = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of weapon lists
 	PlayerTree     = kd.New[*types.P](kd.O[*types.P]{[]*types.P{}, 2, 16})
 	PlayerComp     = ecs.NewComponentType[component.PlayerComponent]()
 	CoinComp       = ecs.NewComponentType[component.CoinComponent]()
@@ -56,10 +56,10 @@ const (
 	ClientTickRate   = 60  // used to determine tickrate relative to cardinal server
 	PlayerRadius     = 0.5 // used to determine which coins to collect
 	ExtractionRadius = -1  // determines when players are in range of their extraction point
-	sped             = 2   // player speed
+	Sped             = 2   // player speed
 	coinRadius       = 0.5 // <= GameParams.CSize/2
 	maxCoinsPerTick  = 1000
 	MAXENTITIES      = 4607704
 	InitRepeatSpawn  = 1
-	balanceFactor    = 3 // multiple of min tree depth after which we should rebalance; the higher, the fewer spikes in processing time there will be at the cost of higher average processing time for lots of players
+	BalanceFactor    = 3 // multiple of min tree depth after which we should rebalance; the higher, the fewer spikes in processing time there will be at the cost of higher average processing time for lots of players
 )
