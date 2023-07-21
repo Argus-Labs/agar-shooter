@@ -2,9 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"github.com/argus-labs/world-engine/game/sample_game_server/server"
 	"github.com/argus-labs/world-engine/game/sample_game_server/server/component"
 	game2 "github.com/argus-labs/world-engine/game/sample_game_server/server/game"
+	"github.com/argus-labs/world-engine/game/sample_game_server/server/systems"
 	"github.com/argus-labs/world-engine/game/sample_game_server/server/types"
 	"gotest.tools/v3/assert"
 	"math/rand"
@@ -41,7 +41,7 @@ func TestPewp(t *testing.T) {
 	var contains bool
 	var p component.PlayerComponent
 
-	err = game2.CreateGame(game)
+	err = game2.CreateGameInternal(game)
 
 	if err != nil {
 		fmt.Println("pewp")
@@ -63,7 +63,7 @@ func TestPewp(t *testing.T) {
 				m[player] = make([]types.TestPlayer, 0)
 			}
 
-			p, err = game2.GetPlayerState(player)
+			p, err = game2.GetPlayerStateInternal(player)
 			fmt.Println(player, ": ", p)
 			assert.NilError(t, err)
 			m[player] = append(m[player], p.Testify())
@@ -73,7 +73,7 @@ func TestPewp(t *testing.T) {
 	testMove([]types.ModPlayer{testPlayer1, testPlayer2})
 
 	move := types.Move{"a", true, false, true, false, 0, 0.2} // up, down, left, right
-	game2.HandleMakeMove(move)
+	game2.HandleMakeMoveInternal(move)
 
 	testMove([]types.ModPlayer{testPlayer1, testPlayer2})
 
@@ -88,7 +88,7 @@ func TestPewp(t *testing.T) {
 	assert.DeepEqual(t, m[testPlayer2][1], m[testPlayer2][2])
 
 	// test adding a player to the game
-	_, err = game2.GetPlayerState(testPlayer3)
+	_, err = game2.GetPlayerStateInternal(testPlayer3)
 	assert.Assert(t, err != nil)
 
 	fmt.Println("start push")
@@ -107,7 +107,7 @@ func TestPewp(t *testing.T) {
 	assert.DeepEqual(t, m[testPlayer3][len(m[testPlayer3])-2], m[testPlayer3][len(m[testPlayer3])-1])
 
 	newMove := types.Move{"c", false, true, false, true, 0, 0.2}
-	game2.HandleMakeMove(newMove)
+	game2.HandleMakeMoveInternal(newMove)
 	game2.TickTock()
 
 	testMove([]types.ModPlayer{testPlayer1, testPlayer2, testPlayer3})
@@ -120,10 +120,10 @@ func TestPewp(t *testing.T) {
 	testMove([]types.ModPlayer{testPlayer1, testPlayer2, testPlayer3})
 
 	fmt.Println("start pop")
-	game2.HandlePlayerPop(testPlayer1)
+	game2.HandlePlayerPopInternal(testPlayer1)
 	fmt.Println("end pop")
 
-	_, err = game2.GetPlayerState(testPlayer1)
+	_, err = game2.GetPlayerStateInternal(testPlayer1)
 	assert.Assert(t, err != nil)
 
 	game2.TickTock()
@@ -140,8 +140,8 @@ func TestPewp(t *testing.T) {
 	move1 := types.Move{"b", true, false, false, false, 0, 0.2} // up, down, left, right
 	move2 := types.Move{"c", false, false, false, true, 1, 0.2}
 
-	game2.HandleMakeMove(move1)
-	game2.HandleMakeMove(move2)
+	game2.HandleMakeMoveInternal(move1)
+	game2.HandleMakeMoveInternal(move2)
 	for i := 0; i < 5*LENGTH; i++ {
 		game2.TickTock()
 	}
@@ -153,7 +153,7 @@ func TestPewp(t *testing.T) {
 	assert.Assert(t, m[testPlayer3][len(m[testPlayer3])-1].LocX == LENGTH)
 
 	move3 := types.Move{"b", false, true, true, false, 1, 0.2} // up, down, left, right
-	game2.HandleMakeMove(move3)
+	game2.HandleMakeMoveInternal(move3)
 
 	for i := 0; i < 5*LENGTH; i++ {
 		game2.TickTock()
@@ -166,8 +166,8 @@ func TestPewp(t *testing.T) {
 	// test that sending multiple moves in one tick works correctly
 	moveMultiple1 := types.Move{"b", true, false, true, false, 2, 0.2} // up, down, left, right
 	moveMultiple2 := types.Move{"b", false, true, false, true, 3, 0.2} // up, down, left, right
-	game2.HandleMakeMove(moveMultiple1)
-	game2.HandleMakeMove(moveMultiple2)
+	game2.HandleMakeMoveInternal(moveMultiple1)
+	game2.HandleMakeMoveInternal(moveMultiple2)
 	game2.TickTock()
 
 	testMove([]types.ModPlayer{testPlayer2, testPlayer3})
@@ -176,8 +176,8 @@ func TestPewp(t *testing.T) {
 
 	// test nearest player: choose a random configuration of players and verify that the players' healths are as expected
 	// insert ATTACKPLAYERS players with non-dud weapons, tick, compare with expected player healths, and repeat until at most one player is left standing
-	game2.HandlePlayerPop(testPlayer2)
-	game2.HandlePlayerPop(testPlayer3)
+	game2.HandlePlayerPopInternal(testPlayer2)
+	game2.HandlePlayerPopInternal(testPlayer3)
 
 	livePlayers := make(map[string]types.Triple[float64, float64, int])
 
@@ -192,12 +192,12 @@ func TestPewp(t *testing.T) {
 		for player, loc := range livePlayers {
 			closestPlayer := "-1"
 			for otherplayer, otherloc := range livePlayers {
-				if otherplayer != player && (closestPlayer == "-1" || main.distance(loc, otherloc) < main.distance(loc, livePlayers[closestPlayer])) {
+				if otherplayer != player && (closestPlayer == "-1" || systems.Distance(loc, otherloc) < systems.Distance(loc, livePlayers[closestPlayer])) {
 					closestPlayer = otherplayer
 				}
 			}
 
-			if closestPlayer != "-1" && main.distance(loc, livePlayers[closestPlayer]) <= game2.Weapons[game2.Melee].Range {
+			if closestPlayer != "-1" && systems.Distance(loc, livePlayers[closestPlayer]) <= game2.Weapons[game2.Melee].Range {
 				livePlayers[closestPlayer] = types.Triple[float64, float64, int]{livePlayers[closestPlayer].First, livePlayers[closestPlayer].Second, livePlayers[closestPlayer].Third - game2.Weapons[game2.Melee].Attack}
 				attacks++
 			}
@@ -219,7 +219,7 @@ func TestPewp(t *testing.T) {
 	comp := func() bool { // compares simulated player map to serverside player map; if
 		serverMap := make(map[string]types.Triple[float64, float64, int])
 		for i := 0; i < ATTACKPLAYERS; i++ {
-			if p, err = game2.GetPlayerState(types.ModPlayer{strconv.Itoa(i)}); err == nil {
+			if p, err = game2.GetPlayerStateInternal(types.ModPlayer{strconv.Itoa(i)}); err == nil {
 				serverMap[strconv.Itoa(i)] = types.Triple[float64, float64, int]{p.Loc.First, p.Loc.Second, p.Health}
 			}
 		}

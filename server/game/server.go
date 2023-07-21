@@ -89,7 +89,7 @@ func PopPlayer(player component.PlayerComponent) error {
 	return nil
 }
 
-func _handlePlayerPush(player types.AddPlayer) error {
+func HandlePlayerPushInternal(player types.AddPlayer) error {
 	playerComp := component.PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{rand.Float64() * GameParams.Dims.First, rand.Float64() * GameParams.Dims.Second}, true, -1}
 	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
 	return PushPlayer(playerComp)
@@ -153,7 +153,7 @@ func TickTock() error { // testing function used to make the game tick
 	return err
 }
 
-func _getPlayerState(player types.ModPlayer) (component.PlayerComponent, error) { // testing function used in place of broadcast to get state of players
+func GetPlayerStateInternal(player types.ModPlayer) (component.PlayerComponent, error) { // testing function used in place of broadcast to get state of players
 	if _, contains := Players[player.Name]; contains == false {
 		return component.PlayerComponent{}, fmt.Errorf("Player does not exist")
 	}
@@ -167,7 +167,7 @@ func _getPlayerState(player types.ModPlayer) (component.PlayerComponent, error) 
 	return comp, nil
 }
 
-func _getPlayerStatus() []types.Pair[string, types.Pair[float64, float64]] { // sends all player information to each player
+func GetPlayerStatusInternal() []types.Pair[string, types.Pair[float64, float64]] { // sends all player information to each player
 	locs := make([]types.Pair[string, types.Pair[float64, float64]], 0)
 	for key, id := range Players {
 		comp, _ := PlayerComp.Get(World, id)
@@ -177,11 +177,11 @@ func _getPlayerStatus() []types.Pair[string, types.Pair[float64, float64]] { // 
 	return locs
 }
 
-func _handleMakeMove(move types.Move) {
+func HandleMakeMoveInternal(move types.Move) {
 	MoveTx.AddToQueue(World, move) // adds "move" transaction to World transaction queue
 }
 
-func _createGame(_game types.Game) error {
+func CreateGameInternal(_game types.Game) error {
 	//if World.stateIsLoaded {
 	//	return fmt.Errorf("already loaded state")
 	//}
@@ -301,7 +301,7 @@ func NearbyCoins(player types.ModPlayer) []types.NearbyCoin {
 	return coins
 }
 
-func _getExtractionPoint(player types.ModPlayer) types.Pair[float64, float64] {
+func GetExtractionPointInternal(player types.ModPlayer) types.Pair[float64, float64] {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
 	if err != nil {
@@ -311,7 +311,7 @@ func _getExtractionPoint(player types.ModPlayer) types.Pair[float64, float64] {
 	return playercomp.Extract
 }
 
-func _checkExtraction(player types.ModPlayer) int {
+func CheckExtractionInternal(player types.ModPlayer) int {
 	return PlayerMaxCoins[player.Name] //TODO remove after demo
 	/*
 		playercomp, err := PlayerComp.Get(World, Players[player.Name])
@@ -334,7 +334,7 @@ func _checkExtraction(player types.ModPlayer) int {
 	*/
 }
 
-func _recentAttacks() []types.AttackTriple {
+func RecentAttacksInternal() []types.AttackTriple {
 	if rand.Float64() > 0.95 {
 		PlayerTree.Balance()
 	}
