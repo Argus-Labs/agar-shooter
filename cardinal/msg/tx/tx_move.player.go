@@ -9,7 +9,7 @@ import (
 
 type MovePlayerMsg struct {
 	TargetPlayerTag     string  `json:"target_player_tag"`
-	PlayerID            string  `json:"playerID` // TODO: fix tag
+	PlayerID            string  `json:"playerID"`
 	Up                  bool    `json:"up"`
 	Down                bool    `json:"down"`
 	Left                bool    `json:"left"`
@@ -26,7 +26,7 @@ func (h *TxHandler) MovePlayer(w http.ResponseWriter, r *http.Request) {
 	var msg MovePlayerMsg
 	err := utils.DecodeMsg[MovePlayerMsg](r, &msg)
 	if err != nil {
-		utils.WriteError(w, "unable to decode attack player tx", err)
+		utils.WriteError(w, "unable to decode move player tx", err)
 		return
 	}
 	TxMovePlayer.AddToQueue(h.World, msg)

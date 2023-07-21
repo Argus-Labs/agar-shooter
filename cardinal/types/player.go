@@ -24,11 +24,6 @@ type TestPlayer struct {
 	LocY     float64
 }
 
-type AddPlayer struct { // for adding and removing players
-	Name  string
-	Coins int
-}
-
 type ModPlayer struct { // for adding and removing players
 	Name string
 }
