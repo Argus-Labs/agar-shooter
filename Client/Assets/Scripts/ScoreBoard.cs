@@ -43,6 +43,7 @@ public class ScoreBoard : MonoBehaviour
             {
                 newText += $"<color=red>{rank}. {playerName}</color>\n";
             }
+            else
             {
                 newText += $"{rank}. {playerName}\n";
             }
