@@ -63,15 +63,14 @@ type Weapon int
 type WeaponData struct {
 	Attack int
 	Range float64
+	MaxAmmo int
+	Reload int64
 }
 
 type BarePlayer struct {
 	Name string
 	Health int
 	Coins int
-	//Weapon Weapon
-	//ExtractX float64
-	//ExtractY float64
 	LocX float64
 	LocY float64
 	IsRight bool

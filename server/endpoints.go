@@ -127,6 +127,19 @@ func checkExtraction(w http.ResponseWriter, r *http.Request) {
 	writeResult(w, coins)
 }
 
+func getMaxCoins(w http.ResponseWriter, r *http.Request) {
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	coins := GetMaxCoins(player)
+
+	writeResult(w, coins)
+}
+
 func getExtractionPoint(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 

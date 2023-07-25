@@ -53,7 +53,6 @@ func PushPlayer(player PlayerComponent) error {
 		return nil
 	}
 
-	//TODO remove after demo
 	PlayerMaxCoins[player.Name] = 0
 
 	playerID, err := World.Create(PlayerComp)// creates new player
@@ -88,8 +87,9 @@ func PopPlayer(player PlayerComponent) error {
 }
 
 func HandlePlayerPush(player AddPlayer) error {
-	playerComp := PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}
-	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
+	weapon, _ := World.Create(WeaponComp)
+	WeaponComp.Set(World, weapon, WeaponComponent{Pair[float64, float64]{-1,-1}, DefaultWeapon, Weapons[DefaultWeapon].MaxAmmo, 0})
+	playerComp := PlayerComponent{player.Name, 100, player.Coins, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}
 	return PushPlayer(playerComp)
 }
 
@@ -177,9 +177,6 @@ func HandleMakeMove(move Move) {
 }
 
 func CreateGame(game Game) error {
-	//if World.stateIsLoaded {
-	//	return fmt.Errorf("already loaded state")
-	//}
 	rand.Seed(time.Now().UnixNano())
 	if game.CSize == 0 {
 		return fmt.Errorf("Cardinal: cellsize is zero")
@@ -215,8 +212,9 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		playercomp := PlayerComponent{playername, 100, 0, DefaultWeapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
-		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
+		weapon, _ := World.Create(WeaponComp)
+		WeaponComp.Set(World, weapon, WeaponComponent{Pair[float64, float64]{-1,-1}, DefaultWeapon, Weapons[DefaultWeapon].MaxAmmo, 0})
+		playercomp := PlayerComponent{playername, 100, 0, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
 
 		if err := PushPlayer(playercomp); err != nil {
 			return err
@@ -268,7 +266,6 @@ func SpawnCoins() error {// spawn coins randomly over the board until the coin c
 	}
 
 	//create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
-	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
 	// maybe make this a system so it can be run async
 
 	return nil
@@ -305,8 +302,6 @@ func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {
 }
 
 func CheckExtraction(player ModPlayer) int {
-	return PlayerMaxCoins[player.Name]//TODO remove after demo
-	/*
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
 	if err != nil {
@@ -324,9 +319,11 @@ func CheckExtraction(player ModPlayer) int {
 	} else {
 		return 0
 	}
-	*/
 }
 
+func GetMaxCoins(player ModPlayer) int {
+	return PlayerMaxCoins[player.Name]
+}
 
 func RecentAttacks() []AttackTriple {
 	if rand.Float64() > 0.95 {

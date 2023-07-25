@@ -27,15 +27,15 @@ var (
 	PlayerComp				= ecs.NewComponentType[PlayerComponent]()
 	CoinComp				= ecs.NewComponentType[CoinComponent]()
 	HealthComp				= ecs.NewComponentType[HealthComponent]()
-	WeaponComp				= ecs.NewComponentType[HealthComponent]()
-	PlayerMaxCoins			= make(map[string] int)// used only for demo purposes TODO: remove after demo
+	WeaponComp				= ecs.NewComponentType[WeaponComponent]()
+	PlayerMaxCoins			= make(map[string] int)// stores max coins achieved for each player
 	Players					= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
 	MoveTx					= ecs.NewTransactionType[Move]()//(World, "move")
 	Width, Height			int
 	Weapons					= map[Weapon] WeaponData{
-								Dud: WeaponData{0, 0.0},
-								Melee: WeaponData{2, 4.0},
-								Slug: WeaponData{3, 6.9},
+								Dud: WeaponData{0, 0.0, 0, 0},
+								Melee: WeaponData{2, 4.0, -1, 1000000000},
+								Slug: WeaponData{3, 6.9, 6, 5000000000},
 							}
 	mutex					= &sync.RWMutex{}
 	ClientView				= Pair[float64,float64]{30,20}// client viewing window
@@ -50,7 +50,7 @@ const (
 	TickRate			= 10// ticks per second
 	ClientTickRate		= 60// used to determine tickrate relative to cardinal server
 	PlayerRadius		= 0.5// used to determine which coins to collect
-	ExtractionRadius	= -1// determines when players are in range of their extraction point
+	ExtractionRadius	= 10// determines when players are in range of their extraction point
 	sped				= 2// player speed
 	coinRadius			= 0.5// <= GameParams.CSize/2
 	maxCoinsPerTick		= 1000

@@ -3,6 +3,7 @@ package main
 
 import (
 	"strconv"
+	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
 
 type HealthComponent struct {
@@ -17,15 +18,16 @@ type CoinComponent struct {
 
 type WeaponComponent struct {
 	Loc Pair[float64, float64]
-	Val Weapon// weapon type; TODO: implement ammo later outside of weapon component
-	// cooldown, ammo, damage, range
+	Val Weapon// weapon type
+	Ammo int// number of attacks left
+	LastAttack int64// time of last attack
 }
 
 type PlayerComponent struct {
 	Name string// username; ip for now
 	Health int// current player health (cap enforced in update loop)
 	Coins int// how much money the player has
-	Weapon Weapon// current player weapon; default is 0 for Melee
+	Weapon storage.EntityID// current player weapon; default is 0 for Melee
 	Loc Pair[float64, float64]// current location
 	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
 	LastMove Pair[float64, float64]// last player move; this must be a pair of ints in [[-1,1],[-1,1]]
@@ -39,7 +41,8 @@ func (p PlayerComponent) Simplify() BarePlayer {
 }
 
 func (p PlayerComponent) Testify() TestPlayer {
-	return TestPlayer{p.Name, p.Health, p.Coins, p.Weapon, p.Extract.First, p.Extract.Second, p.Loc.First, p.Loc.Second}
+	weapon, _ := WeaponComp.Get(World, p.Weapon)
+	return TestPlayer{p.Name, p.Health, p.Coins, weapon.Val, p.Extract.First, p.Extract.Second, p.Loc.First, p.Loc.Second}
 }
 
 func (p PlayerComponent) String() string {
@@ -47,7 +50,8 @@ func (p PlayerComponent) String() string {
 	s += "Name: " + p.Name + "\n"
 	s += "Health: " + strconv.Itoa(p.Health) + "\n"
 	s += "Coins: " + strconv.Itoa(p.Coins) + "\n"
-	s += "Weapon: " + strconv.Itoa(int(p.Weapon)) + "\n"
+	weapon, _ := WeaponComp.Get(World, p.Weapon)
+	s += "Weapon: " + strconv.Itoa(int(weapon.Val)) + "\n"
 	s += "Loc: " + strconv.FormatFloat(float64(p.Loc.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Loc.Second), 'e', -1, 32) + "\n"
 	s += "Dir: " + strconv.FormatFloat(float64(p.Dir.First), 'e', -1, 32) + " " + strconv.FormatFloat(float64(p.Dir.Second), 'e', -1, 32)
 
