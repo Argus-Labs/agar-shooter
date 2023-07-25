@@ -4,6 +4,7 @@ package main
 import (
 	"sync"
 	"math"
+	"time"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
@@ -34,8 +35,8 @@ var (
 	Width, Height			int
 	Weapons					= map[Weapon] WeaponData{
 								Dud: WeaponData{0, 0.0, 0, 0},
-								Melee: WeaponData{2, 4.0, -1, 1000000000},
-								Slug: WeaponData{3, 6.9, 6, 5000000000},
+								Melee: WeaponData{2, 4.0, -1, 1*time.Second.Nanoseconds()},// last number is weapon cooldown in nanoseconds
+								Slug: WeaponData{3, 6.9, 6, 5*time.Second.Nanoseconds()},
 							}
 	mutex					= &sync.RWMutex{}
 	ClientView				= Pair[float64,float64]{30,20}// client viewing window
@@ -44,6 +45,7 @@ var (
 	maxCoinsInCell			= func() int { return int(GameParams.CSize*GameParams.CSize/(3*coinRadius*coinRadius*math.Pi)) }
 	maxCoins				= func() int { return int(math.Min(float64(maxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second/GameParams.CSize/GameParams.CSize/4 + float64(3*len(Players)), float64(MAXENTITIES - len(Players))))}
 	totalCoins				= 0
+	ExtractionCooldown	= 2*time.Second.Nanoseconds()// determines when players are in range of their extraction point
 )
 
 const (

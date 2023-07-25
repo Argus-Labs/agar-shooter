@@ -32,6 +32,7 @@ type PlayerComponent struct {
 	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
 	LastMove Pair[float64, float64]// last player move; this must be a pair of ints in [[-1,1],[-1,1]]
 	Extract Pair[float64, float64]// extraction point; as long as the player is within some distance of the extraction point, player coins are offloaded
+	LastExtract int64// time when extraction point was last used; if the time since extraction point was last used is less than the cooldown, don't reveal the extraction point
 	IsRight bool// whether player is facing right
 	MoveNum int// most recently-processed move
 }
