@@ -19,9 +19,9 @@ func AddCoin(coin Triple[float64, float64, int]) (int, error) {
 		return -1, fmt.Errorf("Coin creation failed: %w", err)
 	}
 
-	mutex.Lock()
+	coinMutex.Lock()
 	CoinMap[GetCell(coin)][Pair[storage.EntityID, Triple[float64, float64, int]]{coinID, coin}] = pewp
-	mutex.Unlock()
+	coinMutex.Unlock()
 	totalCoins++
 
 	return coin.Third, nil
@@ -34,9 +34,9 @@ func RemoveCoin(coinID Pair[storage.EntityID, Triple[float64, float64, int]]) (i
 		return -1, fmt.Errorf("Cardinal: could not get coin entity: %w", err)
 	}
 
-	mutex.Lock()
+	coinMutex.Lock()
 	delete(CoinMap[Pair[int,int]{int(math.Floor(coinID.Second.First/GameParams.CSize)),int(math.Floor(coinID.Second.Second/GameParams.CSize))}], coinID)
-	mutex.Unlock()
+	coinMutex.Unlock()
 
 	if err := World.Remove(coinID.First); err != nil {
 		return -1, err
@@ -45,6 +45,42 @@ func RemoveCoin(coinID Pair[storage.EntityID, Triple[float64, float64, int]]) (i
 	totalCoins--
 	
 	return coin.Val, nil
+}
+
+func AddHealth(health Triple[float64, float64, int]) (int, error) {
+	healthID, err := World.Create(HealthComp)
+	HealthComp.Set(World, healthID, HealthComponent{Pair[float64, float64]{health.First, health.Second}, health.Third})
+
+	if err != nil {
+		return -1, fmt.Errorf("Health creation failed: %w", err)
+	}
+
+	healthMutex.Lock()
+	HealthMap[GetCell(health)][Pair[storage.EntityID, Triple[float64, float64, int]]{healthID, health}] = pewp
+	healthMutex.Unlock()
+	totalHealth++
+
+	return health.Third, nil
+}
+
+func RemoveHealth(healthID Pair[storage.EntityID, Triple[float64, float64, int]]) (int, error) {
+	health, err := HealthComp.Get(World, healthID.First)
+
+	if err != nil {
+		return -1, fmt.Errorf("Cardinal: could not get health entity: %w", err)
+	}
+
+	healthMutex.Lock()
+	delete(HealthMap[Pair[int,int]{int(math.Floor(healthID.Second.First/GameParams.CSize)),int(math.Floor(healthID.Second.Second/GameParams.CSize))}], healthID)
+	healthMutex.Unlock()
+
+	if err := World.Remove(healthID.First); err != nil {
+		return -1, err
+	}
+
+	totalHealth--
+	
+	return health.Val, nil
 }
 
 func PushPlayer(player PlayerComponent) error {
@@ -139,6 +175,10 @@ func HandlePlayerPop(player ModPlayer) error {
 			return err
 		}
 	}
+	
+	if _, err := AddHealth(Triple[float64, float64, int]{playercomp.Loc.First, playercomp.Loc.Second, playercomp.Health}); err != nil {
+		return err
+	}
 
 	return PopPlayer(playercomp)
 }
@@ -206,8 +246,8 @@ func CreateGame(game Game) error {
 	for i := 0; i <= Width; i++ {
 		for j := 0; j <= Height; j++ {
 			CoinMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)
-			HealthMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
-			WeaponMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Pair[float64,float64]]] void)
+			HealthMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)
+			WeaponMap[Pair[int,int]{i,j}] = make(map[Pair[storage.EntityID, Triple[float64,float64,int]]] void)
 		}
 	}
 
@@ -235,11 +275,11 @@ func SpawnCoins() error {// spawn coins randomly over the board until the coin c
 
 		for i := math.Max(0, float64(coinRound.First-1)); i <= math.Min(float64(Width), float64(coinRound.First+1)); i++ {
 			for j := math.Max(0, float64(coinRound.Second-1)); i <= math.Min(float64(Height), float64(coinRound.Second+1)); i++ {
-				mutex.RLock()
+				coinMutex.RLock()
 				for coin,_ := range CoinMap[Pair[int,int]{int(i), int(j)}] {
 					keep = keep && (distance(coin.Second, newCoin) > 2*coinRadius)
 				}
-				mutex.RUnlock()
+				coinMutex.RUnlock()
 
 				knn := kd.KNN[*P](PlayerTree, vector.V{newCoin.First, newCoin.Second}, 1, func(q *P) bool {
 					return true
@@ -271,6 +311,53 @@ func SpawnCoins() error {// spawn coins randomly over the board until the coin c
 	return nil
 }
 
+func SpawnHealth() error {// spawn coins randomly over the board until the coin cap has been met
+	healthToAdd := math.Min(float64(maxHealth() - totalHealth), float64(maxHealthPerTick))
+
+	for healthToAdd > 0 {// generate coins if we haven't reached the max density
+		newHealth := Triple[float64,float64,int]{healthRadius + rand.Float64()*(GameParams.Dims.First-2*healthRadius), healthRadius + rand.Float64()*(GameParams.Dims.Second-2*healthRadius), 1}// random location over range where coins can actually be generated
+		keep := true
+		healthRound := GetCell(newHealth)
+		if len(HealthMap[healthRound]) >= maxHealthInCell() { continue }
+
+		for i := math.Max(0, float64(healthRound.First-1)); i <= math.Min(float64(Width), float64(healthRound.First+1)); i++ {
+			for j := math.Max(0, float64(healthRound.Second-1)); i <= math.Min(float64(Height), float64(healthRound.Second+1)); i++ {
+				healthMutex.RLock()
+				for health,_ := range HealthMap[Pair[int,int]{int(i), int(j)}] {
+					keep = keep && (distance(health.Second, newHealth) > 2*healthRadius)
+				}
+				healthMutex.RUnlock()
+
+				knn := kd.KNN[*P](PlayerTree, vector.V{newHealth.First, newHealth.Second}, 1, func(q *P) bool {
+					return true
+				})
+
+				if len(knn) > 0 {
+					nearestPlayerComp, err := PlayerComp.Get(World, Players[knn[0].Name])
+
+					if err != nil {
+						return fmt.Errorf("Cardinal: player obtain: %w", err)
+					}
+
+					keep = keep && (distance(nearestPlayerComp.Loc, newHealth) > PlayerRadius+1+healthRadius)
+				}
+			}
+		}
+		if keep {
+			if _, err := AddHealth(newHealth); err != nil {
+				return err
+			}
+
+			healthToAdd--
+		}
+	}
+
+	//create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
+	// maybe make this a system so it can be run async
+
+	return nil
+}
+
 func NearbyCoins(player ModPlayer) []NearbyCoin {
 	coins := make([]NearbyCoin, 0)
 
@@ -289,6 +376,26 @@ func NearbyCoins(player ModPlayer) []NearbyCoin {
 	}
 
 	return coins
+}
+
+func NearbyHealths(player ModPlayer) []NearbyHealth {
+	healths := make([]NearbyHealth, 0)
+
+	playercomp, err := PlayerComp.Get(World, Players[player.Name])
+
+	if err != nil {
+		fmt.Errorf("Error getting player component: %w", err)
+	}
+
+	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First/2)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First/2)/GameParams.CSize)); i++ {
+		for j := math.Max(0, math.Floor((playercomp.Loc.Second-ClientView.Second/2)/GameParams.CSize)); j <= math.Min(float64(Height), math.Ceil((playercomp.Loc.Second+ClientView.Second/2)/GameParams.CSize)); j++ {
+			for health, _ := range HealthMap[Pair[int,int]{int(i),int(j)}] {
+				healths = append(healths, NearbyHealth{health.Second.First, health.Second.Second, health.Second.Third})
+			}
+		}
+	}
+
+	return healths
 }
 
 func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {

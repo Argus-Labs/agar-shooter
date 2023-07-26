@@ -239,12 +239,18 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		// collects all hit coins
 		hitCoins := make([]Pair[storage.EntityID, Triple[float64,float64,int]], 0)
+		hitHealth := make([]Pair[storage.EntityID, Triple[float64,float64,int]], 0)
 
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
 				for coin, _ := range CoinMap[Pair[int, int]{i,j}] {
 					if CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
 						hitCoins = append(hitCoins, coin)
+					}
+				}
+				for health, _ := range HealthMap[Pair[int, int]{i,j}] {
+					if CoinProjDist(prevLoc, loc, health.Second) <= PlayerRadius {
+						hitHealth = append(hitHealth, health)
 					}
 				}
 			}
@@ -260,11 +266,23 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			}
 
 		}
+		
+		extraHealth := 0
+
+		for _, entityID := range hitHealth {
+			if healthVal, err := RemoveHealth(entityID); err != nil {
+				return err
+			} else {
+				extraHealth += healthVal
+			}
+
+		}
 
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
 			comp.Loc = loc
 			comp.Coins += extraCoins
 			if PlayerMaxCoins[playerName] < comp.Coins { PlayerMaxCoins[playerName] = comp.Coins }
+			comp.Health += extraHealth// cap health later
 			
 			return comp
 		})

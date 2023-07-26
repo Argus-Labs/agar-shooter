@@ -29,7 +29,7 @@ const (
 	EXTRACTION_POINT int64			= 7
 	MAX_COINS int64				= 8
 	NICKNAME int64				= 9
-	ABORTED int64				= 10
+	HEALTH int64				= 10
 	OUT_OF_RANGE int64			= 11
 	UNIMPLEMENTED int64			= 12
 	INTERNAL int				= 13
@@ -454,6 +454,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			} else {
 				if err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
+			}
+
+			if nearbyHealth, err := CallRPCs["games/health"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
+				return err
+			} else {
+				if err = dispatcher.BroadcastMessage(HEALTH, []byte(nearbyHealth), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
 			}

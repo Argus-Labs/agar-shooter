@@ -26,6 +26,7 @@ func main() {
 		{"games/state", getPlayerState},
 		{"games/status", getPlayerStatus},
 		{"games/coins", getPlayerCoins},
+		{"games/health", getPlayerHealth},
 		{"games/tick", tig},
 		{"games/create", createGame},
 		{"games/offload", checkExtraction},
