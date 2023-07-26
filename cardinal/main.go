@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/argus-labs/new-game/components"
+	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/systems"
 	tx "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/utils"
@@ -37,6 +38,9 @@ func main() {
 	utils.Must(world.RegisterTransactions(
 		tx.TxMovePlayer,
 	))
+
+	utils.Must(world.RegisterReads(
+		read.Constant))
 
 	world.AddSystem(systems.MoveSystem)
 	// world.AddSystem(systems.ProcessMovesSystem)

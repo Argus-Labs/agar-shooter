@@ -1,12 +1,12 @@
 package systems
 
 import (
-	"math"
-	"math/rand"
-
+	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
+	"math"
+	"math/rand"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
@@ -21,14 +21,19 @@ func bound(x float64, y float64) types.Pair[float64, float64] {
 
 // returns distance between two coins
 func distance(loc1, loc2 types.Mult) float64 {
-	return math.Sqrt(math.Pow(loc1.getFirst()-loc2.getFirst(), 2) + math.Pow(loc1.getSecond()-loc2.getSecond(), 2))
+	return math.Sqrt(math.Pow(loc1.GetFirst()-loc2.GetFirst(), 2) + math.Pow(loc1.GetSecond()-loc2.GetSecond(), 2))
 }
 
 // change speed function
 func move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	dir := tmpPlayer.Dir
 	coins := tmpPlayer.Coins
-	return bound(tmpPlayer.Loc.First+(game.sped*dir.First*math.Exp(-0.01*float64(coins))), tmpPlayer.Loc.Second+(sped*dir.Second*math.Exp(-0.01*float64(coins))))
+	playerSpeed := float64(game.WorldConstants.PlayerSpeed)
+
+	return bound(
+		tmpPlayer.Loc.First+(playerSpeed*dir.First*math.Exp(-0.01*float64(coins))),
+		tmpPlayer.Loc.Second+(playerSpeed*dir.Second*math.Exp(-0.01*float64(coins))),
+	)
 }
 
 func CoinProjDist(start, end types.Pair[float64, float64], coin types.Triple[float64, float64, int]) float64 {
@@ -58,19 +63,36 @@ func CoinProjDist(start, end types.Pair[float64, float64], coin types.Triple[flo
 	}
 }
 
+func AddCoin(world *ecs.World, coin types.Triple[float64, float64, int]) (int, error) {
+	coinID, err := world.Create(components.Coin)
+	components.Coin.Set(world, coinID, components.CoinComponent{types.Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
+
+	if err != nil {
+		return -1, fmt.Errorf("Coin creation failed: %w", err)
+	}
+
+	game.Mutex.Lock()
+	game.CoinMap[types.GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = types.Pewp
+	game.Mutex.Unlock()
+	game.TotalCoins++
+
+	return coin.Third, nil
+}
+
 // attack a player
-func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
+func attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
 	kill := false
 	coins := false
 	var loc types.Pair[float64, float64]
 	var name string
+	worldConstants := game.WorldConstants
 
-	if err := game.PlayerComp.Update(game.World, id, func(comp components.PlayerComponent) components.PlayerComponent { // modifies player location
+	if err := components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent { // modifies player location
 		if left == comp.IsRight && comp.Coins > 0 {
 			comp.Coins--
 			coins = true
 		} else {
-			comp.Health -= game.Weapons[weapon].Attack
+			comp.Health -= worldConstants.Weapons[weapon].Attack
 		}
 		kill = comp.Health <= 0
 		name = comp.Name
@@ -85,13 +107,13 @@ func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defen
 		randfloat := rand.Float64() * 2 * math.Pi
 		loc = bound(loc.First+3*math.Cos(randfloat), loc.Second+3*math.Sin(randfloat))
 
-		if _, err := AddCoin(types.Triple[float64, float64, int]{loc.First, loc.Second, 1}); err != nil {
+		if _, err := AddCoin(world, types.Triple[float64, float64, int]{loc.First, loc.Second, 1}); err != nil {
 			return err
 		}
 
 		game.Attacks = append(game.Attacks, types.AttackTriple{attacker, defender, -1})
 	} else { // adds attack to display queue if it was executed
-		game.Attacks = append(game.Attacks, types.AttackTriple{attacker, defender, game.Weapons[weapon].Attack})
+		game.Attacks = append(game.Attacks, types.AttackTriple{attacker, defender, worldConstants.Weapons[weapon].Attack})
 	}
 
 	if kill { // removes player from map if they die
@@ -130,7 +152,7 @@ func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 
 		for _, closestPlayerID := range game.Players {
 			if closestPlayerID != id {
-				closestPlayer, err := game.PlayerComp.Get(World, closestPlayerID)
+				closestPlayer, err := components.Player.Get(World, closestPlayerID)
 				if err != nil {
 					return err
 				}

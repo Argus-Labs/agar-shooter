@@ -12,10 +12,11 @@ type IWorldConstants struct {
 	Dud              types.WeaponData // empty weapon, iota - 1
 	Melee            types.WeaponData // weapon two
 	Slug             types.WeaponData // weapon three
-	TickRate         int              // Ticks per second
-	ClientTickRate   int              // used to determine tickrate relative to cardinal server
-	PlayerRadius     float32          // used to determine which coins to collect
-	ExtractionRadius int              // determines when players are in range of their extraction point
+	Weapons          map[types.Weapon]types.WeaponData
+	TickRate         int     // Ticks per second
+	ClientTickRate   int     // used to determine tickrate relative to cardinal server
+	PlayerRadius     float32 // used to determine which coins to collect
+	ExtractionRadius int     // determines when players are in range of their extraction point
 	PlayerSpeed      int
 	CoinRadius       float32 // <= GameParams.CSize/2
 	MaxCoinsPerTick  int
@@ -26,6 +27,12 @@ type IWorldConstants struct {
 type IFooConstants struct {
 	Foo string
 }
+
+const ( // add more weapons as needed
+	Dud = iota - 1 // empty weapon
+	Melee
+	Slug
+)
 
 var (
 	// If you want the constant to be queryable through `query_constant`,
@@ -40,9 +47,14 @@ var (
 	// WorldConstants is a public constant that can be queried through `query_constant`
 	// because it is in the list of ExposedConstants
 	WorldConstants = IWorldConstants{
-		Dud:              types.WeaponData{Attack: 0, Range: 0.0},
-		Melee:            types.WeaponData{Attack: 4, Range: 4.0},
-		Slug:             types.WeaponData{Attack: 3, Range: 6.9},
+		Dud:   types.WeaponData{Attack: 0, Range: 0.0},
+		Melee: types.WeaponData{Attack: 4, Range: 4.0},
+		Slug:  types.WeaponData{Attack: 3, Range: 6.9},
+		Weapons: map[types.Weapon]types.WeaponData{
+			Dud:   types.WeaponData{Attack: 0, Range: 0.0},
+			Melee: types.WeaponData{Attack: 4, Range: 4.0},
+			Slug:  types.WeaponData{Attack: 3, Range: 6.9},
+		},
 		TickRate:         5,
 		ClientTickRate:   60,
 		PlayerRadius:     0.5,
@@ -68,15 +80,10 @@ var (
 
 	Players       = make(map[string]storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
 	Width, Height int
-	// Weapons       = map[types.Weapon]types.WeaponData{
-	// 	Dud:   types.WeaponData{Attack: 0, Range: 0.0},
-	// 	Melee: types.WeaponData{Attack: 4, Range: 4.0},
-	// 	Slug:  types.WeaponData{Attack: 3, Range: 6.9},
-	// }
-	mutex                      = &sync.RWMutex{}
+	Mutex                      = &sync.RWMutex{}
 	ClientView                 = types.Pair[float64, float64]{First: 30, Second: 20} // client viewing window
 	DefaultWeapon types.Weapon = Melee
 	Attacks                    = make([]types.AttackTriple, 0)
 
-	totalCoins = 0
+	TotalCoins = 0
 )

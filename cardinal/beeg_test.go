@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/argus-labs/new-game/components"
 	"net/http"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestPewp(t *testing.T) {
 	var err error
 	var player ModPlayer
 	var contains bool
-	var p PlayerComponent
+	var p components.PlayerComponent
 
 	err = CreateGame(game)
 
@@ -45,8 +46,8 @@ func TestPewp(t *testing.T) {
 
 	// test adding player moves and making player move each tick
 	testPlayer1, testPlayer2, testPlayer3 := ModPlayer{"a"}, ModPlayer{"b"}, ModPlayer{"c"}
-	AddTestPlayer(PlayerComponent{"a", 100, 0, Dud, types.Pair[float64, float64]{250, 250}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{500, 500}, true, -1})
-	AddTestPlayer(PlayerComponent{"b", 100, 0, Dud, types.Pair[float64, float64]{750, 750}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{250, 250}, true, -1})
+	AddTestPlayer(components.PlayerComponent{"a", 100, 0, Dud, types.Pair[float64, float64]{250, 250}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{500, 500}, true, -1})
+	AddTestPlayer(components.PlayerComponent{"b", 100, 0, Dud, types.Pair[float64, float64]{750, 750}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{250, 250}, true, -1})
 
 	m := make(map[ModPlayer][]TestPlayer)
 
@@ -87,7 +88,7 @@ func TestPewp(t *testing.T) {
 	assert.Assert(t, err != nil)
 
 	fmt.Println("start push")
-	AddTestPlayer(PlayerComponent{"c", 100, 0, Dud, types.Pair[float64, float64]{500, 500}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{750, 750}, true, -1})
+	AddTestPlayer(components.PlayerComponent{"c", 100, 0, Dud, types.Pair[float64, float64]{500, 500}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{750, 750}, true, -1})
 	fmt.Println("end push")
 
 	testMove([]ModPlayer{testPlayer1, testPlayer2, testPlayer3})

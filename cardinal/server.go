@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/argus-labs/new-game/components"
 	"math"
 	"math/rand"
 	"time"
@@ -9,22 +10,6 @@ import (
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 )
-
-func AddCoin(coin types.Triple[float64, float64, int]) (int, error) {
-	coinID, err := World.Create(CoinComp)
-	CoinComp.Set(World, coinID, CoinComponent{types.Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
-
-	if err != nil {
-		return -1, fmt.Errorf("Coin creation failed: %w", err)
-	}
-
-	mutex.Lock()
-	CoinMap[GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = pewp
-	mutex.Unlock()
-	totalCoins++
-
-	return coin.Third, nil
-}
 
 func RemoveCoin(coinID types.Pair[storage.EntityID, types.Triple[float64, float64, int]]) (int, error) {
 	coin, err := CoinComp.Get(World, coinID.First)
@@ -60,7 +45,7 @@ func HandlePlayerPush(player AddPlayer) error {
 	}
 	Players[player.Name] = playerID
 
-	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, true, -1}) // default player
+	components.Player.Set(World, Players[player.Name], components.PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, true, -1}) // default player
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
@@ -137,15 +122,15 @@ func TickTock() error { // testing function used to make the game tick
 	return err
 }
 
-func GetPlayerState(player ModPlayer) (PlayerComponent, error) { // testing function used in place of broadcast to get state of players
+func GetPlayerState(player ModPlayer) (components.PlayerComponent, error) { // testing function used in place of broadcast to get state of players
 	if _, contains := Players[player.Name]; contains == false {
-		return PlayerComponent{}, fmt.Errorf("Player does not exist")
+		return components.PlayerComponent{}, fmt.Errorf("Player does not exist")
 	}
 
 	comp, err := PlayerComp.Get(World, Players[player.Name])
 
 	if err != nil {
-		return PlayerComponent{}, fmt.Errorf("Player fetch error: %w", err)
+		return components.PlayerComponent{}, fmt.Errorf("Player fetch error: %w", err)
 	}
 
 	return comp, nil
@@ -205,7 +190,7 @@ func CreateGame(game Game) error {
 	}
 
 	for _, playername := range GameParams.Players {
-		PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{rand.Float64() * GameParams.Dims.First, rand.Float64() * GameParams.Dims.Second}, true, -1}) // initializes player entities through their component
+		PlayerComp.Set(World, Players[playername], components.PlayerComponent{playername, 100, 0, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{rand.Float64() * GameParams.Dims.First, rand.Float64() * GameParams.Dims.Second}, true, -1}) // initializes player entities through their component
 		//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, types.Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, types.Pair[float64,float64]{0,0}, types.Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 
 		playercomp, err := PlayerComp.Get(World, Players[playername])
@@ -289,7 +274,7 @@ func CheckExtraction(player ModPlayer) int {
 	}
 
 	if playercomp.Coins > 0 && distance(playercomp.Loc, playercomp.Extract) <= ExtractionRadius {
-		PlayerComp.Update(World, Players[player.Name], func(comp PlayerComponent) PlayerComponent {
+		PlayerComp.Update(World, Players[player.Name], func(comp components.PlayerComponent) components.PlayerComponent {
 			comp.Coins = 0 // extraction point offloading
 
 			return comp
@@ -301,7 +286,7 @@ func CheckExtraction(player ModPlayer) int {
 	}
 }
 
-func AddTestPlayer(player PlayerComponent) error {
+func AddTestPlayer(player components.PlayerComponent) error {
 	if _, contains := Players[player.Name]; contains { // player already exists; don't do anything
 		return nil
 	}

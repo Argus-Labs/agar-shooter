@@ -1,9 +1,6 @@
 package msg
 
 import (
-	"net/http"
-
-	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
@@ -19,14 +16,3 @@ type MovePlayerMsg struct {
 }
 
 var TxMovePlayer = ecs.NewTransactionType[MovePlayerMsg]("move-player")
-
-func (h *TxHandler) MovePlayer(w http.ResponseWriter, r *http.Request) {
-	var msg MovePlayerMsg
-	err := utils.DecodeMsg[MovePlayerMsg](r, &msg)
-	if err != nil {
-		utils.WriteError(w, "unable to decode move player tx", err)
-		return
-	}
-	TxMovePlayer.AddToQueue(h.World, msg)
-	utils.WriteResult(w, "ok")
-}
