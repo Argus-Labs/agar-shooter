@@ -47,19 +47,20 @@ func RemoveCoin(coinID types.Pair[storage.EntityID, types.Triple[float64, float6
 }
 
 func HandlePlayerPush(player AddPlayer) error {
-	if _, contains := Players[player.Name]; contains { // player already exists; don't do anything
+	// player already exists; don't do anything
+	if _, contains := Players[player.Name]; contains {
 		fmt.Println("Player already exists; not pushing again")
 		return nil
 	}
 
-	playerID, err := World.Create(PlayerComp) // creates new player
+	// creates new player
+	playerID, err := World.Create(PlayerComp)
 	if err != nil {
 		return fmt.Errorf("Error adding player to world: %w", err)
 	}
 	Players[player.Name] = playerID
 
 	PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, true, -1}) // default player
-	//PlayerComp.Set(World, Players[player.Name], PlayerComponent{player.Name, 100, 0, Dud, types.Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, types.Pair[float64,float64]{0,0}, types.Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// default player
 
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 

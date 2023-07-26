@@ -18,10 +18,8 @@ type MovePlayerMsg struct {
 	Delta               float64 `json:"delta"`
 }
 
-var TxMovePlayer = ecs.NewTransactionType[MovePlayerMsg]()
+var TxMovePlayer = ecs.NewTransactionType[MovePlayerMsg]("move-player")
 
-// NOTE: We are going to be abstracting away this in the future, but for now
-// you have to copy and paste this for each transaction type.
 func (h *TxHandler) MovePlayer(w http.ResponseWriter, r *http.Request) {
 	var msg MovePlayerMsg
 	err := utils.DecodeMsg[MovePlayerMsg](r, &msg)

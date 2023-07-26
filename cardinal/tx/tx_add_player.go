@@ -12,7 +12,7 @@ type AddPlayerMsg struct {
 	Coins int    `json:"coins"`
 }
 
-var TxAddPlayer = ecs.NewTransactionType[AddPlayerMsg]()
+var TxAddPlayer = ecs.NewTransactionType[AddPlayerMsg]("add-player")
 
 // NOTE: We are going to be abstracting away this in the future, but for now
 // you have to copy and paste this for each transaction type.

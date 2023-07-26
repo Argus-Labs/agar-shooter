@@ -104,7 +104,7 @@ func attack(id storage.EntityID, weapon types.Weapon, left bool, attacker, defen
 }
 
 // moves player based on the coin-speed
-func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {
+func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 	attackQueue := make([]types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
 

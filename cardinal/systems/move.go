@@ -2,11 +2,11 @@ package systems
 
 import (
 	"fmt"
+	"github.com/argus-labs/new-game/tx"
 	"math"
 
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
-	msg "github.com/argus-labs/new-game/msg/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )

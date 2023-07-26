@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/argus-labs/new-game/tx"
 	"math"
 	"net/http"
 
 	"github.com/argus-labs/new-game/components"
-	msg "github.com/argus-labs/new-game/msg/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 )

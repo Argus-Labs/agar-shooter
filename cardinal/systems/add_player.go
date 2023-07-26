@@ -2,10 +2,10 @@ package systems
 
 import (
 	"fmt"
+	"github.com/argus-labs/new-game/read"
+	msg1 "github.com/argus-labs/new-game/tx"
 
 	"github.com/argus-labs/new-game/components"
-	msg2 "github.com/argus-labs/new-game/msg/query"
-	msg1 "github.com/argus-labs/new-game/msg/tx"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
@@ -24,14 +24,14 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 			return fmt.Errorf("Error adding player to world: %w", err)
 		}
 
-		m := msg2.QueryConstantMsg{
+		m := read.ConstantMsg{
 			ConstantLabel: "World",
 		}
 
 		components.Player.Set(world, playerID, components.PlayerComponent{
 			Name:   tx.Name,
 			Coins:  tx.Coins,
-			Weapon: msg2.queryConstant(m),
+			Weapon: read.queryConstant(world, m),
 		})
 
 	}

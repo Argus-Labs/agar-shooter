@@ -1,8 +1,8 @@
 package types
 
-type void struct{}
+type Void struct{}
 
-var pewp void
+var pewp Void
 
 type Weapon int
 

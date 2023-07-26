@@ -61,10 +61,10 @@ var (
 	}
 
 	GameParams types.Game
-	CoinMap    = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.void) // maps cells to sets of coin lists
-	HealthMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of healthpack lists
-	WeaponMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of weapon lists
-	PlayerMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.void)        // maps cells to sets of player name-location types.Pairs
+	CoinMap    = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of coin lists
+	HealthMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of healthpack lists
+	WeaponMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of weapon lists
+	PlayerMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of player name-location types.Pairs
 
 	Players       = make(map[string]storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
 	Width, Height int
