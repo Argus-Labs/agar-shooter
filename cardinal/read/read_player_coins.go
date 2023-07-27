@@ -28,7 +28,7 @@ func getNearbyCoins(playerComp components.PlayerComponent) []types.NearbyCoin {
 			}
 		}
 	}
-	
+
 	return coins
 }
 
@@ -66,8 +66,7 @@ func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 	nearbyCoins = getNearbyCoins(comp)
 
 	// Return the component as bytes
-	var returnMsg []byte
-	returnMsg, err = json.Marshal(nearbyCoins)
+	returnMsg, err := json.Marshal(nearbyCoins)
 
-	return returnMsg, nil
+	return returnMsg, err
 }

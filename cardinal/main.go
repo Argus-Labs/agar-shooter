@@ -49,6 +49,7 @@ func main() {
 		read.PlayerState,
 		read.PlayersStatus,
 		read.PlayerCoins,
+		read.ReadAttacks,
 	))
 
 	// Register the systems
@@ -89,9 +90,7 @@ func main() {
 	//{"games/state", getPlayerState},
 	//{"games/status", getPlayerStatus},
 	//{"games/coins", getPlayerCoins},
-	//{"games/create", createGame},
-
-	// TODO: NOT DONE
+	//{"games/create", createGame}
 	//{"games/tick", tig},
 	//{"games/offload", checkExtraction},
 	//{"games/attacks", recentAttacks},
