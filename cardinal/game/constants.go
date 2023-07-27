@@ -67,9 +67,9 @@ var (
 
 	// FooConstant is a private constant that cannot be queried through `query_constant`
 	// because it is not in the list of ExposedConstants
-	FooConstants = IFooConstants{
-		Foo: "Bar",
-	}
+	//FooConstants = IFooConstants{
+	//	Foo: "Bar",
+	//}
 
 	GameParams types.Game
 	CoinMap    = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of coin lists

@@ -53,23 +53,23 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			}
 		}
 
-		if assigned && minDistance <= game.Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, types.Triple[storage.EntityID, Weapon, types.Triple[bool, string, string]]{minID, tmpPlayer.Weapon, types.Triple[bool, string, string]{left, playerName, closestPlayerName}})
+		if assigned && minDistance <= game.WorldConstants.Weapons[tmpPlayer.Weapon].Range {
+			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, playerName, closestPlayerName}})
 		}
 
 		// moving players
 
 		loc := game.Move(tmpPlayer)
 
-		delete(PlayerMap[GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{id, prevLoc})
-		PlayerMap[GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{id, loc}] = pewp
+		delete(game.PlayerMap[types.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: prevLoc})
+		game.PlayerMap[types.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: loc}] = types.Pewp
 
-		hitCoins := make([]Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
+		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 
-		for i := int(math.Floor(prevLoc.First / GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
-			for j := int(math.Floor(prevLoc.Second / GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
-				for coin, _ := range CoinMap[types.Pair[int, int]{i, j}] {
-					if game.CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
+		for i := int(math.Floor(prevLoc.First / game.GameParams.CSize)); i <= int(math.Floor(loc.First/game.GameParams.CSize)); i++ {
+			for j := int(math.Floor(prevLoc.Second / game.GameParams.CSize)); j <= int(math.Floor(loc.Second/game.GameParams.CSize)); j++ {
+				for coin, _ := range game.CoinMap[types.Pair[int, int]{i, j}] {
+					if game.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}
 				}
@@ -88,7 +88,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		// modifies player location
-		components.Player.Update(world, Players[playerName], func(comp PlayerComponent) PlayerComponent {
+		components.Player.Update(world, game.Players[playerName], func(comp components.PlayerComponent) components.PlayerComponent {
 			comp.Loc = loc
 			comp.Coins += extraCoins
 
