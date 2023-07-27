@@ -132,26 +132,6 @@ func SpawnCoins() error { // spawn coins randomly over the board until the coin 
 	return nil
 }
 
-func NearbyCoins(player ModPlayer) []NearbyCoin {
-	coins := make([]NearbyCoin, 0)
-
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-
-	if err != nil {
-		fmt.Errorf("Error getting player component: %w", err)
-	}
-
-	for i := math.Max(0, math.Floor((playercomp.Loc.First-ClientView.First/2)/GameParams.CSize)); i <= math.Min(float64(Width), math.Ceil((playercomp.Loc.First+ClientView.First/2)/GameParams.CSize)); i++ {
-		for j := math.Max(0, math.Floor((playercomp.Loc.Second-ClientView.Second/2)/GameParams.CSize)); j <= math.Min(float64(Height), math.Ceil((playercomp.Loc.Second+ClientView.Second/2)/GameParams.CSize)); j++ {
-			for coin, _ := range CoinMap[types.Pair[int, int]{int(i), int(j)}] {
-				coins = append(coins, NearbyCoin{coin.Second.First, coin.Second.Second, coin.Second.Third})
-			}
-		}
-	}
-
-	return coins
-}
-
 func CheckExtraction(player ModPlayer) int {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 
