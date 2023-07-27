@@ -6,7 +6,7 @@ import (
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/read"
-	tx "github.com/argus-labs/new-game/tx"
+	transactions "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
@@ -14,7 +14,7 @@ import (
 )
 
 func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
-	addPlayerTxs := tx.TxAddPlayer.In(tq)
+	addPlayerTxs := transactions.TxAddPlayer.In(tq)
 	players := read.ReadPlayers(world)
 
 	for _, tx := range addPlayerTxs {

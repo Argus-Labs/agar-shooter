@@ -1,9 +1,10 @@
 package systems
 
 import (
+	"errors"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/read"
-	tx "github.com/argus-labs/new-game/tx"
+	transactions "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
@@ -12,10 +13,24 @@ import (
 )
 
 func RemovePlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
-	removePlayerTxs := tx.TxRemovePlayer.In(tq)
+	removePlayerTxs := transactions.TxRemovePlayer.In(tq)
 	var err error = nil
+	players := read.ReadPlayers(world)
 
 	for _, tx := range removePlayerTxs {
+
+		// Check that the player exists
+		var playerFound bool = false
+		for _, player := range players {
+			if player.Component.Name == tx.Name {
+				playerFound = true
+			}
+		}
+		if playerFound == false {
+			log.Error().Msg("player name already exists")
+			return errors.New("RemovePlayerSystem: Player does not exist.")
+		}
+
 		// Get the player id and component
 		player, err := read.GetPlayerByName(world, tx.Name)
 		if err != nil {

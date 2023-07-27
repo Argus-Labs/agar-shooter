@@ -31,109 +31,9 @@ func RemoveCoin(coinID types.Pair[storage.EntityID, types.Triple[float64, float6
 	return coin.Val, nil
 }
 
-func HandlePlayerPush(player AddPlayer) error {
-	// player already exists; don't do anything
-	if _, contains := Players[player.Name]; contains {
-		fmt.Println("Player already exists; not pushing again")
-		return nil
-	}
-
-	// creates new player
-	playerID, err := World.Create(PlayerComp)
-	if err != nil {
-		return fmt.Errorf("Error adding player to world: %w", err)
-	}
-	Players[player.Name] = playerID
-
-	components.Player.Set(World, Players[player.Name], components.PlayerComponent{player.Name, 100, player.Coins, DefaultWeapon, types.Pair[float64, float64]{25 + (rand.Float64()-0.5)*10, 25 + (rand.Float64()-0.5)*10}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, types.Pair[float64, float64]{0, 0}, true, -1}) // default player
-
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-
-	if err != nil {
-		fmt.Errorf("Error getting location with callback function: %w", err)
-	}
-
-	newPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{Players[player.Name], playercomp.Loc}
-	PlayerMap[GetCell(playercomp.Loc)][newPlayer] = pewp
-
-	return nil
-}
-
-func HandlePlayerPop(player ModPlayer) error {
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-	if err != nil {
-		return err
-	}
-
-	if err = World.Remove(Players[player.Name]); err != nil {
-		fmt.Errorf("error removing player: %w", err)
-	}
-
-	// put all coins around the player
-	coins := playercomp.Coins
-	tot := int(math.Max(1, float64(coins/10+(coins%10)/5+coins%5)))
-	start := 0
-	rad := float64(tot) / (2 * math.Pi)
-	newCoins := make([]Triple[float64, float64, int], 0)
-
-	for coins > 0 { // decomposes into 10s, 5s, 1s
-		addCoins := 0
-		switch {
-		case coins >= 10:
-			{
-				addCoins = 10
-				coins -= 10
-				break
-			}
-		case coins >= 5:
-			{
-				addCoins = 5
-				coins -= 5
-				break
-			}
-		default:
-			{
-				addCoins = 1
-				coins--
-			}
-		}
-
-		peep := bound(playercomp.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), playercomp.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
-		newCoins = append(newCoins, types.Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
-		start++
-	}
-
-	for _, coin := range newCoins {
-		if _, err := AddCoin(coin); err != nil {
-			return err
-		}
-	}
-
-	oldPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{Players[player.Name], playercomp.Loc}
-	delete(PlayerMap[GetCell(playercomp.Loc)], oldPlayer)
-
-	delete(Players, player.Name)
-
-	return nil
-}
-
 func TickTock() error { // testing function used to make the game tick
 	err := World.Tick()
 	return err
-}
-
-func GetPlayerState(player ModPlayer) (components.PlayerComponent, error) { // testing function used in place of broadcast to get state of players
-	if _, contains := Players[player.Name]; contains == false {
-		return components.PlayerComponent{}, fmt.Errorf("Player does not exist")
-	}
-
-	comp, err := PlayerComp.Get(World, Players[player.Name])
-
-	if err != nil {
-		return components.PlayerComponent{}, fmt.Errorf("Player fetch error: %w", err)
-	}
-
-	return comp, nil
 }
 
 func GetPlayerStatus() []Pair[string, types.Pair[float64, float64]] { // sends all player information to each player
@@ -144,10 +44,6 @@ func GetPlayerStatus() []Pair[string, types.Pair[float64, float64]] { // sends a
 	}
 
 	return locs
-}
-
-func HandleMakeMove(move Move) {
-	MoveTx.AddToQueue(World, move) // adds "move" transaction to World transaction queue
 }
 
 func CreateGame(game Game) error {

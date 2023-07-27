@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/tx"
 	"math"
@@ -10,50 +9,6 @@ import (
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 )
-
-func handlePlayerPush(w http.ResponseWriter, r *http.Request) {
-	player := types.AddPlayer{}
-
-	fmt.Println(r)
-
-	if err := utils.Decode(r, &player); err != nil {
-		utils.WriteError(w, "invalid player name format given: ", err)
-		return
-	}
-
-	if _, contains := Players[player.Name]; contains {
-		utils.WriteError(w, "player name already exists", nil)
-		return
-	}
-
-	err := HandlePlayerPush(player)
-
-	if err != nil {
-		utils.WriteError(w, "error pushing: ", err)
-		return
-	}
-
-	utils.WriteResult(w, "Player registration successful")
-}
-
-func handlePlayerPop(w http.ResponseWriter, r *http.Request) {
-	player := types.ModPlayer{}
-
-	if err := utils.Decode(r, &player); err != nil {
-		utils.WriteError(w, "invalid player name format given", err)
-		return
-	}
-
-	if _, contains := Players[player.Name]; !contains {
-		utils.WriteError(w, "player name does not exist", nil)
-		return
-	}
-
-	HandlePlayerPop(player)
-
-	utils.WriteResult(w, "Player removal successful")
-
-}
 
 func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 	moves := msg.MovePlayerMsg{}

@@ -43,7 +43,9 @@ func main() {
 
 	// Register the reads
 	utils.Must(world.RegisterReads(
-		read.Constant))
+		read.Constant,
+		read.PlayerState,
+	))
 
 	// Register the systems
 	world.AddSystem(systems.MoveSystem)
@@ -65,13 +67,12 @@ func main() {
 	h.Serve("", cfg.CardinalPort)
 
 	// DONE:
-	//{"tx_move_player", tx.MovePlayer}
-
-	// TODO: NOT DONE
+	//{"games/move", handleMakeMove},
 	//{"games/push", handlePlayerPush}
 	//{"games/pop", handlePlayerPop},
-	//{"games/move", handleMakeMove},
 	//{"games/state", getPlayerState},
+	// TODO: NOT DONE
+
 	//{"games/status", getPlayerStatus},
 	//{"games/coins", getPlayerCoins},
 	//{"games/tick", tig},

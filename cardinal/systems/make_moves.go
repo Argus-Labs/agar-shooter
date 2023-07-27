@@ -1,10 +1,14 @@
 package systems
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
+	tx "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
+	"github.com/argus-labs/world-engine/sign"
 	"math"
 	"math/rand"
 
@@ -118,6 +122,18 @@ func attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 
 	// removes player from map if they die
 	if kill {
+		transaction := tx.RemovePlayer{
+			Name: name,
+		}
+		pk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		signedPayload, err := sign.NewSignedPayload(
+			pk,
+			playerWithPlanet1.Comp.PersonaTag, // TODO: How do I implement persona in this game?
+			world.GetNamespace(),
+			5, // TODO: How do I get the correct next nonce?
+			transaction,
+		)
+		tx.TxRemovePlayer.AddToQueue(world, transaction, signedPayload)
 		if err := HandlePlayerPop(types.ModPlayer{name}); err != nil {
 			return err
 		}
