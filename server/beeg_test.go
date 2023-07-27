@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"time"
 
 	"gotest.tools/v3/assert"
 )
@@ -31,6 +32,7 @@ func TestPewp(t *testing.T) {
 	// test game initialization
 	const LENGTH = 1000
 	const ATTACKPLAYERS = 100
+	const ASYNCATTACKWAIT = 5
 	game := Game{Pair[float64,float64]{LENGTH,LENGTH}, 1, []string{}}
 	
 	var err error
@@ -47,8 +49,13 @@ func TestPewp(t *testing.T) {
 
 	// test adding player moves and making player move each tick
 	testPlayer1, testPlayer2, testPlayer3 := ModPlayer{"a"}, ModPlayer{"b"}, ModPlayer{"c"}
-	PushPlayer(PlayerComponent{"a", 100, 0, Dud, Pair[float64,float64]{250,250}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, true, -1})
-	PushPlayer(PlayerComponent{"b", 100, 0, Dud, Pair[float64,float64]{750,750}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, true, -1})
+	weapon1, _ := World.Create(WeaponComp)
+	WeaponComp.Set(World, weapon1, WeaponComponent{Pair[float64, float64]{-1,-1}, Dud, Weapons[Dud].MaxAmmo, 0})
+	PushPlayer(PlayerComponent{"a", 100, 0, weapon1, Pair[float64,float64]{250,250}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, time.Now().UnixNano(), true, -1})
+
+	weapon2, _ := World.Create(WeaponComp)
+	WeaponComp.Set(World, weapon2, WeaponComponent{Pair[float64, float64]{-1,-1}, Dud, Weapons[Dud].MaxAmmo, 0})
+	PushPlayer(PlayerComponent{"b", 100, 0, weapon2, Pair[float64,float64]{750,750}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, time.Now().UnixNano(), true, -1})
 
 	m := make(map[ModPlayer] []TestPlayer)
 
@@ -89,7 +96,9 @@ func TestPewp(t *testing.T) {
 	assert.Assert(t, err != nil)
 
 	fmt.Println("start push")
-	PushPlayer(PlayerComponent{"c", 100, 0, Dud, Pair[float64,float64]{500,500}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{750, 750}, true, -1})
+	weapon3, _ := World.Create(WeaponComp)
+	WeaponComp.Set(World, weapon3, WeaponComponent{Pair[float64, float64]{-1,-1}, Dud, Weapons[Dud].MaxAmmo, 0})
+	PushPlayer(PlayerComponent{"c", 100, 0, weapon3, Pair[float64,float64]{500,500}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{750, 750}, time.Now().UnixNano(), true, -1})
 	fmt.Println("end push")
 
 	testMove([]ModPlayer{testPlayer1, testPlayer2, testPlayer3})
@@ -180,7 +189,9 @@ func TestPewp(t *testing.T) {
 
 	for i := 0; i < ATTACKPLAYERS; i++ {
 		livePlayers[strconv.Itoa(i)] = Triple[float64, float64, int]{rand.Float64()*LENGTH, rand.Float64()*LENGTH, 100}
-		PushPlayer(PlayerComponent{strconv.Itoa(i), livePlayers[strconv.Itoa(i)].Third, 0, Melee, Pair[float64, float64]{livePlayers[strconv.Itoa(i)].First, livePlayers[strconv.Itoa(i)].Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0, 0}, true, -1})
+		weaponi, _ := World.Create(WeaponComp)
+		WeaponComp.Set(World, weaponi, WeaponComponent{Pair[float64, float64]{-1,-1}, TestWeapon, Weapons[TestWeapon].MaxAmmo, 0})
+		PushPlayer(PlayerComponent{strconv.Itoa(i), livePlayers[strconv.Itoa(i)].Third, 0, weaponi, Pair[float64, float64]{livePlayers[strconv.Itoa(i)].First, livePlayers[strconv.Itoa(i)].Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0, 0}, time.Now().UnixNano(), true, -1})
 	}
 
 	sim := func() bool {
@@ -194,8 +205,8 @@ func TestPewp(t *testing.T) {
 				}
 			}
 
-			if closestPlayer != "-1" && distance(loc, livePlayers[closestPlayer]) <= Weapons[Melee].Range {
-				livePlayers[closestPlayer] = Triple[float64, float64, int]{livePlayers[closestPlayer].First, livePlayers[closestPlayer].Second, livePlayers[closestPlayer].Third - Weapons[Melee].Attack}
+			if closestPlayer != "-1" && distance(loc, livePlayers[closestPlayer]) <= Weapons[TestWeapon].Range {
+				livePlayers[closestPlayer] = Triple[float64, float64, int]{livePlayers[closestPlayer].First, livePlayers[closestPlayer].Second, livePlayers[closestPlayer].Third - Weapons[TestWeapon].Attack}
 				attacks++
 			}
 		}
@@ -230,14 +241,56 @@ func TestPewp(t *testing.T) {
 	}
 
 	for len(livePlayers) > 1 {
-		if noMoreAttacks := sim(); noMoreAttacks {
-			break
-		}
 		TickTock()
+		noMoreAttacks := sim()
 		assert.Assert(t, comp())
 		fmt.Println("Still attacking")
+		if noMoreAttacks {
+			break
+		}
 	}
 
+	for player, _ := range livePlayers {
+		HandlePlayerPop(ModPlayer{player})
+	}
+
+	// check that weapon ammo works as intended, check that reload times work
+	// spawn players within some radius of each other, make them attack each other with one given an unlimited ammo weapon and the other given a limited ammo weapon, then check that each drops each other's health as expected and that the number of attacks is as expected
+
+	weapon1, _ = World.Create(WeaponComp)
+	WeaponComp.Set(World, weapon1, WeaponComponent{Pair[float64, float64]{-1,-1}, Melee, Weapons[Melee].MaxAmmo, 0})
+	PushPlayer(PlayerComponent{"a", 100, 0, weapon1, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, time.Now().UnixNano(), true, -1})
+
+	weapon2, _ = World.Create(WeaponComp)
+	WeaponComp.Set(World, weapon2, WeaponComponent{Pair[float64, float64]{-1,-1}, Melee, Weapons[Melee].MaxAmmo, 0})
+	PushPlayer(PlayerComponent{"b", 100, 0, weapon2, Pair[float64,float64]{1,1}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, time.Now().UnixNano(), true, -1})
+	TickTock()
+	wipun2, _ := WeaponComp.Get(World, weapon2)
+	startTime := wipun2.LastAttack
+
+	p, err = GetPlayerState(testPlayer1)
+	p1Health := p.Health
+
+	p, err = GetPlayerState(testPlayer1)
+	p2Health := p.Health
+
+	fmt.Println("attacks\n\n\n\n\n\n\n ")
+	for i := time.Now().UnixNano(); i < startTime + 5*time.Second.Nanoseconds(); i = time.Now().UnixNano(){
+		TickTock()
+		p, err = GetPlayerState(testPlayer1)
+		assert.Assert(t, p1Health - int(time.Duration(i - startTime).Seconds())*Weapons[Melee].Attack - p.Health <= Weapons[Melee].Attack)
+		
+		p, err = GetPlayerState(testPlayer2)
+		p, err = GetPlayerState(testPlayer1)
+		assert.Assert(t, p2Health - int(time.Duration(i - startTime).Seconds())*Weapons[Melee].Attack - p.Health <= Weapons[Melee].Attack)
+		
+
+		wipun1, _ := WeaponComp.Get(World, weapon1)
+		wipun2, _ := WeaponComp.Get(World, weapon2)
+		fmt.Println("wipun1:", wipun1)
+		fmt.Println("wipun2:", wipun2)
+		fmt.Println("TICK COMPLETED", time.Now().Unix())
+	}
 
 	fmt.Println("Tests successfully passed")
 }

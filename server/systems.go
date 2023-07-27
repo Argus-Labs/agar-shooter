@@ -136,7 +136,7 @@ func attack(id, weapon storage.EntityID, left bool, attacker, defender string) e
 	if err != nil {
 		return err
 	}
-	if wipun.Ammo == 0 || wipun.Val == Dud || (wipun.LastAttack + Weapons[wipun.Val].Reload) < time.Now().Unix() { return nil }
+	if wipun.Ammo == 0 || wipun.Val == Dud || (wipun.LastAttack + Weapons[wipun.Val].Reload) > time.Now().UnixNano() { return nil }
 	kill := false
 	coins := false
 	var loc Pair[float64, float64]
@@ -144,7 +144,7 @@ func attack(id, weapon storage.EntityID, left bool, attacker, defender string) e
 
 	if err := WeaponComp.Update(World, weapon, func(comp WeaponComponent) WeaponComponent {// decrements ammo
 		comp.Ammo--
-		comp.LastAttack = time.Now().Unix()
+		comp.LastAttack = time.Now().UnixNano()
 		
 		return comp
 	}); err != nil {
