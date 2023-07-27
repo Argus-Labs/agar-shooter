@@ -1,6 +1,9 @@
+using System;
 using Nakama.TinyJson;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
 
 public class Player : MonoBehaviour
@@ -21,6 +24,7 @@ public class Player : MonoBehaviour
     CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>(100);
     public Vector2 pos = new Vector2(0, 0);
     public TextMeshProUGUI nameText;
+    public PlayerAction playerAction;
     // may need introduce other parameters
     public void PlayerInit(Vector2 pos)
     {
@@ -95,6 +99,21 @@ public class Player : MonoBehaviour
     }
 
 
+    private void Awake()
+    {
+        playerAction = new PlayerAction();
+    }
+
+    private void OnEnable()
+    {
+        playerAction.Enable();
+    }
+    
+    private void OnDisable()
+    {
+        playerAction.Disable();
+    }
+
     private void Update()                       
     {
         // print(sequenceNumber);
@@ -108,13 +127,27 @@ public class Player : MonoBehaviour
 
     private void UploadPlayerInput()
     {
-        PlayerInput input = new PlayerInput(gameManager.UserId, Input.GetKey(inputProfile.up),
-            Input.GetKey(inputProfile.down), Input.GetKey(inputProfile.left), Input.GetKey(inputProfile.right),
+        Vector2to4button(playerAction.Player.Movement.ReadValue<Vector2>(), out bool up, out bool down, out bool left, out bool right);
+        // PlayerInput input = new PlayerInput(gameManager.UserId, Input.GetKey(inputProfile.up),
+        //     Input.GetKey(inputProfile.down), Input.GetKey(inputProfile.left), Input.GetKey(inputProfile.right),
+        //     sequenceNumber,Time.deltaTime);
+        PlayerInput input = new PlayerInput(gameManager.UserId, up, down, left, right,
             sequenceNumber,Time.deltaTime);
-        int opCode = 17;
-        gameManager.SendMessageToServer(opCode, input.ToJson());
+        
+        int opCode = 17;;
+        gameManager.SendMessageToServer(opCode, input.ToJson()); 
         ApplyInput(input, Time.deltaTime);
         pendingInputs.Enqueue(new PlayerInputExtraInfo(input, Time.deltaTime, pos));
+    }
+    private void Vector2to4button(Vector2 input, out bool up, out bool down, out bool left, out bool right)
+    {
+        up = input.y > 0;
+        down = input.y < 0;
+        left = input.x < 0;
+        right = input.x > 0;
+    }
+    private void OnMovement(InputAction action)
+    {
     }
     
     // change above code to C#

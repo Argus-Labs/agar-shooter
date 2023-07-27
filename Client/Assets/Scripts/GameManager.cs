@@ -7,6 +7,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -66,6 +67,7 @@ public class GameManager : MonoBehaviour
     public bool gameInitialized;
     public RemotePlayer prefab;
     private Dictionary<string, RemotePlayer> otherPlayers;
+    public List<NakamaConnection> nakamaConnectionCandidates;
     public NakamaConnection nakamaConnection;
     public Player player;
     public string UserId;
@@ -108,17 +110,21 @@ public class GameManager : MonoBehaviour
     public int scoreboardSize = 5;
 
     #endregion
+    
+    public GameObject virtualJoystick;
 
     // Start is called before the first frame update
     private void Awake()
     {
         // let the game run 60fps
         Application.targetFrameRate = 59;
+        
     }
 
     void Start()
     {
         introScreen.gameObject.SetActive(true);
+        virtualJoystick.SetActive(Utility.WebglIsMobile());
     }
 
     public async void StartGame()
@@ -396,9 +402,7 @@ public class GameManager : MonoBehaviour
                 }
 
                 break;
-            
             case (long) opcode.playerName:
-                print(content);
                 List<PlayerName> playerNames;
                 try
                 {
@@ -410,7 +414,6 @@ public class GameManager : MonoBehaviour
                     Console.WriteLine(e);
                     throw;
                 }
-                print(playerNames);
                 foreach (PlayerName playerName in playerNames)
                 {
                     if (playerName.UserId == UserId)
@@ -445,6 +448,9 @@ public class GameManager : MonoBehaviour
 
 
                 break;
+            default:
+                print("opcode: " + newState.OpCode + " "+ content);
+                break;
         }
     }
 
@@ -468,5 +474,10 @@ public class GameManager : MonoBehaviour
     {
         bestRankText.text = bestRank.ToString();
         bestScoreText.text = bestScore.ToString();
+    }
+
+    public void OnServerChange(TMP_Dropdown change)
+    {
+        nakamaConnection= nakamaConnectionCandidates[change.value];
     }
 }
