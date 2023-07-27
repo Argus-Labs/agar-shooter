@@ -116,7 +116,8 @@ func attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 		game.Attacks = append(game.Attacks, types.AttackTriple{attacker, defender, worldConstants.Weapons[weapon].Attack})
 	}
 
-	if kill { // removes player from map if they die
+	// removes player from map if they die
+	if kill {
 		if err := HandlePlayerPop(types.ModPlayer{name}); err != nil {
 			return err
 		}

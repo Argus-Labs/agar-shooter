@@ -37,13 +37,19 @@ func main() {
 	// otherwise it will show an error when you try to use them in a system.
 	utils.Must(world.RegisterTransactions(
 		tx.TxMovePlayer,
+		tx.TxAddPlayer,
+		tx.TxRemovePlayer,
 	))
 
+	// Register the reads
 	utils.Must(world.RegisterReads(
 		read.Constant))
 
+	// Register the systems
 	world.AddSystem(systems.MoveSystem)
 	// world.AddSystem(systems.ProcessMovesSystem)
+	world.AddSystem(systems.AddPlayerSystem)
+	world.AddSystem(systems.RemovePlayerSystem)
 
 	// Load game state
 	utils.Must(world.LoadGameState())

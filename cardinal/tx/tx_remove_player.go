@@ -5,8 +5,7 @@ import (
 )
 
 type RemovePlayer struct {
-	Name  string `json:"name"`
-	Coins int    `json:"coins"`
+	Name string `json:"name"`
 }
 
 var TxRemovePlayer = ecs.NewTransactionType[RemovePlayer]("remove-player")

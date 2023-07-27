@@ -21,7 +21,7 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 
 		// check if player already exists; don't do anything
 		for _, player := range players {
-			if player.Player.Name == tx.Name {
+			if player.Component.Name == tx.Name {
 				log.Error().Msg("player name already exists")
 				return errors.New("AddPlayerSystem: Player name already exists.")
 			}
