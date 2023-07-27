@@ -2,6 +2,7 @@
 package game
 
 import (
+	"math"
 	"sync"
 
 	"github.com/argus-labs/new-game/types"
@@ -15,10 +16,10 @@ type IWorldConstants struct {
 	Weapons          map[types.Weapon]types.WeaponData
 	TickRate         int     // Ticks per second
 	ClientTickRate   int     // used to determine tickrate relative to cardinal server
-	PlayerRadius     float32 // used to determine which coins to collect
+	PlayerRadius     float64 // used to determine which coins to collect
 	ExtractionRadius int     // determines when players are in range of their extraction point
 	PlayerSpeed      int
-	CoinRadius       float32 // <= GameParams.CSize/2
+	CoinRadius       float64 // <= GameParams.CSize/2
 	MaxCoinsPerTick  int
 	MaxEntities      int
 	InitRepeatSpawn  int
@@ -35,8 +36,6 @@ const ( // add more weapons as needed
 )
 
 var (
-	// If you want the constant to be queryable through `query_constant`,
-	// make sure to add the constant to the list of exposed constants
 	ExposedConstants = []types.IConstant{
 		{
 			Label: "world",
@@ -78,12 +77,16 @@ var (
 	WeaponMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of weapon lists
 	PlayerMap  = make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)        // maps cells to sets of player name-location types.Pairs
 
-	Players       = make(map[string]storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
-	Width, Height int
-	Mutex                      = &sync.RWMutex{}
-	ClientView                 = types.Pair[float64, float64]{First: 30, Second: 20} // client viewing window
-	DefaultWeapon types.Weapon = Melee
-	Attacks                    = make([]types.AttackTriple, 0)
-
+	Players        = make(map[string]storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
+	Width, Height  int
+	Mutex          = &sync.RWMutex{}
+	ClientView     = types.Pair[float64, float64]{First: 30, Second: 20} // client viewing window
+	Attacks        = make([]types.AttackTriple, 0)
+	MaxCoinsInCell = func() int {
+		return int(GameParams.CSize * GameParams.CSize / (3 * WorldConstants.CoinRadius * WorldConstants.CoinRadius * math.Pi))
+	}
+	MaxCoins = func() int {
+		return int(math.Min(float64(MaxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second/GameParams.CSize/GameParams.CSize/4+float64(3*len(Players)), float64(WorldConstants.MaxEntities-len(Players))))
+	}
 	TotalCoins = 0
 )

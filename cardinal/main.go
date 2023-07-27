@@ -2,9 +2,11 @@ package main
 
 import (
 	"github.com/argus-labs/new-game/components"
+	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/systems"
 	tx "github.com/argus-labs/new-game/tx"
+	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/server"
 	"github.com/rs/zerolog"
@@ -58,6 +60,17 @@ func main() {
 	// Load game state
 	utils.Must(world.LoadGameState())
 
+	// Setup some game settings
+	gameSettings := types.Game{
+		Dims: types.Pair[float64, float64]{
+			First:  100,
+			Second: 100,
+		},
+		CSize:   5,
+		Players: []string{},
+	}
+	game.InitializeGame(world, gameSettings)
+
 	// Start game loop as a goroutine
 	go utils.GameLoop(world)
 
@@ -74,9 +87,9 @@ func main() {
 	//{"games/pop", handlePlayerPop},
 	//{"games/state", getPlayerState},
 	//{"games/status", getPlayerStatus},
+	//{"games/coins", getPlayerCoins},
 
 	// TODO: NOT DONE
-	//{"games/coins", getPlayerCoins},
 	//{"games/tick", tig},
 	//{"games/create", createGame},
 	//{"games/offload", checkExtraction},

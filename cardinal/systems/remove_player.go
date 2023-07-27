@@ -71,13 +71,13 @@ func RemovePlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 				}
 			}
 
-			peep := bound(player.Component.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), player.Component.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
+			peep := game.bound(player.Component.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), player.Component.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
 			newCoins = append(newCoins, types.Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
 			start++
 		}
 
 		for _, coin := range newCoins {
-			if _, err := AddCoin(world, coin); err != nil {
+			if _, err := game.AddCoin(world, coin); err != nil {
 				return err
 			}
 		}

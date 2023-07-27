@@ -2,76 +2,12 @@ package main
 
 import (
 	"github.com/argus-labs/new-game/components"
-	"github.com/argus-labs/new-game/tx"
 	"math"
 	"net/http"
 
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 )
-
-func handleMakeMove(w http.ResponseWriter, r *http.Request) {
-	moves := msg.MovePlayerMsg{}
-
-	if err := utils.Decode(r, &moves); err != nil {
-		utils.WriteError(w, "invalid move or player name given", err)
-		return
-	}
-
-	HandleMakeMove(moves)
-
-	utils.WriteResult(w, "move registered")
-}
-
-func getPlayerState(w http.ResponseWriter, r *http.Request) {
-	var player types.ModPlayer
-
-	if err := utils.Decode(r, &player); err != nil {
-		utils.WriteError(w, "invalid player name given", err)
-		return
-	}
-
-	comp, err := GetPlayerState(player)
-	bareplayer := comp.Simplify()
-
-	if err != nil {
-		utils.WriteError(w, "could not get player state", err)
-		return
-	}
-
-	utils.WriteResult(w, bareplayer)
-}
-
-func getPlayerCoins(w http.ResponseWriter, r *http.Request) {
-	var player types.ModPlayer
-
-	if err := utils.Decode(r, &player); err != nil {
-		utils.WriteError(w, "invalid player name given", err)
-		return
-	}
-
-	coins := NearbyCoins(player)
-
-	utils.WriteResult(w, coins)
-}
-
-func getPlayerStatus(w http.ResponseWriter, r *http.Request) { // get all locations of players --- array of types.Pairs of strings and location (coordinate types.Pairs)
-	var player types.ModPlayer
-
-	if err := utils.Decode(r, &player); err != nil {
-		utils.WriteError(w, "invalid player name given", err)
-		return
-	}
-
-	comp, err := GetPlayerState(player)
-
-	if err != nil {
-		utils.WriteError(w, "could not get player state", err)
-		return
-	}
-
-	utils.WriteResult(w, comp)
-}
 
 func checkExtraction(w http.ResponseWriter, r *http.Request) {
 	var player types.ModPlayer
@@ -106,19 +42,6 @@ func testAddHealth(w http.ResponseWriter, r *http.Request) {
 func recentAttacks(w http.ResponseWriter, r *http.Request) {
 	attacks := RecentAttacks()
 	utils.WriteResult(w, attacks)
-}
-
-func createGame(w http.ResponseWriter, r *http.Request) {
-	game := Game{types.Pair[float64, float64]{100, 100}, 5, []string{}} // removed {"a","b"}
-	if err := CreateGame(game); err != nil {
-		utils.WriteError(w, "error initializing game", err)
-	}
-
-	for i := 0; i < InitRepeatSpawn; i++ {
-		go SpawnCoins()
-	}
-
-	utils.WriteResult(w, "game created")
 }
 
 func tig(w http.ResponseWriter, r *http.Request) {

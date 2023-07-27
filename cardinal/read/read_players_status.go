@@ -33,8 +33,7 @@ func readPlayersStatus(world *ecs.World, m []byte) ([]byte, error) {
 	})
 
 	// Return the component as bytes
-	var returnMsg []byte
-	returnMsg, _ = json.Marshal(nameToLocation)
+	returnMsg, err := json.Marshal(nameToLocation)
 
-	return returnMsg, nil
+	return returnMsg, err
 }

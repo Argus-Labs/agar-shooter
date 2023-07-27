@@ -37,7 +37,7 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 		components.Player.Set(world, playerID, components.PlayerComponent{
 			Name:   tx.Name,
 			Coins:  tx.Coins,
-			Weapon: types.Weapon(game.Melee), // This is the default weapon
+			Weapon: types.Weapon(game.Melee), // This is the default weaponehn
 		})
 
 		// Add player to local PlayerMap
