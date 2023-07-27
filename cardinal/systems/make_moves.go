@@ -10,12 +10,12 @@ import (
 )
 
 // moves player based on the coin-speed
-func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
+func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	attackQueue := make([]types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
 
 	for playerName, id := range game.Players {
-		tmpPlayer, err := components.Player.Get(World, id)
+		tmpPlayer, err := components.Player.Get(world, id)
 
 		if err != nil {
 			return err
@@ -36,12 +36,12 @@ func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 
 		for _, closestPlayerID := range game.Players {
 			if closestPlayerID != id {
-				closestPlayer, err := components.Player.Get(World, closestPlayerID)
+				closestPlayer, err := components.Player.Get(world, closestPlayerID)
 				if err != nil {
 					return err
 				}
 
-				dist := game.distance(closestPlayer.Loc, prevLoc)
+				dist := game.Distance(closestPlayer.Loc, prevLoc)
 
 				if !assigned || minDistance > dist {
 					minID = closestPlayerID
@@ -59,7 +59,7 @@ func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 
 		// moving players
 
-		loc := game.move(tmpPlayer)
+		loc := game.Move(tmpPlayer)
 
 		delete(PlayerMap[GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{id, prevLoc})
 		PlayerMap[GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{id, loc}] = pewp
@@ -79,7 +79,7 @@ func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 		extraCoins := 0
 
 		for _, entityID := range hitCoins {
-			if coinVal, err := RemoveCoin(entityID); err != nil {
+			if coinVal, err := game.RemoveCoin(world, entityID); err != nil {
 				return err
 			} else {
 				extraCoins += coinVal
@@ -88,7 +88,7 @@ func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		// modifies player location
-		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent {
+		components.Player.Update(world, Players[playerName], func(comp PlayerComponent) PlayerComponent {
 			comp.Loc = loc
 			comp.Coins += extraCoins
 
@@ -97,7 +97,7 @@ func ProcessMovesSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 	}
 
 	for _, triple := range attackQueue {
-		if err := game.attack(triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
+		if err := game.Attack(world, triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
 			return err
 		}
 	}

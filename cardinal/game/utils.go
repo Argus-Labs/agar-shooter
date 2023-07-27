@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/argus-labs/new-game/components"
+	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
+	"github.com/rs/zerolog/log"
 	"math"
 	"math/rand"
 	"time"
@@ -48,12 +50,12 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 			for j := math.Max(0, float64(coinRound.Second-1)); i <= math.Min(float64(Height), float64(coinRound.Second+1)); i++ {
 				Mutex.RLock()
 				for coin, _ := range CoinMap[types.Pair[int, int]{int(i), int(j)}] {
-					keep = keep && (distance(coin.Second, newCoin) > 2*consts.CoinRadius)
+					keep = keep && (Distance(coin.Second, newCoin) > 2*consts.CoinRadius)
 				}
 				Mutex.RUnlock()
 
 				for player, _ := range PlayerMap[types.Pair[int, int]{int(i), int(j)}] {
-					keep = keep && (distance(player.Second, newCoin) > consts.PlayerRadius+1+consts.CoinRadius)
+					keep = keep && (Distance(player.Second, newCoin) > consts.PlayerRadius+1+consts.CoinRadius)
 				}
 			}
 		}
@@ -73,6 +75,79 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 	return nil
 }
 
+func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerPair) error {
+	// Check that the player exists
+	var playerFound bool = false
+	for _, player := range playerList {
+		if player.Component.Name == playerName {
+			playerFound = true
+		}
+	}
+	if playerFound == false {
+		log.Error().Msg("player name already exists")
+		return errors.New("RemovePlayerSystem: Player does not exist")
+	}
+
+	// Get the player id and component
+	player, err := read.GetPlayerByName(world, playerName)
+	if err != nil {
+		return err
+	}
+
+	// Remove the player from the World
+	if err := world.Remove(player.ID); err != nil {
+		log.Error().Msg("RemovePlayerSystem: Error removing player from world")
+	}
+
+	// Put all the coins around the player
+	coins := player.Component.Coins
+	tot := int(math.Max(1, float64(coins/10+(coins%10)/5+coins%5)))
+	start := 0
+	rad := float64(tot) / (2 * math.Pi)
+	newCoins := make([]types.Triple[float64, float64, int], 0)
+
+	for coins > 0 { // decomposes into 10s, 5s, 1s
+		addCoins := 0
+		switch {
+		case coins >= 10:
+			{
+				addCoins = 10
+				coins -= 10
+				break
+			}
+		case coins >= 5:
+			{
+				addCoins = 5
+				coins -= 5
+				break
+			}
+		default:
+			{
+				addCoins = 1
+				coins--
+			}
+		}
+
+		peep := Bound(player.Component.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), player.Component.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
+		newCoins = append(newCoins, types.Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
+		start++
+	}
+
+	for _, coin := range newCoins {
+		if _, err := AddCoin(world, coin); err != nil {
+			return err
+		}
+	}
+
+	// Delete the player from the local PlayerMap
+	oldPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{player.ID, player.Component.Loc}
+	delete(PlayerMap[types.GetCell(player.Component.Loc)], oldPlayer)
+
+	delete(Players, player.Component.Name)
+
+	return err
+}
+
 func Bound(x float64, y float64) types.Pair[float64, float64] {
 	return types.Pair[float64, float64]{
 		First:  math.Min(float64(GameParams.Dims.First), math.Max(0, x)),
@@ -80,13 +155,13 @@ func Bound(x float64, y float64) types.Pair[float64, float64] {
 	}
 }
 
-// returns distance between two coins
-func distance(loc1, loc2 types.Mult) float64 {
+// returns Distance between two coins
+func Distance(loc1, loc2 types.Mult) float64 {
 	return math.Sqrt(math.Pow(loc1.GetFirst()-loc2.GetFirst(), 2) + math.Pow(loc1.GetSecond()-loc2.GetSecond(), 2))
 }
 
 // change speed function
-func move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
+func Move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	dir := tmpPlayer.Dir
 	coins := tmpPlayer.Coins
 	playerSpeed := float64(WorldConstants.PlayerSpeed)
@@ -140,7 +215,27 @@ func AddCoin(world *ecs.World, coin types.Triple[float64, float64, int]) (int, e
 	return coin.Third, nil
 }
 
-func attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
+func RemoveCoin(world *ecs.World, coinID types.Pair[storage.EntityID, types.Triple[float64, float64, int]]) (int, error) {
+	coin, err := components.Coin.Get(world, coinID.First)
+
+	if err != nil {
+		return -1, fmt.Errorf("Cardinal: could not get coin entity: %w", err)
+	}
+
+	Mutex.Lock()
+	delete(CoinMap[types.Pair[int, int]{int(math.Floor(coinID.Second.First / GameParams.CSize)), int(math.Floor(coinID.Second.Second / GameParams.CSize))}], coinID)
+	Mutex.Unlock()
+
+	if err := world.Remove(coinID.First); err != nil {
+		return -1, err
+	}
+
+	TotalCoins--
+
+	return coin.Val, nil
+}
+
+func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
 	kill := false
 	coins := false
 	var loc types.Pair[float64, float64]
@@ -178,7 +273,8 @@ func attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 
 	// removes player from map if they die
 	if kill {
-		if err := HandlePlayerPop(types.ModPlayer{Name: name}); err != nil {
+		playerList := read.ReadPlayers(world)
+		if err := RemovePlayer(world, name, playerList); err != nil {
 			return err
 		}
 	}
