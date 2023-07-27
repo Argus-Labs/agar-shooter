@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"time"
 
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
@@ -23,7 +24,6 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 
 	for _, move := range MoveTx.In(q) {
 		if _, contains := moveMap[move.PlayerID]; !contains {
-			/*
 			pcomp, err := PlayerComp.Get(World, Players[move.PlayerID])
 
 			if err != nil {
@@ -31,19 +31,17 @@ func processMoves(World *ecs.World, q *ecs.TransactionQueue) error {// adjusts p
 			}
 			
 			if pcomp.MoveNum != move.Input_sequence_number - 1{
-				fmt.Printf("Difference in input sequence number is not 1; received sequence number %i after sequence number %i.",move.Input_sequence_number,pcomp.MoveNum)
+				fmt.Println("Difference in input sequence number is not 1; received sequence number", move.Input_sequence_number, "after sequence number", pcomp.MoveNum)
 				return nil
 			}
-			*/
 
 			moveMap[move.PlayerID] = []Move{move}
 		} else {
-			/*
 			if num := moveMap[move.PlayerID][len(moveMap[move.PlayerID])-1].Input_sequence_number;move.Input_sequence_number != num + 1 {
-				fmt.Printf("Difference in input sequence number is not 1; received sequence number %i after sequence number %i.",move.Input_sequence_number,num)
+				fmt.Println("Difference in input sequence number is not 1; received sequence number", move.Input_sequence_number, "after sequence number", num)
 				return nil
 			}
-			*/
+
 			moveMap[move.PlayerID] = append(moveMap[move.PlayerID], move)
 		}
 	}
@@ -132,18 +130,33 @@ func CoinProjDist(start, end Pair[float64, float64], coin Triple[float64, float6
 	}
 }
 
-func attack(id storage.EntityID, weapon Weapon, left bool, attacker, defender string) error {// attack a player
+func attack(id, weapon storage.EntityID, left bool, attacker, defender string) error {// attack a player
+	wipun, err := WeaponComp.Get(World, weapon)
+
+	if err != nil {
+		return err
+	}
+	if wipun.Ammo == 0 || wipun.Val == Dud || (wipun.LastAttack + Weapons[wipun.Val].Reload) < time.Now().Unix() { return nil }
 	kill := false
 	coins := false
 	var loc Pair[float64, float64]
 	var name string
 
-	if err := PlayerComp.Update(World, id, func(comp PlayerComponent) PlayerComponent{// modifies player location
+	if err := WeaponComp.Update(World, weapon, func(comp WeaponComponent) WeaponComponent {// decrements ammo
+		comp.Ammo--
+		comp.LastAttack = time.Now().Unix()
+		
+		return comp
+	}); err != nil {
+		return err
+	}
+
+	if err := PlayerComp.Update(World, id, func(comp PlayerComponent) PlayerComponent {// modifies player location
 		if left == comp.IsRight && comp.Coins > 0 {
 			comp.Coins--
 			coins = true
 		} else{
-			comp.Health -= Weapons[weapon].Attack
+			comp.Health -= Weapons[wipun.Val].Attack
 		}
 		kill = comp.Health <= 0
 		name = comp.Name
@@ -164,7 +177,7 @@ func attack(id storage.EntityID, weapon Weapon, left bool, attacker, defender st
 
 		Attacks = append(Attacks, AttackTriple{attacker, defender, -1})
 	} else {// adds attack to display queue if it was executed
-		Attacks = append(Attacks, AttackTriple{attacker, defender, Weapons[weapon].Attack})
+		Attacks = append(Attacks, AttackTriple{attacker, defender, Weapons[wipun.Val].Attack})
 	}
 
 	if kill {// removes player from map if they die
@@ -177,7 +190,7 @@ func attack(id storage.EntityID, weapon Weapon, left bool, attacker, defender st
 }
 
 func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player based on the coin-speed
-	attackQueue := make([]Triple[storage.EntityID, Weapon, Triple[bool, string, string]],0)
+	attackQueue := make([]Triple[storage.EntityID, storage.EntityID, Triple[bool, string, string]],0)
 	Attacks = make([]AttackTriple, 0)
 	maxDepth := 0
 
@@ -188,6 +201,13 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			return err
 		}
 
+		weapon, err := WeaponComp.Get(World, tmpPlayer.Weapon)
+
+		if err != nil {
+			return err
+		}
+
+		attackRange := Weapons[weapon.Val].Range
 		prevLoc := tmpPlayer.Loc
 
 		// attacking players; each player attacks the closest player as determined by kdtree TODO: change targetting system later
@@ -205,8 +225,8 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			if err != nil {
 				return fmt.Errorf("Cardinal: error fetching player: %w", err)
 			}
-			if distance(nearestPlayerComp.Loc, prevLoc) <= Weapons[tmpPlayer.Weapon].Range {
-				attackQueue = append(attackQueue, Triple[storage.EntityID, Weapon, Triple[bool, string, string]]{Players[knn[1].Name], tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
+			if distance(nearestPlayerComp.Loc, prevLoc) <= attackRange {
+				attackQueue = append(attackQueue, Triple[storage.EntityID, storage.EntityID, Triple[bool, string, string]]{Players[knn[1].Name], tmpPlayer.Weapon, Triple[bool, string, string]{left, playerName, nearestPlayerComp.Name}})
 			}
 		}
 
@@ -219,12 +239,18 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 
 		// collects all hit coins
 		hitCoins := make([]Pair[storage.EntityID, Triple[float64,float64,int]], 0)
+		hitHealth := make([]Pair[storage.EntityID, Triple[float64,float64,int]], 0)
 
 		for i := int(math.Floor(prevLoc.First/GameParams.CSize)); i <= int(math.Floor(loc.First/GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second/GameParams.CSize)); j <= int(math.Floor(loc.Second/GameParams.CSize)); j++ {
 				for coin, _ := range CoinMap[Pair[int, int]{i,j}] {
 					if CoinProjDist(prevLoc, loc, coin.Second) <= PlayerRadius {
 						hitCoins = append(hitCoins, coin)
+					}
+				}
+				for health, _ := range HealthMap[Pair[int, int]{i,j}] {
+					if CoinProjDist(prevLoc, loc, health.Second) <= PlayerRadius {
+						hitHealth = append(hitHealth, health)
 					}
 				}
 			}
@@ -240,11 +266,23 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 			}
 
 		}
+		
+		extraHealth := 0
+
+		for _, entityID := range hitHealth {
+			if healthVal, err := RemoveHealth(entityID); err != nil {
+				return err
+			} else {
+				extraHealth += healthVal
+			}
+
+		}
 
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
 			comp.Loc = loc
 			comp.Coins += extraCoins
 			if PlayerMaxCoins[playerName] < comp.Coins { PlayerMaxCoins[playerName] = comp.Coins }
+			comp.Health += extraHealth// cap health later
 			
 			return comp
 		})

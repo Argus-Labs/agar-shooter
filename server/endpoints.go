@@ -96,6 +96,19 @@ func getPlayerCoins(w http.ResponseWriter, r *http.Request) {
 	writeResult(w, coins)
 }
 
+func getPlayerHealth(w http.ResponseWriter, r *http.Request) {
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	health := NearbyHealths(player)
+
+	writeResult(w, health)
+}
+
 func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locations of players --- array of pairs of strings and location (coordinate pairs)
 	var player ModPlayer
 
@@ -123,6 +136,19 @@ func checkExtraction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	coins := CheckExtraction(player)
+
+	writeResult(w, coins)
+}
+
+func getMaxCoins(w http.ResponseWriter, r *http.Request) {
+	var player ModPlayer
+
+	if err := decode(r, &player); err != nil {
+		writeError(w, "invalid player name given", err)
+		return
+	}
+
+	coins := GetMaxCoins(player)
 
 	writeResult(w, coins)
 }
@@ -168,7 +194,10 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "error initializing game", err)
 	}
 
-	for i := 0; i < InitRepeatSpawn; i++ { go SpawnCoins() }
+	for i := 0; i < InitRepeatSpawn; i++ {
+		go SpawnCoins()
+		go SpawnHealth()
+	}
 
 	writeResult(w, "game created")
 }
@@ -180,6 +209,10 @@ func tig(w http.ResponseWriter, r *http.Request) {
 
 	if err := SpawnCoins(); err != nil {
 		writeError(w, "error spawning coins", err)
+	}
+
+	if err := SpawnHealth(); err != nil {
+		writeError(w, "error spawning health", err)
 	}
 
 	writeResult(w, "game tick completed; coins spawned")
