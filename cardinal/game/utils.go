@@ -73,7 +73,7 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 	return nil
 }
 
-func bound(x float64, y float64) types.Pair[float64, float64] {
+func Bound(x float64, y float64) types.Pair[float64, float64] {
 	return types.Pair[float64, float64]{
 		First:  math.Min(float64(GameParams.Dims.First), math.Max(0, x)),
 		Second: math.Min(float64(GameParams.Dims.Second), math.Max(0, y)),
@@ -91,7 +91,7 @@ func move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	coins := tmpPlayer.Coins
 	playerSpeed := float64(WorldConstants.PlayerSpeed)
 
-	return bound(
+	return Bound(
 		tmpPlayer.Loc.First+(playerSpeed*dir.First*math.Exp(-0.01*float64(coins))),
 		tmpPlayer.Loc.Second+(playerSpeed*dir.Second*math.Exp(-0.01*float64(coins))),
 	)
@@ -165,7 +165,7 @@ func attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 
 	if coins {
 		randfloat := rand.Float64() * 2 * math.Pi
-		loc = bound(loc.First+3*math.Cos(randfloat), loc.Second+3*math.Sin(randfloat))
+		loc = Bound(loc.First+3*math.Cos(randfloat), loc.Second+3*math.Sin(randfloat))
 
 		if _, err := AddCoin(world, types.Triple[float64, float64, int]{First: loc.First, Second: loc.Second, Third: 1}); err != nil {
 			return err

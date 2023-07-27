@@ -11,7 +11,7 @@ import (
 
 func GameLoop(world *ecs.World) {
 	log.Info().Msg("Game loop started")
-	for range time.Tick(time.Second) {
+	for range time.Tick(time.Millisecond * 100) {
 		if err := world.Tick(context.Background()); err != nil {
 			panic(err)
 		}

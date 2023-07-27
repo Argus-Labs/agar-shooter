@@ -43,15 +43,3 @@ func recentAttacks(w http.ResponseWriter, r *http.Request) {
 	attacks := RecentAttacks()
 	utils.WriteResult(w, attacks)
 }
-
-func tig(w http.ResponseWriter, r *http.Request) {
-	if err := TickTock(); err != nil {
-		utils.WriteError(w, "error ticking", err)
-	}
-
-	if err := SpawnCoins(); err != nil {
-		utils.WriteError(w, "error spawning coins", err)
-	}
-
-	utils.WriteResult(w, "game tick completed; coins spawned")
-}

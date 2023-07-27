@@ -28,11 +28,6 @@ func RemoveCoin(coinID types.Pair[storage.EntityID, types.Triple[float64, float6
 	return coin.Val, nil
 }
 
-func TickTock() error { // testing function used to make the game tick
-	err := World.Tick()
-	return err
-}
-
 func CheckExtraction(player ModPlayer) int {
 	playercomp, err := PlayerComp.Get(World, Players[player.Name])
 

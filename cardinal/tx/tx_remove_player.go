@@ -4,8 +4,8 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
-type RemovePlayer struct {
+type RemovePlayerMsg struct {
 	Name string `json:"name"`
 }
 
-var TxRemovePlayer = ecs.NewTransactionType[RemovePlayer]("remove-player")
+var TxRemovePlayer = ecs.NewTransactionType[RemovePlayerMsg]("remove-player")

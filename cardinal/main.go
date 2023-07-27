@@ -56,6 +56,7 @@ func main() {
 	// world.AddSystem(systems.ProcessMovesSystem)
 	world.AddSystem(systems.AddPlayerSystem)
 	world.AddSystem(systems.RemovePlayerSystem)
+	world.AddSystem(systems.SpawnCoinsSystem)
 
 	// Load game state
 	utils.Must(world.LoadGameState())
@@ -88,10 +89,10 @@ func main() {
 	//{"games/state", getPlayerState},
 	//{"games/status", getPlayerStatus},
 	//{"games/coins", getPlayerCoins},
+	//{"games/create", createGame},
 
 	// TODO: NOT DONE
 	//{"games/tick", tig},
-	//{"games/create", createGame},
 	//{"games/offload", checkExtraction},
 	//{"games/attacks", recentAttacks},
 	//{"games/testaddhealth", testAddHealth},
