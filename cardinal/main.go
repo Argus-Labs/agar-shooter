@@ -45,6 +45,7 @@ func main() {
 	utils.Must(world.RegisterReads(
 		read.Constant,
 		read.PlayerState,
+		read.PlayersStatus,
 	))
 
 	// Register the systems
@@ -71,8 +72,8 @@ func main() {
 	//{"games/push", handlePlayerPush}
 	//{"games/pop", handlePlayerPop},
 	//{"games/state", getPlayerState},
-	// TODO: NOT DONE
 
+	// TODO: NOT DONE
 	//{"games/status", getPlayerStatus},
 	//{"games/coins", getPlayerCoins},
 	//{"games/tick", tig},

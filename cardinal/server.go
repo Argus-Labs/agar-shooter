@@ -36,16 +36,6 @@ func TickTock() error { // testing function used to make the game tick
 	return err
 }
 
-func GetPlayerStatus() []Pair[string, types.Pair[float64, float64]] { // sends all player information to each player
-	locs := make([]Pair[string, types.Pair[float64, float64]], 0)
-	for key, id := range Players {
-		comp, _ := PlayerComp.Get(World, id)
-		locs = append(locs, types.Pair[string, types.Pair[float64, float64]]{key, comp.Loc})
-	}
-
-	return locs
-}
-
 func CreateGame(game Game) error {
 	//if World.stateIsLoaded {
 	//	return fmt.Errorf("already loaded state")
