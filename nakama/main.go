@@ -262,18 +262,18 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// send attack information to all players
-	attacks, err := CallRPCs["/read-attacks"](ctx, logger, db, nk, "{}")
-
-	if err != nil {
-		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
-	}
-
-	if attacks != "[]\n" {
-		//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
-		if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
-			return err
-		}
-	}
+	//attacks, err := CallRPCs["/read-attacks"](ctx, logger, db, nk, "{}")
+	//
+	//if err != nil {
+	//	logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
+	//}
+	//
+	//if attacks != "[]\n" {
+	//	//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
+	//	if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
+	//		return err
+	//	}
+	//}
 
 	return state
 }
@@ -354,14 +354,15 @@ func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initiali
 	endpoints = append(endpoints, endpoints2...)
 
 	for _, e := range endpoints {
-		logger.Debug("registering: %v", e)
-		currEndpoint := e
+		endpoint := e
+		endpoint = endpoint[1:]
+		logger.Debug("registering: %v", endpoint)
 
 		// function creates functions to use for calling endpoints within the code
-		CallRPCs[currEndpoint] = makeEndpoint(currEndpoint, makeURL)
-		err := initializer.RegisterRpc(e, CallRPCs[currEndpoint])
+		CallRPCs[endpoint] = makeEndpoint(endpoint, makeURL)
+		err := initializer.RegisterRpc(endpoint, CallRPCs[endpoint])
 		if err != nil {
-			logger.Error("failed to register endpoint %q: %v", e, err)
+			logger.Error("failed to register endpoint %q: %v", endpoint, err)
 		}
 	}
 
