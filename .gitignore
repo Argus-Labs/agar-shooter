@@ -24,7 +24,7 @@ https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.giti
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-server/vendor
+cardinal/vendor
 nakama/vendor
 
 
