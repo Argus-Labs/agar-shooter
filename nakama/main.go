@@ -150,7 +150,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		// send player database information to Cardinal if it exists when initializing player
 		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":"+strconv.Itoa(coins)+"}"))
-		result, err := CallRPCs["/tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
+		result, err := CallRPCs["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
 
 		if err != nil {
 			return err
@@ -168,7 +168,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	}
 
 	for i := 0; i < len(presences); i++ {
-		result, err := CallRPCs["/tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
+		result, err := CallRPCs["tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
 
 		if err != nil {
 			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
@@ -209,7 +209,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			switch opCode {
 			case MOVE:
 				for _, matchData := range matchDataArray {
-					if _, err = CallRPCs["/tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil { // the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+					if _, err = CallRPCs["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil { // the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
 						logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 					}
 
@@ -226,7 +226,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	kickList := make([]string, 0)
 	for _, pp := range Presences {
 		// get player state
-		playerState, err := CallRPCs["/read-player-state"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())
@@ -237,7 +237,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["/read-player-coins"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
 				return err
@@ -262,7 +262,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// send attack information to all players
-	//attacks, err := CallRPCs["/read-attacks"](ctx, logger, db, nk, "{}")
+	//attacks, err := CallRPCs["read-attacks"](ctx, logger, db, nk, "{}")
 	//
 	//if err != nil {
 	//	logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
