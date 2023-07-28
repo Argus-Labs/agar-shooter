@@ -125,7 +125,7 @@ func PopPlayer(player PlayerComponent) error {
 func HandlePlayerPush(player AddPlayer) error {
 	weapon, _ := World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon, WeaponComponent{Pair[float64, float64]{-1,-1}, DefaultWeapon, Weapons[DefaultWeapon].MaxAmmo, 0})
-	playerComp := PlayerComponent{player.Name, 100, player.Coins, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second},time.Now().Unix(), true, -1}
+	playerComp := PlayerComponent{player.Name, 100, player.Coins, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second},time.Now().UnixNano(), true, -1}
 	return PushPlayer(playerComp)
 }
 
@@ -254,7 +254,7 @@ func CreateGame(game Game) error {
 	for _, playername := range GameParams.Players {
 		weapon, _ := World.Create(WeaponComp)
 		WeaponComp.Set(World, weapon, WeaponComponent{Pair[float64, float64]{-1,-1}, DefaultWeapon, Weapons[DefaultWeapon].MaxAmmo, 0})
-		playercomp := PlayerComponent{playername, 100, 0, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, time.Now().Unix(), true, -1}// initializes player entities through their component
+		playercomp := PlayerComponent{playername, 100, 0, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, time.Now().UnixNano(), true, -1}// initializes player entities through their component
 
 		if err := PushPlayer(playercomp); err != nil {
 			return err
@@ -405,7 +405,7 @@ func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {
 		fmt.Errorf("Error getting player component: %w", err)
 	}
 	
-	if time.Now().Unix() - playercomp.LastExtract >= ExtractionCooldown {
+	if time.Now().UnixNano() - playercomp.LastExtract >= ExtractionCooldown {
 		return playercomp.Extract
 	} else {
 		return Pair[float64, float64]{-1,-1}
@@ -419,10 +419,10 @@ func CheckExtraction(player ModPlayer) int {
 		fmt.Errorf("Error getting  player component: %w", err)
 	}
 
-	if time.Now().Unix() - playercomp.LastExtract >= ExtractionCooldown && distance(playercomp.Loc, playercomp.Extract) <= ExtractionRadius {
+	if time.Now().UnixNano() - playercomp.LastExtract >= ExtractionCooldown && distance(playercomp.Loc, playercomp.Extract) <= ExtractionRadius {
 		PlayerComp.Update(World, Players[player.Name], func(comp PlayerComponent) PlayerComponent{
 			comp.Coins = 0// extraction point offloading
-			playercomp.LastExtract = time.Now().Unix()
+			playercomp.LastExtract = time.Now().UnixNano()
 			playercomp.Extract = Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}
 
 			return comp

@@ -17,6 +17,7 @@ const (// add more weapons as needed
 	Dud = iota - 1// empty weapon
 	Melee 
 	Slug
+	TestWeapon
 )
 var (
 	GameParams				Game
@@ -37,6 +38,7 @@ var (
 								Dud: WeaponData{0, 0.0, 0, 0},
 								Melee: WeaponData{2, 4.0, -1, 1*time.Second.Nanoseconds()},// last number is weapon cooldown in nanoseconds
 								Slug: WeaponData{3, 6.9, 6, 5*time.Second.Nanoseconds()},
+								TestWeapon: WeaponData{2, 4.0, -1, -1},
 							}
 	coinMutex				= &sync.RWMutex{}
 	healthMutex				= &sync.RWMutex{}
