@@ -15,6 +15,7 @@ public class GameManager : MonoBehaviour
     {
         playerStatus = 0,
         coinsInfo = 1,
+        otherPlayerDie = 2,
         attack = 3,
         die = 5,
         addHealth = 6,
@@ -447,6 +448,15 @@ public class GameManager : MonoBehaviour
                 player.enabled = false;
 
 
+                break;
+            case(long) opcode.otherPlayerDie:
+                Debug.Log("Other player die");
+                if (!otherPlayers.ContainsKey(content))
+                {
+                    return;
+                }
+                Destroy(otherPlayers[content].gameObject);
+                otherPlayers.Remove(content);
                 break;
             default:
                 print("opcode: " + newState.OpCode + " "+ content);
