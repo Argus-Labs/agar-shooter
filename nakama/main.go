@@ -86,10 +86,6 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 	tickRate := 5
 	label := ""
 
-	if _, err := CallRPCs["games/create"](ctx, logger, db, nk, "{}"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error creating game", err).Error())
-	}
-
 	time.Sleep(5 * time.Second)
 
 	if _, err := db.Query("DROP TABLE IF EXISTS dbplayer"); err != nil {
@@ -154,7 +150,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		// send player database information to Cardinal if it exists when initializing player
 		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":"+strconv.Itoa(coins)+"}"))
-		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
+		result, err := CallRPCs["/tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
 
 		if err != nil {
 			return err
@@ -172,7 +168,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	}
 
 	for i := 0; i < len(presences); i++ {
-		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
+		result, err := CallRPCs["/tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
 
 		if err != nil {
 			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
@@ -204,12 +200,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if _, contains := Presences[match.GetUserId()]; !contains {
 			return fmt.Errorf("Nakama: unregistered player is moving")
 		}
-
-		if match.GetOpCode() == TESTADDHEALTH {
-			if _, err := CallRPCs["games/testaddhealth"](ctx, logger, db, nk, "{\"Name\":\""+match.GetUserId()+"\"}"); err != nil {
-				logger.Error(fmt.Errorf("Nakama: error adding health:", err).Error())
-			}
-		}
 	}
 
 	for _, matchMap := range messageMap {
@@ -219,7 +209,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			switch opCode {
 			case MOVE:
 				for _, matchData := range matchDataArray {
-					if _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData)); err != nil { // the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+					if _, err = CallRPCs["/tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil { // the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
 						logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 					}
 
@@ -232,19 +222,11 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	// call tick (could cause players to die, but we're fine as long as we check immediately after), then get player statuses and broadcast to everyone & offload coins; after this, send attack information to all existing players
-	// tick
-	if _, err := CallRPCs["games/tick"](ctx, logger, db, nk, "{}"); err != nil {
-		return fmt.Errorf("Nakama: tick error: %w", err)
-	}
-
-	m.tick++
-
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
 	for _, pp := range Presences {
 		// get player state
-		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+		playerState, err := CallRPCs["/read-player-state"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())
@@ -255,7 +237,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+			nearbyCoins, err := CallRPCs["/read-player-coins"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
 				return err
@@ -268,42 +250,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			}
 		}
 
-		// offload coins to database
-		coins, err := CallRPCs["games/offload"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
-		var intCoins int
-
-		if err != nil {
-			logger.Error(fmt.Errorf("Nakama: error fetching extraction point stuff: ", err).Error())
-		}
-
-		if intCoins, err = strconv.Atoi(strings.TrimSpace(coins)); err != nil {
-			logger.Error(fmt.Errorf("Nakama:", err).Error())
-		}
-
-		if intCoins > 0 {
-			var (
-				coins              int
-				discard1, discard2 string
-			)
-
-			row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", pp.GetUserId())
-
-			if err := row.Scan(&discard1, &coins, &discard2); err != nil {
-				if err != sql.ErrNoRows && err != nil {
-					logger.Error(fmt.Errorf("Nakama: error getting player information from database: ", err).Error())
-					return state
-				} else {
-					logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
-					return state
-				}
-			}
-
-			if _, err = db.Exec("UPDATE dbplayer SET storedcoins = $1 WHERE id = $2", intCoins+coins, pp.GetUserId()); err != nil {
-				logger.Error(fmt.Errorf("Nakama: error updating player's coins: ", err).Error())
-			} else {
-				logger.Debug(fmt.Sprintf("Nakama: player's coins updated: ", intCoins+coins))
-			}
-		}
 	}
 
 	// kick all dead players
@@ -316,7 +262,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// send attack information to all players
-	attacks, err := CallRPCs["games/attacks"](ctx, logger, db, nk, "{}")
+	attacks, err := CallRPCs["/read-attacks"](ctx, logger, db, nk, "{}")
 
 	if err != nil {
 		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
@@ -392,6 +338,20 @@ func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initiali
 	if err := dec.Decode(&endpoints); err != nil {
 		return err
 	}
+
+	// get the list of available endpoints from the backend server
+	resp, err = http.Get(makeURL("list/read-endpoints"))
+	if err != nil {
+		return err
+	}
+
+	dec = json.NewDecoder(resp.Body)
+	var endpoints2 []string
+	if err := dec.Decode(&endpoints2); err != nil {
+		return err
+	}
+
+	endpoints = append(endpoints, endpoints2...)
 
 	for _, e := range endpoints {
 		logger.Debug("registering: %v", e)
