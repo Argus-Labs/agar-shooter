@@ -2722,7 +2722,7 @@ MonoBehaviour:
   gameInitialized: 0
   prefab: {fileID: 1835360544227996713, guid: c63b58d0670eb4c4d8b6f0ad2b0d5bf8, type: 3}
   nakamaConnectionCandidates:
-  - {fileID: 11400000, guid: fb3bfee287dd8ac4e9a4b9f7dc043f3b, type: 2}
+  - {fileID: 11400000, guid: 8a6d48dff0e345d49b507b6604328709, type: 2}
   - {fileID: 11400000, guid: dde93a0d29fef5543a6b5c0358401fe1, type: 2}
   - {fileID: 11400000, guid: 83a37b321fc5c584f8ecc589e9f83724, type: 2}
   nakamaConnection: {fileID: 11400000, guid: 8a6d48dff0e345d49b507b6604328709, type: 2}
@@ -2737,6 +2737,9 @@ MonoBehaviour:
   coinsParent: {fileID: 1745651490}
   dmgTextSpawner: {fileID: 977874919}
   attackAnimSpawner: {fileID: 977874920}
+  healthPacks: []
+  healthPackPrefab: {fileID: 3355190014567228456, guid: 51977319cf7714441ac3aeffdba452c7, type: 3}
+  healthPackParent: {fileID: 1388723539}
   loadingScreen: {fileID: 2116535601}
   introScreen: {fileID: 939298035}
   gameOverScreen: {fileID: 1683885970}
@@ -3702,6 +3705,37 @@ RectTransform:
   m_AnchoredPosition: {x: 19, y: -172}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1388723538
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1388723539}
+  m_Layer: 0
+  m_Name: HealthPackHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1388723539
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1388723538}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 30.834229, y: 24.16685, z: -0.11168537}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1389543185
 GameObject:
   m_ObjectHideFlags: 0
