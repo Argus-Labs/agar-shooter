@@ -8,6 +8,7 @@ import (
 	"github.com/argus-labs/new-game/read"
 	transactions "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
+	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"github.com/rs/zerolog/log"
@@ -43,7 +44,7 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 		// Add player to local PlayerMap
 		playerComp, err := components.Player.Get(world, playerID)
 		newPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{playerID, playerComp.Loc}
-		game.PlayerMap[types.GetCell(playerComp.Loc)][newPlayer] = types.Pewp
+		game.PlayerMap[utils.GetCell(playerComp.Loc)][newPlayer] = types.Pewp
 	}
 
 	return nil

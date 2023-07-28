@@ -14,6 +14,7 @@ replace (
 
 require (
 	github.com/argus-labs/world-engine/cardinal v0.1.18-alpha
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	gotest.tools/v3 v3.5.0
 )
 
@@ -98,7 +99,6 @@ require (
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	golang.org/x/crypto v0.10.0 // indirect
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/net v0.11.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
 	google.golang.org/genproto v0.0.0-20230525234025-438c736192d0 // indirect

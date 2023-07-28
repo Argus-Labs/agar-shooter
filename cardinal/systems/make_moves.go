@@ -4,6 +4,7 @@ import (
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
+	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"math"
@@ -41,7 +42,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 					return err
 				}
 
-				dist := game.Distance(closestPlayer.Loc, prevLoc)
+				dist := utils.Distance(closestPlayer.Loc, prevLoc)
 
 				if !assigned || minDistance > dist {
 					minID = closestPlayerID
@@ -59,17 +60,17 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		// moving players
 
-		loc := game.Move(tmpPlayer)
+		loc := utils.Move(tmpPlayer)
 
-		delete(game.PlayerMap[types.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: prevLoc})
-		game.PlayerMap[types.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: loc}] = types.Pewp
+		delete(game.PlayerMap[utils.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: prevLoc})
+		game.PlayerMap[utils.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: loc}] = types.Pewp
 
 		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 
 		for i := int(math.Floor(prevLoc.First / game.GameParams.CSize)); i <= int(math.Floor(loc.First/game.GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second / game.GameParams.CSize)); j <= int(math.Floor(loc.Second/game.GameParams.CSize)); j++ {
 				for coin, _ := range game.CoinMap[types.Pair[int, int]{i, j}] {
-					if game.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
+					if utils.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}
 				}
@@ -79,7 +80,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		extraCoins := 0
 
 		for _, entityID := range hitCoins {
-			if coinVal, err := game.RemoveCoin(world, entityID); err != nil {
+			if coinVal, err := utils.RemoveCoin(world, entityID); err != nil {
 				return err
 			} else {
 				extraCoins += coinVal
@@ -97,7 +98,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	}
 
 	for _, triple := range attackQueue {
-		if err := game.Attack(world, triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
+		if err := utils.Attack(world, triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
 			return err
 		}
 	}

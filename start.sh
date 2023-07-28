@@ -8,10 +8,8 @@ go mod tidy
 go mod vendor
 cd ..
 
-cd server
-rm -rf vendor/
+cd cardinal
 go mod tidy
-go mod vendor
 cd ..
 
 docker compose up --build

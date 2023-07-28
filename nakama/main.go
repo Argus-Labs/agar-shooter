@@ -9,59 +9,59 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"regexp"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 const (
-	LOCATION int64				= 0
-	COINS int64					= 1
-	REMOVE int64				= 2
-	ATTACKS int64				= 3
-	DEADLINE_EXCEEDED int64		= 4
-	DED int64					= 5
-	TESTADDHEALTH int64			= 6
-	PERMISSION_DENIED int64		= 7
-	RESOURCE_EXHAUSTED int64	= 8
-	FAILED_PRECONDITION int64	= 9
-	ABORTED int64				= 10
-	OUT_OF_RANGE int64			= 11
-	UNIMPLEMENTED int64			= 12
-	INTERNAL int				= 13
-	UNAVAILABLE int64			= 14
-	DATA_LOSS int64				= 15
-	UNAUTHENTICATED int64		= 16
-	MOVE int64					= 17
+	LOCATION            int64 = 0
+	COINS               int64 = 1
+	REMOVE              int64 = 2
+	ATTACKS             int64 = 3
+	DEADLINE_EXCEEDED   int64 = 4
+	DED                 int64 = 5
+	TESTADDHEALTH       int64 = 6
+	PERMISSION_DENIED   int64 = 7
+	RESOURCE_EXHAUSTED  int64 = 8
+	FAILED_PRECONDITION int64 = 9
+	ABORTED             int64 = 10
+	OUT_OF_RANGE        int64 = 11
+	UNIMPLEMENTED       int64 = 12
+	INTERNAL            int   = 13
+	UNAVAILABLE         int64 = 14
+	DATA_LOSS           int64 = 15
+	UNAUTHENTICATED     int64 = 16
+	MOVE                int64 = 17
 )
 
 const (
-	EnvGameServer	= "GAME_SERVER_ADDR"
+	EnvGameServer = "GAME_SERVER_ADDR"
 )
 
 var (
-	CallRPCs	= make(map[string] func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))// contains all RPC endpoint functions
-	Presences	= make(map[string] runtime.Presence)// contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
-	nonnum		= regexp.MustCompile(`[^0-9]`)
+	CallRPCs  = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error)) // contains all RPC endpoint functions
+	Presences = make(map[string]runtime.Presence)                                                                                                      // contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
+	nonnum    = regexp.MustCompile(`[^0-9]`)
 )
 
 type DBPlayer struct {
-	ID				string
-	StoredCoins, CurrCoins 	int
+	ID                     string
+	StoredCoins, CurrCoins int
 	// add weapon & other base information
 }
 
-type MatchState struct {}// contains match data as the match progresses
+type MatchState struct{} // contains match data as the match progresses
 
-type Match struct{
+type Match struct {
 	tick int
-}// should contain data on the match, but because this is being handled through Cardinal, it's an empty struct that does nothing --- all match functions call Cardinal endpoints rather than actually updating some Nakama match state
+} // should contain data on the match, but because this is being handled through Cardinal, it's an empty struct that does nothing --- all match functions call Cardinal endpoints rather than actually updating some Nakama match state
 
-func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {// called when connection is established
-	if err := InitializeCardinalProxy(logger, initializer); err != nil {// Register the RPC function of Cardinal to Nakama to create a proxy
+func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error { // called when connection is established
+	if err := InitializeCardinalProxy(logger, initializer); err != nil { // Register the RPC function of Cardinal to Nakama to create a proxy
 		return err
 	}
 
@@ -70,7 +70,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return err
 	}
 
-	if _, err := nk.MatchCreate(ctx, "singleton_match", map[string]interface{}{}); err != nil {// calls the newMatch function, then calls MatchInit on the result
+	if _, err := nk.MatchCreate(ctx, "singleton_match", map[string]interface{}{}); err != nil { // calls the newMatch function, then calls MatchInit on the result
 		return err
 	}
 
@@ -90,10 +90,10 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 		logger.Error(fmt.Errorf("Nakama: error creating game", err).Error())
 	}
 
-	time.Sleep(5*time.Second)
+	time.Sleep(5 * time.Second)
 
 	if _, err := db.Query("DROP TABLE IF EXISTS dbplayer"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error())// drop table and replace with new table
+		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error()) // drop table and replace with new table
 	}
 
 	if _, err := db.Query("CREATE TABLE dbplayer (id text, storedcoins int, currcoins int)"); err != nil {
@@ -106,7 +106,7 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 }
 
 func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
-	_, contains := Presences[presence.GetUserId()]// whether user should be accepted
+	_, contains := Presences[presence.GetUserId()] // whether user should be accepted
 
 	return state, !contains, ""
 }
@@ -128,7 +128,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		fmt.Println("Connected to database")
 
 		var (
-			coins int
+			coins              int
 			discard1, discard2 string
 		)
 
@@ -137,7 +137,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
 			if err == sql.ErrNoRows {
 				logger.Debug("Nakama: player does not already exist in database; adding player to database")
-				
+
 				_, err := db.Exec("INSERT INTO dbplayer (id, storedcoins, currcoins) VALUES ($1, $2, $3)", p.GetUserId(), 0, 0)
 				if err != nil {
 					logger.Error(fmt.Errorf("Nakama: error inserting player into database: ", err).Error())
@@ -151,10 +151,10 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		} else {
 			logger.Debug(fmt.Sprintf("Nakama: player exists in database with coins", coins))
 		}
-		
+
 		// send player database information to Cardinal if it exists when initializing player
-		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}"))
-		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":0}")
+		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":"+strconv.Itoa(coins)+"}"))
+		result, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
 
 		if err != nil {
 			return err
@@ -172,13 +172,13 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	}
 
 	for i := 0; i < len(presences); i++ {
-		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\"" + presences[i].GetUserId() + "\"}")
+		result, err := CallRPCs["games/pop"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
 
 		if err != nil {
 			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
 		}
-		
-		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true)// broadcast player removal to all players
+
+		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true) // broadcast player removal to all players
 
 		if _, contains := Presences[presences[i].GetUserId()]; contains {
 			delete(Presences, presences[i].GetUserId())
@@ -192,11 +192,11 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
 	// process player input for each type of input
-	messageMap := make(map[string] map[int64] [][]byte)
+	messageMap := make(map[string]map[int64][][]byte)
 
 	for _, match := range messages {
 		if messageMap[match.GetUserId()] == nil {
-			messageMap[match.GetUserId()] = make(map[int64] [][]byte)
+			messageMap[match.GetUserId()] = make(map[int64][][]byte)
 		}
 
 		messageMap[match.GetUserId()][match.GetOpCode()] = append(messageMap[match.GetUserId()][match.GetOpCode()], match.GetData())
@@ -206,7 +206,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 
 		if match.GetOpCode() == TESTADDHEALTH {
-			if _, err := CallRPCs["games/testaddhealth"](ctx, logger, db, nk, "{\"Name\":\"" + match.GetUserId() + "\"}"); err != nil {
+			if _, err := CallRPCs["games/testaddhealth"](ctx, logger, db, nk, "{\"Name\":\""+match.GetUserId()+"\"}"); err != nil {
 				logger.Error(fmt.Errorf("Nakama: error adding health:", err).Error())
 			}
 		}
@@ -217,13 +217,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			var err error
 
 			switch opCode {
-				case MOVE:
-					for _, matchData := range matchDataArray {
-						if _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData)); err != nil {// the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
-							logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
-						}
-							
+			case MOVE:
+				for _, matchData := range matchDataArray {
+					if _, err = CallRPCs["games/move"](ctx, logger, db, nk, string(matchData)); err != nil { // the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+						logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 					}
+
+				}
 			}
 
 			if err != nil {
@@ -244,18 +244,18 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	kickList := make([]string, 0)
 	for _, pp := range Presences {
 		// get player state
-		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-		
-		if err != nil {// assume that an error here means the player is dead
-			kickList = append(kickList, pp.GetUserId())	
-		} else {// send everyone player state & send player its nearby coins
-			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)// idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-			
+		playerState, err := CallRPCs["games/state"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+
+		if err != nil { // assume that an error here means the player is dead
+			kickList = append(kickList, pp.GetUserId())
+		} else { // send everyone player state & send player its nearby coins
+			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true) // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
+
 			if err != nil {
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+			nearbyCoins, err := CallRPCs["games/coins"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
 				return err
@@ -267,11 +267,11 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 		}
-		
+
 		// offload coins to database
-		coins, err := CallRPCs["games/offload"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
+		coins, err := CallRPCs["games/offload"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
 		var intCoins int
-	
+
 		if err != nil {
 			logger.Error(fmt.Errorf("Nakama: error fetching extraction point stuff: ", err).Error())
 		}
@@ -282,7 +282,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		if intCoins > 0 {
 			var (
-				coins int
+				coins              int
 				discard1, discard2 string
 			)
 
@@ -297,11 +297,11 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 					return state
 				}
 			}
-		
-			if _, err = db.Exec("UPDATE dbplayer SET storedcoins = $1 WHERE id = $2", intCoins + coins, pp.GetUserId()); err != nil {
+
+			if _, err = db.Exec("UPDATE dbplayer SET storedcoins = $1 WHERE id = $2", intCoins+coins, pp.GetUserId()); err != nil {
 				logger.Error(fmt.Errorf("Nakama: error updating player's coins: ", err).Error())
 			} else {
-				logger.Debug(fmt.Sprintf("Nakama: player's coins updated: ", intCoins + coins))
+				logger.Debug(fmt.Sprintf("Nakama: player's coins updated: ", intCoins+coins))
 			}
 		}
 	}
@@ -314,7 +314,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
 		delete(Presences, pid)
 	}
-
 
 	// send attack information to all players
 	attacks, err := CallRPCs["games/attacks"](ctx, logger, db, nk, "{}")
@@ -329,12 +328,12 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 	}
-	
+
 	return state
 }
 
 func (m *Match) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, graceSeconds int) interface{} {
-	return state// there is nothing to do on the Cardinal side to shut the game/world down
+	return state // there is nothing to do on the Cardinal side to shut the game/world down
 }
 
 func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, data string) (interface{}, string) {
@@ -370,7 +369,7 @@ func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context
 	// the currEndpoint in callEndpoint is declared by the parent environment, which is this function
 }
 
-func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initializer) error {// initializes cardinal endpoints
+func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initializer) error { // initializes cardinal endpoints
 	gameServerAddr := os.Getenv(EnvGameServer)
 	if gameServerAddr == "" {
 		msg := fmt.Sprintf("Must specify a game server via %s", EnvGameServer)
@@ -383,7 +382,7 @@ func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initiali
 	}
 
 	// get the list of available endpoints from the backend server
-	resp, err := http.Get(makeURL("list"))
+	resp, err := http.Get(makeURL("list/tx-endpoints"))
 	if err != nil {
 		return err
 	}
