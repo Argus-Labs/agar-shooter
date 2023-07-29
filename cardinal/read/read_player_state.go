@@ -24,6 +24,8 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	log.Info().Msgf("ReadPlayerStateMsg: %+v", msg)
+
 	// Check that the player exists
 	var foundPlayer bool = false
 	var foundPlayerID storage.EntityID

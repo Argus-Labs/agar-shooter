@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/argus-labs/world-engine/sign"
+	"github.com/heroiclabs/nakama-common/runtime"
 	"io"
 	"net/http"
 	"os"
@@ -13,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 const (
@@ -288,9 +288,21 @@ func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.
 
 func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
-		logger.Debug("Got request for %q", currEndpoint)
 
-		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(payload))
+		// Random pk
+		//pk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		signedPayload := &sign.SignedPayload{
+			PersonaTag: "bullshit",
+			Namespace:  "0",
+			Nonce:      1000,
+			Signature:  "pk",
+			Body:       json.RawMessage(payload),
+		}
+
+		logger.Debug("Got request for %q", currEndpoint)
+		payloadStr, err := json.Marshal(signedPayload)
+
+		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(string(payloadStr)))
 		if err != nil {
 			logger.Error("request setup failed for endpoint %q: %v", currEndpoint, err)
 			return "", runtime.NewError("request setup failed", INTERNAL)
