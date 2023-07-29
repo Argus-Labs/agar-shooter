@@ -2,7 +2,7 @@ package read
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
@@ -37,8 +37,8 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 		}
 	}
 	if foundPlayer == false {
-		log.Error().Msg("ReadPlayerState: Player with given name not found.")
-		return nil, errors.New("ReadPlayerState: Player with given name not found")
+		log.Error().Msgf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
+		return nil, fmt.Errorf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
 	}
 
 	// Get the Player's Component
