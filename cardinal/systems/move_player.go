@@ -3,15 +3,13 @@ package systems
 import (
 	"fmt"
 	"github.com/argus-labs/new-game/components"
+	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/tx"
-	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-	"math"
-	"strconv"
-
-	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
+	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
+	"math"
 )
 
 func diff(a, b bool) float64 {
@@ -38,15 +36,14 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 	}
 
-	for id, moveList := range moveMap {
-		var contains bool = false
+	for playerID, playerMoveList := range moveMap {
+		contains := false
 		var entityID storage.EntityID
 		playerPairs := read.ReadPlayers(world)
-		for _id, _comp := range playerPairs {
-			strId := strconv.Itoa(_id)
-			if id == strId {
+		for _, player := range playerPairs {
+			if player.Component.Name == playerID {
 				contains = true
-				entityID = _comp.ID
+				entityID = player.ID
 			}
 		}
 
@@ -64,7 +61,7 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		var dir types.Pair[float64, float64]
 		isRight := false
 
-		for _, move := range moveList {
+		for _, move := range playerMoveList {
 			moove := types.Pair[float64, float64]{
 				First:  diff(move.Right, move.Left), // Calculate the difference between right and left movement
 				Second: diff(move.Up, move.Down),    // Calculate the difference between up and down movement
@@ -81,15 +78,15 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		lastMove := types.Pair[float64, float64]{
-			First:  diff(moveList[len(moveList)-1].Right, moveList[len(moveList)-1].Left), // Calculate the difference between the latest right and left movement
-			Second: diff(moveList[len(moveList)-1].Up, moveList[len(moveList)-1].Down),    // Calculate the difference between the latest up and down movement
+			First:  diff(playerMoveList[len(playerMoveList)-1].Right, playerMoveList[len(playerMoveList)-1].Left), // Calculate the difference between the latest right and left movement
+			Second: diff(playerMoveList[len(playerMoveList)-1].Up, playerMoveList[len(playerMoveList)-1].Down),    // Calculate the difference between the latest up and down movement
 		}
 
 		// Update the player's direction in their PlayerComponent on Cardinal
 		components.Player.Update(world, entityID, func(comp components.PlayerComponent) components.PlayerComponent {
-			comp.Dir = dir                                               // Adjust the player's move directions
-			comp.MoveNum = moveList[len(moveList)-1].InputSequenceNumber // Set the player's latest input sequence number
-			comp.LastMove = lastMove                                     // Update the player's last movement
+			comp.Dir = dir                                                           // Adjust the player's move directions
+			comp.MoveNum = playerMoveList[len(playerMoveList)-1].InputSequenceNumber // Set the player's latest input sequence number
+			comp.LastMove = lastMove                                                 // Update the player's last movement
 			if lastMove.First != 0 {
 				comp.IsRight = isRight // Set the dominant horizontal movement direction
 			}
