@@ -2,8 +2,8 @@ package read
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/argus-labs/new-game/components"
+	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"github.com/rs/zerolog/log"
@@ -37,8 +37,37 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 		}
 	}
 	if foundPlayer == false {
+		// TODO: put these errors back in
 		log.Error().Msgf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
-		return nil, fmt.Errorf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
+		tempPlayer := &components.PlayerComponent{
+			Name:   msg.PlayerName,
+			Health: 100,
+			Coins:  0,
+			Weapon: 0,
+			Loc: types.Pair[float64, float64]{
+				First:  -1,
+				Second: -1,
+			},
+			Dir: types.Pair[float64, float64]{
+				First:  0,
+				Second: 0,
+			},
+			LastMove: types.Pair[float64, float64]{
+				First:  0,
+				Second: 0,
+			},
+			Extract: types.Pair[float64, float64]{
+				First:  0,
+				Second: 0,
+			},
+			IsRight: true,
+			MoveNum: 0,
+		}
+
+		var returnMsg []byte
+		returnMsg, err = json.Marshal(tempPlayer)
+		return returnMsg, nil
+		//return returnMsg, fmt.Errorf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
 	}
 
 	// Get the Player's Component

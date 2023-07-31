@@ -3,8 +3,11 @@ package systems
 import (
 	"fmt"
 	"github.com/argus-labs/new-game/components"
+	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/tx"
+	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"math"
+	"strconv"
 
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
@@ -22,7 +25,7 @@ func diff(a, b bool) float64 {
 }
 
 // adjusts player directions based on their movement
-func MoveSystem(World *ecs.World, q *ecs.TransactionQueue) error {
+func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	// playerId -> Move Directions Struct mapping
 	moveMap := make(map[string][]msg.MovePlayerMsg)
 
@@ -36,17 +39,26 @@ func MoveSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 	}
 
 	for id, moveList := range moveMap {
-		entityID, contains := game.Players[id]
+		var contains bool = false
+		var entityID storage.EntityID
+		playerPairs := read.ReadPlayers(world)
+		for _id, _comp := range playerPairs {
+			strId := strconv.Itoa(_id)
+			if id == strId {
+				contains = true
+				entityID = _comp.ID
+			}
+		}
 
 		// Check if the player making the move is registered
 		if !contains {
-			str := ""
-
-			for key, _ := range game.Players {
-				str += " " + key
-			}
-
-			return fmt.Errorf("Cardinal: unregistered player attempting to move " + str)
+			//str := ""
+			//
+			//for key, _ := range game.Players {
+			//	str += " " + key
+			//}
+			//continue
+			return fmt.Errorf("Cardinal: unregistered player attempting to move ")
 		}
 
 		var dir types.Pair[float64, float64]
@@ -74,7 +86,7 @@ func MoveSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		// Update the player's direction in their PlayerComponent on Cardinal
-		components.Player.Update(World, entityID, func(comp components.PlayerComponent) components.PlayerComponent {
+		components.Player.Update(world, entityID, func(comp components.PlayerComponent) components.PlayerComponent {
 			comp.Dir = dir                                               // Adjust the player's move directions
 			comp.MoveNum = moveList[len(moveList)-1].InputSequenceNumber // Set the player's latest input sequence number
 			comp.LastMove = lastMove                                     // Update the player's last movement
@@ -93,7 +105,7 @@ func MoveSystem(World *ecs.World, q *ecs.TransactionQueue) error {
 			continue
 		}
 
-		components.Player.Update(World, entityID, func(comp components.PlayerComponent) components.PlayerComponent {
+		components.Player.Update(world, entityID, func(comp components.PlayerComponent) components.PlayerComponent {
 			comp.Dir = comp.LastMove
 
 			return comp

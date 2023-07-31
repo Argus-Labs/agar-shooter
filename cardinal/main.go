@@ -55,9 +55,9 @@ func main() {
 	))
 
 	// Register the systems
+	world.AddSystem(systems.AddPlayerSystem)
 	world.AddSystem(systems.MoveSystem)
 	world.AddSystem(systems.ProcessMovesSystem)
-	world.AddSystem(systems.AddPlayerSystem)
 	world.AddSystem(systems.RemovePlayerSystem)
 	world.AddSystem(systems.SpawnCoinsSystem)
 

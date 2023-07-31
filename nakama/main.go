@@ -108,6 +108,7 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 }
 
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
+	time.Sleep(100 * time.Millisecond)
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
@@ -235,7 +236,8 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
-			kickList = append(kickList, pp.GetUserId())
+			//kickList = append(kickList, pp.GetUserId()) TODO: put this error back in
+			logger.Info("Error with ReadPlayerState")
 		} else { // send everyone player state & send player its nearby coins
 			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true) // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 
@@ -243,10 +245,12 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"player_coins\":\""+pp.GetUserId()+"\"}")
+			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
-				return err
+				// TODO: put this error back in
+				//return err
+				logger.Info("Error with ReadPlayerCoins")
 			}
 
 			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
@@ -296,7 +300,7 @@ func makeTxEndpoint(currEndpoint string, makeURL func(string) string) func(conte
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 
 		signedPayload := &sign.SignedPayload{
-			PersonaTag: "bullshit",
+			PersonaTag: "sender's tag",
 			Namespace:  "0",
 			Nonce:      1000,
 			Signature:  "pk",
@@ -305,7 +309,7 @@ func makeTxEndpoint(currEndpoint string, makeURL func(string) string) func(conte
 
 		logger.Debug("Got request for %q, payload: %s", currEndpoint, payload)
 		payloadStr, err := json.Marshal(signedPayload)
-		logger.Debug("PayloadStr: %v ", payloadStr)
+		//logger.Debug("PayloadStr: %v ", payloadStr)
 		readerStr := strings.NewReader(string(payloadStr))
 		logger.Debug("string from Reader: %s", readerStr)
 
