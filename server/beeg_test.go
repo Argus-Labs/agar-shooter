@@ -51,11 +51,11 @@ func TestPewp(t *testing.T) {
 	testPlayer1, testPlayer2, testPlayer3 := ModPlayer{"a"}, ModPlayer{"b"}, ModPlayer{"c"}
 	weapon1, _ := World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon1, WeaponComponent{Pair[float64, float64]{-1,-1}, Dud, Weapons[Dud].MaxAmmo, 0})
-	PushPlayer(PlayerComponent{"a", 100, 0, weapon1, Pair[float64,float64]{250,250}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, time.Now().UnixNano(), true, -1})
+	PushPlayer(PlayerComponent{"a", 100, 0, weapon1, Pair[float64,float64]{250,250}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, time.Now().UnixNano(), true, -1, 0})
 
 	weapon2, _ := World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon2, WeaponComponent{Pair[float64, float64]{-1,-1}, Dud, Weapons[Dud].MaxAmmo, 0})
-	PushPlayer(PlayerComponent{"b", 100, 0, weapon2, Pair[float64,float64]{750,750}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, time.Now().UnixNano(), true, -1})
+	PushPlayer(PlayerComponent{"b", 100, 0, weapon2, Pair[float64,float64]{750,750}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, time.Now().UnixNano(), true, -1, 0})
 
 	m := make(map[ModPlayer] []TestPlayer)
 
@@ -98,7 +98,7 @@ func TestPewp(t *testing.T) {
 	fmt.Println("start push")
 	weapon3, _ := World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon3, WeaponComponent{Pair[float64, float64]{-1,-1}, Dud, Weapons[Dud].MaxAmmo, 0})
-	PushPlayer(PlayerComponent{"c", 100, 0, weapon3, Pair[float64,float64]{500,500}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{750, 750}, time.Now().UnixNano(), true, -1})
+	PushPlayer(PlayerComponent{"c", 100, 0, weapon3, Pair[float64,float64]{500,500}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{750, 750}, time.Now().UnixNano(), true, -1, 0})
 	fmt.Println("end push")
 
 	testMove([]ModPlayer{testPlayer1, testPlayer2, testPlayer3})
@@ -191,7 +191,7 @@ func TestPewp(t *testing.T) {
 		livePlayers[strconv.Itoa(i)] = Triple[float64, float64, int]{rand.Float64()*LENGTH, rand.Float64()*LENGTH, 100}
 		weaponi, _ := World.Create(WeaponComp)
 		WeaponComp.Set(World, weaponi, WeaponComponent{Pair[float64, float64]{-1,-1}, TestWeapon, Weapons[TestWeapon].MaxAmmo, 0})
-		PushPlayer(PlayerComponent{strconv.Itoa(i), livePlayers[strconv.Itoa(i)].Third, 0, weaponi, Pair[float64, float64]{livePlayers[strconv.Itoa(i)].First, livePlayers[strconv.Itoa(i)].Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0, 0}, time.Now().UnixNano(), true, -1})
+		PushPlayer(PlayerComponent{strconv.Itoa(i), livePlayers[strconv.Itoa(i)].Third, 0, weaponi, Pair[float64, float64]{livePlayers[strconv.Itoa(i)].First, livePlayers[strconv.Itoa(i)].Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0, 0}, time.Now().UnixNano(), true, -1, 0})
 	}
 
 	sim := func() bool {
@@ -259,11 +259,11 @@ func TestPewp(t *testing.T) {
 
 	weapon1, _ = World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon1, WeaponComponent{Pair[float64, float64]{-1,-1}, Melee, Weapons[Melee].MaxAmmo, 0})
-	PushPlayer(PlayerComponent{"a", 100, 0, weapon1, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, time.Now().UnixNano(), true, -1})
+	PushPlayer(PlayerComponent{"a", 100, 0, weapon1, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{500, 500}, time.Now().UnixNano(), true, -1, 0})
 
 	weapon2, _ = World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon2, WeaponComponent{Pair[float64, float64]{-1,-1}, Melee, Weapons[Melee].MaxAmmo, 0})
-	PushPlayer(PlayerComponent{"b", 100, 0, weapon2, Pair[float64,float64]{1,1}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, time.Now().UnixNano(), true, -1})
+	PushPlayer(PlayerComponent{"b", 100, 0, weapon2, Pair[float64,float64]{1,1}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{250, 250}, time.Now().UnixNano(), true, -1, 0})
 	TickTock()
 	wipun2, _ := WeaponComp.Get(World, weapon2)
 	startTime := wipun2.LastAttack

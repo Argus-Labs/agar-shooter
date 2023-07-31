@@ -156,7 +156,9 @@ func attack(id, weapon storage.EntityID, left bool, attacker, defender string) e
 			comp.Coins--
 			coins = true
 		} else{
-			comp.Health -= Weapons[wipun.Val].Attack
+			if attacker_, err := PlayerComp.Get(World, Players[attacker]); err != nil {
+				comp.Health -= int(math.Floor(float64(Weapons[wipun.Val].Attack)*(1 + LevelAttack[attacker_.Level])))
+			}
 		}
 		kill = comp.Health <= 0
 		name = comp.Name
@@ -281,8 +283,21 @@ func makeMoves(World *ecs.World, q *ecs.TransactionQueue) error {// moves player
 		PlayerComp.Update(World, Players[playerName], func(comp PlayerComponent) PlayerComponent{// modifies player location
 			comp.Loc = loc
 			comp.Coins += extraCoins
-			if PlayerMaxCoins[playerName] < comp.Coins { PlayerMaxCoins[playerName] = comp.Coins }
+			PlayerCoins[playerName] = comp.Coins
+
+			if _, goodLevel := LevelCoins[comp.Level]; goodLevel {
+				for LevelCoins[comp.Level] <= comp.Coins {
+					comp.Coins -= LevelCoins[comp.Level]
+					comp.Level++
+				}
+			}
+
 			comp.Health += extraHealth// cap health later
+			if _, goodLevel := LevelHealth[comp.Level]; goodLevel {
+				if comp.Health > LevelHealth[comp.Level] {
+					comp.Health = LevelHealth[comp.Level]
+				}
+			}
 			
 			return comp
 		})

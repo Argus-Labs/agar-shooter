@@ -30,9 +30,10 @@ var (
 	CoinComp				= ecs.NewComponentType[CoinComponent]()
 	HealthComp				= ecs.NewComponentType[HealthComponent]()
 	WeaponComp				= ecs.NewComponentType[WeaponComponent]()
-	PlayerMaxCoins			= make(map[string] int)// stores max coins achieved for each player
+	PlayerCoins				= make(map[string] int)// stores coins achieved for each player
+	PlayerLevels			= make(map[string] int)
 	Players					= make(map[string] storage.EntityID)//players are names and components identified by strings; input into a map to make it easier to add and remove components
-	MoveTx					= ecs.NewTransactionType[Move]()//(World, "move")
+	MoveTx					= ecs.NewTransactionType[Move]()
 	Width, Height			int
 	Weapons					= map[Weapon] WeaponData{
 								Dud: WeaponData{0, 0.0, 0, 0},
@@ -51,14 +52,15 @@ var (
 	maxHealth				= func() int { return int(math.Ceil(float64(GameParams.Dims.First*GameParams.Dims.Second)*healthDensity)) }
 	maxHealthInCell			= func() int { return int(math.Max(1, math.Ceil(float64(maxHealth())/float64(GameParams.CSize*GameParams.CSize)))) }
 	totalHealth				= 0
-	ExtractionCooldown		= 2*time.Second.Nanoseconds()// determines when players are in range of their extraction point
+	LevelCoins				= make(map[int] int)// maps from level to number of coins to next level
+	LevelHealth				= make(map[int] int)// maps from level to max health
+	LevelAttack				= make(map[int] float64)// maps from level to damage bonus
 )
 
 const (
 	TickRate			= 10// ticks per second
 	ClientTickRate		= 60// used to determine tickrate relative to cardinal server
 	PlayerRadius		= 0.5// used to determine which coins to collect
-	ExtractionRadius	= 10// determines when players are in range of their extraction point
 	sped				= 2// player speed
 	coinRadius			= 0.5// <= GameParams.CSize/2
 	healthRadius		= 0.5// <= GameParams.CSize/2

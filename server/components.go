@@ -31,19 +31,18 @@ type PlayerComponent struct {
 	Loc Pair[float64, float64]// current location
 	Dir Pair[float64, float64]// array of movement directions with range [[-1,1],[-1,1]] where each pair is the movement at a given timestep (divided uniformly over the tick) and the first direction is the one that determines player movement
 	LastMove Pair[float64, float64]// last player move; this must be a pair of ints in [[-1,1],[-1,1]]
-	Extract Pair[float64, float64]// extraction point; as long as the player is within some distance of the extraction point, player coins are offloaded
-	LastExtract int64// time when extraction point was last used; if the time since extraction point was last used is less than the cooldown, don't reveal the extraction point
 	IsRight bool// whether player is facing right
 	MoveNum int// most recently-processed move
+	Level int// current player level
 }
 
 func (p PlayerComponent) Simplify() BarePlayer {
-	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum}// update Simplify for weapons & extraction point
+	return BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum, p.Level}
 }
 
 func (p PlayerComponent) Testify() TestPlayer {
 	weapon, _ := WeaponComp.Get(World, p.Weapon)
-	return TestPlayer{p.Name, p.Health, p.Coins, weapon.Val, p.Extract.First, p.Extract.Second, p.Loc.First, p.Loc.Second}
+	return TestPlayer{p.Name, p.Health, p.Coins, weapon.Val, p.Loc.First, p.Loc.Second}
 }
 
 func (p PlayerComponent) String() string {

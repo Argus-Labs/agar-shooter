@@ -75,6 +75,7 @@ type BarePlayer struct {
 	LocY float64
 	IsRight bool
 	InputNum int
+	Level int
 }
 
 type TestPlayer struct {
@@ -82,8 +83,6 @@ type TestPlayer struct {
 	Health int
 	Coins int
 	Weapon Weapon
-	ExtractX float64
-	ExtractY float64
 	LocX float64
 	LocY float64
 }
