@@ -33,8 +33,18 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 			game.CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void)
 			game.HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
 			game.WeaponMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
+			game.PlayerMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
 		}
 	}
+
+	//for _, playername := range game.GameParams.Players {
+	//	playercomp := components.PlayerComponent{playername, 100, 0, game.DefaultWeapon, types.Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
+	//	//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
+	//
+	//	if err := PushPlayer(playercomp); err != nil {
+	//		return err
+	//	}
+	//}
 
 	for i := 0; i < game.WorldConstants.InitRepeatSpawn; i++ {
 		go SpawnCoins(world)

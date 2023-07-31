@@ -123,5 +123,5 @@ require (
 	github.com/redis/go-redis/v9 v9.0.2 // indirect
 	github.com/rs/zerolog v1.29.1
 	github.com/yuin/gopher-lua v1.1.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 )

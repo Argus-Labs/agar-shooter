@@ -28,8 +28,11 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 			}
 		}
 
+		log.Debug().Msgf("Adding player with name: %s", tx.Name)
+
 		// Create the player
 		playerID, err := world.Create(components.Player)
+
 		if err != nil {
 			return fmt.Errorf("Error adding player to world: %w", err)
 		}
@@ -43,6 +46,7 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 
 		// Add player to local PlayerMap
 		playerComp, err := components.Player.Get(world, playerID)
+		log.Debug().Msgf("Created player with name", playerComp.Name)
 		newPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{playerID, playerComp.Loc}
 		game.PlayerMap[utils.GetCell(playerComp.Loc)][newPlayer] = types.Pewp
 	}

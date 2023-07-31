@@ -111,6 +111,10 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
+	//for pres := range presences {
+	//	fmt.Printf("%s: k: %s, v: %s\n", pres.GetUserId())
+	//}
+	logger.Debug("List of presences in Match Join: %+v", presences)
 
 	for _, p := range presences {
 		Presences[p.GetUserId()] = p
@@ -224,9 +228,11 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
+	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
 		// get player state
-		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+		logger.Debug("pp.GetUserId(): %s", pp.GetUserId())
+		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())
@@ -237,7 +243,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"Name\":\""+pp.GetUserId()+"\"}")
+			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"player_coins\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
 				return err
@@ -286,11 +292,9 @@ func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.
 	return state, "signal received: " + data
 }
 
-func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
+func makeTxEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 
-		// Random pk
-		//pk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		signedPayload := &sign.SignedPayload{
 			PersonaTag: "bullshit",
 			Namespace:  "0",
@@ -299,10 +303,41 @@ func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context
 			Body:       json.RawMessage(payload),
 		}
 
-		logger.Debug("Got request for %q", currEndpoint)
+		logger.Debug("Got request for %q, payload: %s", currEndpoint, payload)
 		payloadStr, err := json.Marshal(signedPayload)
+		logger.Debug("PayloadStr: %v ", payloadStr)
+		readerStr := strings.NewReader(string(payloadStr))
+		logger.Debug("string from Reader: %s", readerStr)
 
 		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(string(payloadStr)))
+		if err != nil {
+			logger.Error("request setup failed for endpoint %q: %v", currEndpoint, err)
+			return "", runtime.NewError("request setup failed", INTERNAL)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			logger.Error("request failed for endpoint %q: %v", currEndpoint, err)
+			return "", runtime.NewError("request failed", INTERNAL)
+		}
+		if resp.StatusCode != 200 {
+			body, _ := io.ReadAll(resp.Body)
+			logger.Error("bad status code: %v: %s", resp.Status, body)
+			return "", runtime.NewError("bad status code", INTERNAL)
+		}
+		str, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Error("can't read body")
+			return "", runtime.NewError("read body failed", INTERNAL)
+		}
+		return string(str), nil
+	}
+	// the currEndpoint in callEndpoint is declared by the parent environment, which is this function
+}
+
+func makeReadEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
+	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+
+		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(payload))
 		if err != nil {
 			logger.Error("request setup failed for endpoint %q: %v", currEndpoint, err)
 			return "", runtime.NewError("request setup failed", INTERNAL)
@@ -371,7 +406,13 @@ func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initiali
 		logger.Debug("registering: %v", endpoint)
 
 		// function creates functions to use for calling endpoints within the code
-		CallRPCs[endpoint] = makeEndpoint(endpoint, makeURL)
+		if strings.HasPrefix(endpoint, "read") {
+			CallRPCs[endpoint] = makeReadEndpoint(endpoint, makeURL)
+		} else if strings.HasPrefix(endpoint, "tx") {
+			CallRPCs[endpoint] = makeTxEndpoint(endpoint, makeURL)
+		} else {
+			logger.Error("The following endpoint does not have the correct format: %s", endpoint)
+		}
 		err := initializer.RegisterRpc(endpoint, CallRPCs[endpoint])
 		if err != nil {
 			logger.Error("failed to register endpoint %q: %v", endpoint, err)
