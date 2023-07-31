@@ -182,6 +182,9 @@ public class Player : MonoBehaviour
 
         //2m/s
         pos += speedVector * (Speed * deltaTime);
+        // check the boundary map is from left bottom(0,0) to up right(100,100)
+        pos.x = Mathf.Clamp(pos.x, 0, 100);
+        pos.y = Mathf.Clamp(pos.y, 0, 100);
     }
 
     public void ReceiveNewMsg(ServerPayload payload)

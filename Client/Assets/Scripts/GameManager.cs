@@ -15,10 +15,12 @@ public class GameManager : MonoBehaviour
     {
         playerStatus = 0,
         coinsInfo = 1,
+        otherPlayerDie = 2,
         attack = 3,
         die = 5,
         addHealth = 6,
         playerName = 9,
+        healthPackInfo =10,
         playerMove = 17,
     }
 
@@ -57,6 +59,12 @@ public class GameManager : MonoBehaviour
         public float Y;
         public int Value;
     }
+    struct HealthPack
+    {
+        public float X;
+        public float Y;
+        public int Value;
+    }
 
     struct PlayerName
     {
@@ -82,7 +90,9 @@ public class GameManager : MonoBehaviour
     public Transform coinsParent;
     public DamageTextSpawner dmgTextSpawner;
     public AttackAnimSpawner attackAnimSpawner;
-
+    public List<GameObject> healthPacks;
+    public GameObject healthPackPrefab;
+    public Transform healthPackParent;
 
     #endregion
    
@@ -139,7 +149,12 @@ public class GameManager : MonoBehaviour
             SpriteRenderer temp = Instantiate(coinPrefab, coinsParent);
             temp.gameObject.SetActive(false);
             coins.Add(temp);
+            var healthPack = Instantiate(healthPackPrefab, healthPackParent);
+            healthPack.SetActive(false);
+            healthPacks.Add(healthPack);
         }
+
+        
 
         // nakamaConnection.socket.ReceivedMatchmakerMatched += m => mainThread.Enqueue(() => OnReceivedMatchmakerMatched(m));
         nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
@@ -350,7 +365,31 @@ public class GameManager : MonoBehaviour
                         coins[i].gameObject.SetActive(false);
                     }
                 }
-
+                break;
+            case (long) opcode.healthPackInfo:
+                List<HealthPack> HealthPackInfos;
+                try
+                {
+                    HealthPackInfos = content.FromJson<List<HealthPack>>();
+                }
+                catch (Exception e)
+                {
+                    print("content: " + content);
+                    Console.WriteLine(e);
+                    throw;
+                }
+                for (int i = 0; i < healthPacks.Count; i++)
+                {
+                    if (i < HealthPackInfos.Count)
+                    {
+                        healthPacks[i].gameObject.SetActive(true);
+                        healthPacks[i].transform.position = new Vector3(HealthPackInfos[i].X, HealthPackInfos[i].Y, 0);
+                    }
+                    else
+                    {
+                        healthPacks[i].gameObject.SetActive(false);
+                    }
+                }
                 break;
             case (long) opcode.attack:
                 List<Attack> attackInfos;
@@ -447,6 +486,15 @@ public class GameManager : MonoBehaviour
                 player.enabled = false;
 
 
+                break;
+            case(long) opcode.otherPlayerDie:
+                Debug.Log("Other player die");
+                if (!otherPlayers.ContainsKey(content))
+                {
+                    return;
+                }
+                Destroy(otherPlayers[content].gameObject);
+                otherPlayers.Remove(content);
                 break;
             default:
                 print("opcode: " + newState.OpCode + " "+ content);
