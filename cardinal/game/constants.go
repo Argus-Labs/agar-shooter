@@ -54,7 +54,7 @@ var (
 			Melee: types.WeaponData{Attack: 4, Range: 4.0},
 			Slug:  types.WeaponData{Attack: 3, Range: 6.9},
 		},
-		TickRate:         5,
+		TickRate:         10,
 		ClientTickRate:   60,
 		PlayerRadius:     0.5,
 		ExtractionRadius: 10,

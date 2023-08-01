@@ -77,9 +77,9 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 	}
 
 	// Return the component as bytes
-	log.Debug().Msgf("read-player-state: PlayerLocation is %v", comp.Name, comp.Loc)
+	log.Debug().Msgf("read-player-state: PlayerLocation is %v", comp.Loc)
 	var returnMsg []byte
-	returnMsg, err = json.Marshal(comp)
+	returnMsg, err = json.Marshal(comp.Simplify())
 
 	return returnMsg, nil
 }

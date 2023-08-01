@@ -66,7 +66,6 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		// moving players
-
 		loc := utils.Move(tmpPlayer)
 
 		delete(game.PlayerMap[utils.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: prevLoc})

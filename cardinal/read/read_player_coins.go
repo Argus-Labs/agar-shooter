@@ -32,7 +32,6 @@ func getNearbyCoins(playerComp components.PlayerComponent) types.Pair[[]float64,
 			}
 		}
 	}
-
 	return coins
 }
 

@@ -83,7 +83,7 @@ func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime
 
 func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
 
-	tickRate := 5
+	tickRate := 10
 	label := ""
 
 	time.Sleep(5 * time.Second)
@@ -108,7 +108,6 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 }
 
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
-	time.Sleep(100 * time.Millisecond)
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
@@ -161,6 +160,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 
+		// TODO: global.StartTimeMap[pp.GetUserId()] = time.Now()
 		fmt.Println("player joined: ", p.GetUserId(), "; result: ", result)
 	}
 
@@ -231,12 +231,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	kickList := make([]string, 0)
 	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
+		// TODO: check map to see if pp.userid start time > 500ms
+
 		// get player state
-		logger.Debug("pp.GetUserId(): %s", pp.GetUserId())
 		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
-			//kickList = append(kickList, pp.GetUserId()) TODO: put this error back in
+			//kickList = append(kickList, pp.GetUserId()) TODO: put this back in
 			logger.Info("Error with ReadPlayerState")
 		} else { // send everyone player state & send player its nearby coins
 			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true) // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
@@ -259,7 +260,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 		}
-
 	}
 
 	// kick all dead players
