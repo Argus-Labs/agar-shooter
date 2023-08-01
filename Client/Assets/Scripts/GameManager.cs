@@ -1,13 +1,12 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection.Emit;
-using System.Threading.Tasks;
 using Nakama;
 using Nakama.TinyJson;
+using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Pool;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
@@ -15,6 +14,10 @@ public class GameManager : MonoBehaviour
     {
         playerStatus = 0,
         coinsInfo = 1,
+        attack = 3,
+        die = 5,
+        addHealth = 6,
+        playerName = 9,
         playerMove = 17,
     }
 
@@ -40,6 +43,26 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    struct Attack
+    {
+        public string AttackerID;
+        public string DefenderID;
+        public int Damage;
+    }
+
+    struct Coin
+    {
+        public float X;
+        public float Y;
+        public int Value;
+    }
+
+    struct PlayerName
+    {
+        public string UserId;
+        public string Name;
+    }
+
     public bool gameInitialized;
     public RemotePlayer prefab;
     private Dictionary<string, RemotePlayer> otherPlayers;
@@ -47,43 +70,135 @@ public class GameManager : MonoBehaviour
     public Player player;
     public string UserId;
     public Action<IMatchState> OnMatchStateReceived;
+    
+    [Header("PoolingObjects")]
+    #region PoolingObjects
 
-    public List<Transform> coins;
-
-    public GameObject coinPrefab;
-
+    public List<SpriteRenderer> coins;
+    public List<Sprite> coinSprites;
+    public SpriteRenderer coinPrefab;
     public Transform coinsParent;
+    public DamageTextSpawner dmgTextSpawner;
+    public AttackAnimSpawner attackAnimSpawner;
+
+
+    #endregion
+   
+    [Header("UI")]
+
+    #region DifferentScreen
+
+    [FormerlySerializedAs("startScreen")]
+    public Transform loadingScreen;
+
+    public Transform introScreen;
+    public Transform gameOverScreen;
+    public TextMeshProUGUI bestRankText;
+    public TextMeshProUGUI bestScoreText;
+    private int bestRank = 0;
+    private int bestScore = 0;
+
+    #endregion
+
+    # region scoreBoard
+
+    public ScoreBoard scoreBoard;
+    public float refreshRate = 1f;
+    private float refreshTimer = 0f;
+    public int scoreboardSize = 5;
+
+    #endregion
 
     // Start is called before the first frame update
     private void Awake()
     {
         // let the game run 60fps
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = 59;
     }
 
-    async void Start()
+    void Start()
     {
+        introScreen.gameObject.SetActive(true);
+    }
+
+    public async void StartGame()
+    {
+        loadingScreen.gameObject.SetActive(true);
         await nakamaConnection.Connect();
         UserId = nakamaConnection.session.UserId;
         var mainThread = UnityMainThreadDispatcher.Instance();
         otherPlayers = new Dictionary<string, RemotePlayer>();
         for (int i = 0; i < 200; i++)
         {
-            var temp = Instantiate(coinPrefab, coinsParent);
-            temp.SetActive(false);
-            coins.Add(temp.transform);
+            SpriteRenderer temp = Instantiate(coinPrefab, coinsParent);
+            temp.gameObject.SetActive(false);
+            coins.Add(temp);
         }
 
         // nakamaConnection.socket.ReceivedMatchmakerMatched += m => mainThread.Enqueue(() => OnReceivedMatchmakerMatched(m));
-        // nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
+        nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
         nakamaConnection.socket.ReceivedMatchState += m => mainThread.Enqueue(() => MatchStatusUpdate(m));
+
+        bestRank = int.MaxValue;
+        bestScore = int.MinValue;
+    }
+
+    private void OnReceivedMatchPresence(IMatchPresenceEvent matchPresenceEvent)
+    {
+        foreach (var join in matchPresenceEvent.Joins)
+        {
+            print("join:" + join.UserId);
+        }
+
+        foreach (var leave in matchPresenceEvent.Leaves)
+        {
+            print("leave" + leave.UserId);
+            // check whether the player is in the game
+            if (otherPlayers.ContainsKey(leave.UserId))
+            {
+                Destroy(otherPlayers[leave.UserId].gameObject);
+                otherPlayers.Remove(leave.UserId);
+            }
+
+            // if the player itself left the game quit the game
+        }
     }
 
     private void Update()
     {
-        if (gameInitialized && !player.enabled)
+        // detect key "o" to call addHealth
+        if (Input.GetKeyDown(KeyCode.O))
         {
-            player.enabled = true;
+            AddHealth();
+        }
+
+        if (!gameInitialized)
+        {
+            return;
+        }
+
+        // refresh the score board every 1 second
+        refreshTimer += Time.deltaTime;
+        if (refreshTimer > refreshRate)
+        {
+            refreshTimer = 0f;
+            Dictionary<string, int> players = new Dictionary<string, int>();
+            foreach (KeyValuePair<string, RemotePlayer> otherPlayer in otherPlayers)
+            {
+                players.Add(otherPlayer.Value.nameText.text, otherPlayer.Value.coin);
+            }
+
+            players.Add(player.nameText.text, player.Coin);
+            int currRank = scoreBoard.Refresh(players, player.nameText.text, scoreboardSize);
+            if (currRank < bestRank)
+            {
+                bestRank = currRank;
+            }
+
+            if (player.Coin > bestScore)
+            {
+                bestScore = player.Coin;
+            }
         }
     }
 
@@ -108,9 +223,15 @@ public class GameManager : MonoBehaviour
     {
         var enc = System.Text.Encoding.UTF8;
         var content = enc.GetString(newState.State);
+        if (content == "null\n")
+        {
+            // print($"useless info opcode:{newState.OpCode}");
+            return;
+        }
+
         switch (newState.OpCode)
         {
-            case ((long) 0):
+            case ((long) opcode.playerStatus):
 
                 // only care about it self
                 // TODO check the userID
@@ -129,6 +250,7 @@ public class GameManager : MonoBehaviour
                 // handle other player
                 if (packet.Name != UserId)
                 {
+                    // print("content: " + content);
                     if (!otherPlayers.ContainsKey(packet.Name))
                     {
                         RemotePlayer newPlayer = Instantiate(prefab, Vector3.one * -1f, quaternion.identity);
@@ -136,15 +258,20 @@ public class GameManager : MonoBehaviour
                         newPlayer.transform.position = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
+                        newPlayer.coin = packet.Coins;
+                        // newPlayer.SetName(packet.Name);
+                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.Name.GetHashCode() / int.MaxValue),
+                            0.75f, 0.75f));
                     }
                     else
                     {
-                        print(content);
-                        var otherPlayer = otherPlayers[packet.Name];
+                        RemotePlayer otherPlayer = otherPlayers[packet.Name];
                         otherPlayer.prevPos = otherPlayer.newPos;
                         otherPlayer.newPos = new Vector2(packet.LocX, packet.LocY);
                         otherPlayer.t = 0;
                         otherPlayer.isRight = packet.IsRight;
+                        otherPlayer.coin = packet.Coins;
+                        otherPlayer.UpdateHealth(packet.Health);
                     }
 
                     break;
@@ -161,39 +288,56 @@ public class GameManager : MonoBehaviour
                 {
                     gameInitialized = true;
                     player.PlayerInit(serverPayload.pos);
+                    // assign a color based on UserID
+                    player.SetColor(
+                        Color.HSVToRGB(Mathf.Abs((float) UserId.GetHashCode()) / int.MaxValue, 0.75f, 0.75f));
+                    player.enabled = true;
+                    loadingScreen.gameObject.SetActive(false);
                     break;
                 }
 
                 player.UpdateCoins(packet.Coins);
+                player.UpdateHealth(packet.Health);
+                player.UpdatePosText($"{packet.LocX},{packet.LocY}");
                 player.ReceiveNewMsg(serverPayload);
                 break;
-            case 1:
-                Dictionary<string, List<double>> coinsDict = content.FromJson<Dictionary<string, List<double>>>();
-                List<double> x_array = coinsDict["First"];
-                List<double> y_array = coinsDict["Second"];
-                if (x_array.Count != y_array.Count)
+            case (long) opcode.coinsInfo:
+                // coins info
+                List<Coin> coinsInfo;
+                try
                 {
-                    Debug.LogError("x and y array size not match");
+                    coinsInfo = content.FromJson<List<Coin>>();
                 }
-
-                // check the length of coins and x_array, if there is no enough coins add to the list
-                if (coins.Count < x_array.Count)
+                catch (Exception e)
                 {
-                    for (int i = coins.Count; i < x_array.Count; i++)
-                    {
-                        var temp = Instantiate(coinPrefab, coinsParent);
-                        temp.SetActive(false);
-                        coins.Add(temp.transform);
-                    }
+                    print("content: " + content);
+                    Console.WriteLine(e);
+                    throw;
                 }
 
                 // for [0,x_arry.count] coins set transform to right pos, others set active false
                 for (int i = 0; i < coins.Count; i++)
                 {
-                    if (i < x_array.Count)
+                    if (i < coinsInfo.Count)
                     {
                         coins[i].gameObject.SetActive(true);
-                        coins[i].position = new Vector3((float) x_array[i], (float) y_array[i], 0);
+                        coins[i].transform.position = new Vector3(coinsInfo[i].X, coinsInfo[i].Y, 0);
+                        // if the coin value is not 1 set the color to sky blue
+                        switch (coinsInfo[i].Value)
+                        {
+                            case 1:
+                                coins[i].sprite = coinSprites[0];
+                                break;
+                            case 5:
+                                coins[i].sprite = coinSprites[1];
+                                break;
+                            case 10:
+                                coins[i].sprite = coinSprites[2];
+                                break;
+                            default:
+                                Debug.LogError($"Invalid coin value{coinsInfo[i].Value}");
+                                break;
+                        }
                     }
                     else
                     {
@@ -202,11 +346,127 @@ public class GameManager : MonoBehaviour
                 }
 
                 break;
+            case (long) opcode.attack:
+                List<Attack> attackInfos;
+                try
+                {
+                    attackInfos = content.FromJson<List<Attack>>();
+                }
+                catch (Exception e)
+                {
+                    print("content: " + content);
+                    Console.WriteLine(e);
+                    throw;
+                }
+
+                foreach (var attackInfo in attackInfos)
+                {
+                    Vector2 origin, target;
+                    // origin is attacker transform position
+                    if (attackInfo.AttackerID == UserId)
+                    {
+                        origin = player.transform.position;
+                    }
+                    else
+                    {
+                        if (!otherPlayers.ContainsKey(attackInfo.AttackerID))
+                        {
+                            return;
+                        }
+
+                        origin = otherPlayers[attackInfo.AttackerID].transform.position;
+                    }
+
+                    // target is defender transform position
+                    if (attackInfo.DefenderID == UserId)
+                    {
+                        target = player.transform.position;
+                    }
+                    else
+                    {
+                        if (!otherPlayers.ContainsKey(attackInfo.DefenderID))
+                        {
+                            return;
+                        }
+
+                        target = otherPlayers[attackInfo.DefenderID].transform.position;
+                    }
+
+                    attackAnimSpawner.Create(origin, target, attackInfo.Damage);
+                }
+
+                break;
+            
+            case (long) opcode.playerName:
+                print(content);
+                List<PlayerName> playerNames;
+                try
+                {
+                    playerNames = content.FromJson<List<PlayerName>>();
+                }
+                catch (Exception e)
+                {
+                    print("content: " + content);
+                    Console.WriteLine(e);
+                    throw;
+                }
+                print(playerNames);
+                foreach (PlayerName playerName in playerNames)
+                {
+                    if (playerName.UserId == UserId)
+                    {
+                        player.UpdateNameText(playerName.Name);
+                    }
+                    else
+                    {
+                        if ( !otherPlayers.ContainsKey(playerName.UserId) )
+                        {
+                            return;
+                        }
+                    
+                        otherPlayers[playerName.UserId].SetName(playerName.Name);
+                    }
+                }
+                
+                break;
+            case (long) opcode.die:
+                Debug.Log("You die");
+#if UNITY_EDITOR
+                // UnityEditor.EditorApplication.isPlaying = false;
+                gameOverScreen.gameObject.SetActive(true);
+                SetFinalScore();
+                player.enabled = false;
+
+#endif
+                // Application.Quit();
+                gameOverScreen.gameObject.SetActive(true);
+                SetFinalScore();
+                player.enabled = false;
+
+
+                break;
         }
     }
 
     public void SendMessageToServer(int opcode, string message)
     {
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode, message);
+    }
+
+    public void AddHealth()
+    {
+        print("AddHealth");
+        SendMessageToServer((int) opcode.addHealth, "");
+    }
+
+    public void Restart()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void SetFinalScore()
+    {
+        bestRankText.text = bestRank.ToString();
+        bestScoreText.text = bestScore.ToString();
     }
 }

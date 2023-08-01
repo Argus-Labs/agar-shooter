@@ -94,6 +94,7 @@ public class NakamaConnection : ScriptableObject
             matchID = match.MatchId;
             break;
         }
+        
         return session.Username;
     }
 

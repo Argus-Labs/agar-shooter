@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be1c119e98d42ce409ab7a908d24f173, type: 3}
   m_Name: Ngrok
   m_EditorClassIdentifier: 
-  Scheme: https
-  Host: cruel-zoos-lose.loca.lt
-  Port: 443
+  Scheme: http
+  Host: gamebackend-newgame-1.staging.argus-dev.com
+  Port: 7350
   ServerKey: defaultkey
   matchName: singleton_match
-  matchID: 8415a869-cfbd-4b01-940b-bccff5316f7e.nakama
+  matchID: 8b1e2948-3afc-431f-9473-bbe7b6c4bd99.nakama

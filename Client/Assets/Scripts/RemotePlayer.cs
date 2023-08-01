@@ -1,13 +1,20 @@
 ﻿using System;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class RemotePlayer : MonoBehaviour
 {
     public Vector2 newPos, prevPos;
     public float t = 0f;
-    public int serverTickRate = 5;
+    public int serverTickRate = 10;
     public bool isRight = true;
+    public int coin = 0;
     public string userID;
+    public Transform sprite;
+    public Slider healthBar;
+    public SpriteRenderer body;
+    public TextMeshProUGUI nameText;
     // lerp between prevPos and newPos
 
     private void Start()
@@ -25,10 +32,23 @@ public class RemotePlayer : MonoBehaviour
         }
         transform.position = Vector2.Lerp(prevPos, newPos, t);
         // update player orientation as soon as possible 
-        transform.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
+        sprite.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
         t += Time.deltaTime/ (1f / serverTickRate);
         // print(t);
         t = Mathf.Clamp(t, 0, 1);
     }
-        
+    public void UpdateHealth(int newHealth)
+    {
+        healthBar.value = newHealth / 100f;
+    }
+
+    public void SetColor(Color hsvToRGB)
+    {
+        print(hsvToRGB);
+        body.color = hsvToRGB;
+    }
+    public void SetName(string name)
+    {
+        nameText.text = name;
+    }
 }

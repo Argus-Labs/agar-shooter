@@ -1,10 +1,7 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Nakama.TinyJson;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
@@ -15,10 +12,15 @@ public class Player : MonoBehaviour
     [SerializeField] private bool isRight = true;
     [SerializeField] private InputProfile inputProfile;
     [SerializeField] private TextMeshProUGUI coinText;
+    [SerializeField] private Transform rangeIndicator;
+    [SerializeField] private Slider healthBar;
+    [SerializeField] private Transform sprite;
+    [SerializeField] private SpriteRenderer body;
+    [SerializeField] TextMeshProUGUI posText;
     private int sequenceNumber = 0;
     CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>(100);
     public Vector2 pos = new Vector2(0, 0);
-
+    public TextMeshProUGUI nameText;
     // may need introduce other parameters
     public void PlayerInit(Vector2 pos)
     {
@@ -31,7 +33,7 @@ public class Player : MonoBehaviour
         set
         {
             isRight = value;
-            transform.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
+            sprite.localScale = new Vector3(isRight ? 1 : -1, 1, 1);
         }
     }
 
@@ -39,6 +41,11 @@ public class Player : MonoBehaviour
     {
         // get { return speed/* Mathf.Exp(-0.01f*coin)*/; }
         get { return speed* Mathf.Exp(-0.01f*coin); }
+    }
+
+    public int Coin
+    {
+        get { return coin; }
     }
 
     // player can use wasd to move up down left right and they can also press two button to move diagonally 
@@ -186,10 +193,31 @@ public class Player : MonoBehaviour
         }
     }
 
+    public void UpdateHealth(int newHealth)
+    {
+        health = newHealth;
+        healthBar.value = health / 100f;
+    }
+
     public void UpdateCoins(int newCoinCount)
     {
         coin = newCoinCount;
         coinText.text = coin.ToString();
         // update UI
+    }
+
+    public void SetColor(Color color)
+    {
+        body.color = color;
+    }
+
+    public void UpdatePosText(string newPos)
+    {
+        posText.text = newPos;
+    }
+
+    public void UpdateNameText(string newName)
+    {
+        nameText.text = newName;
     }
 }
