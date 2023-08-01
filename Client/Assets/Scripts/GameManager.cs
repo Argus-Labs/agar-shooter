@@ -33,6 +33,7 @@ public class GameManager : MonoBehaviour
         public float LocY;
         public bool IsRight;
         public int InputNum;
+        public int Level;
 
         public ServerPacket(string name, int health, int coins, int locX, int locY, bool isRight, int inputNum)
         {
@@ -43,6 +44,7 @@ public class GameManager : MonoBehaviour
             LocY = locY;
             IsRight = isRight;
             InputNum = inputNum;
+            Level = 0;
         }
     }
 
@@ -280,6 +282,7 @@ public class GameManager : MonoBehaviour
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
                         newPlayer.coin = packet.Coins;
+                        newPlayer.currLevel = packet.Level;
                         // newPlayer.SetName(packet.Name);
                         newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.Name.GetHashCode() / int.MaxValue),
                             0.75f, 0.75f));
@@ -293,6 +296,7 @@ public class GameManager : MonoBehaviour
                         otherPlayer.isRight = packet.IsRight;
                         otherPlayer.coin = packet.Coins;
                         otherPlayer.UpdateHealth(packet.Health);
+                        otherPlayer.CheckUpgrade(packet.Level);
                     }
 
                     break;
@@ -320,6 +324,7 @@ public class GameManager : MonoBehaviour
                 player.UpdateCoins(packet.Coins);
                 player.UpdateHealth(packet.Health);
                 player.UpdatePosText($"{packet.LocX},{packet.LocY}");
+                player.CheckUpgrade(packet.Level);
                 player.ReceiveNewMsg(serverPayload);
                 break;
             case (long) opcode.coinsInfo:

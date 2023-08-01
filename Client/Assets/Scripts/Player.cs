@@ -13,18 +13,19 @@ public class Player : MonoBehaviour
     [SerializeField] private int coin = 0;
     [SerializeField] private float speed;
     [SerializeField] private bool isRight = true;
-    [SerializeField] private InputProfile inputProfile;
     [SerializeField] private TextMeshProUGUI coinText;
-    [SerializeField] private Transform rangeIndicator;
     [SerializeField] private Slider healthBar;
     [SerializeField] private Transform sprite;
     [SerializeField] private SpriteRenderer body;
     [SerializeField] TextMeshProUGUI posText;
+    [SerializeField] private TextMeshProUGUI levelText;
+    [SerializeField] private Animator animator;
     private int sequenceNumber = 0;
     CircularArray<PlayerInputExtraInfo> pendingInputs = new CircularArray<PlayerInputExtraInfo>(100);
     public Vector2 pos = new Vector2(0, 0);
     public TextMeshProUGUI nameText;
     public PlayerAction playerAction;
+    public int currLevel = 1;
     // may need introduce other parameters
     public void PlayerInit(Vector2 pos)
     {
@@ -102,6 +103,7 @@ public class Player : MonoBehaviour
     private void Awake()
     {
         playerAction = new PlayerAction();
+        currLevel = 1;
     }
 
     private void OnEnable()
@@ -122,6 +124,12 @@ public class Player : MonoBehaviour
         // update the player position on main thread
         transform.localPosition = pos;
         IsRight = isRight;
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            print("Play" +
+                  "");
+            animator.Play("levelUp");
+        }
     }
 
 
@@ -238,7 +246,7 @@ public class Player : MonoBehaviour
     public void UpdateCoins(int newCoinCount)
     {
         coin = newCoinCount;
-        coinText.text = coin.ToString();
+        coinText.text = $"{coin}/{CoinCap(currLevel)}";
         // update UI
     }
 
@@ -255,5 +263,22 @@ public class Player : MonoBehaviour
     public void UpdateNameText(string newName)
     {
         nameText.text = newName;
+    }
+
+    public void CheckUpgrade(int newlevel)
+    {
+        if (newlevel > currLevel)
+        {
+            currLevel = newlevel;
+            // update UI
+            levelText.text = $"LVL. {currLevel}";
+            animator.Play("levelUp");
+        }
+    }
+
+    private int CoinCap(int level)
+    {
+        // base 20 
+        return Mathf.Min(10+ level * 10,100);
     }
 }
