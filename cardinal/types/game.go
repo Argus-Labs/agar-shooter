@@ -23,6 +23,6 @@ type AttackTriple struct {
 }
 
 type NearbyCoin struct { // nearby coins for client retrieval
-	X, Y  float64
-	Value int
+	First, Second float64
+	Value         int
 }

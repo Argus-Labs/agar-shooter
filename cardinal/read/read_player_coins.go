@@ -17,13 +17,18 @@ type ReadPlayerCoinsMsg struct {
 
 var PlayerCoins = ecs.NewReadType[ReadPlayerCoinsMsg]("player-coins", readPlayerCoins)
 
-func getNearbyCoins(playerComp components.PlayerComponent) []types.NearbyCoin {
-	coins := make([]types.NearbyCoin, 0)
+func getNearbyCoins(playerComp components.PlayerComponent) types.Pair[[]float64, []float64] {
+	//coins := make([]types.NearbyCoin, 0)
+	coins := types.Pair[[]float64, []float64]{
+		make([]float64, 0),
+		make([]float64, 0),
+	}
 
 	for i := math.Max(0, math.Floor((playerComp.Loc.First-game.ClientView.First/2)/game.GameParams.CSize)); i <= math.Min(float64(game.Width), math.Ceil((playerComp.Loc.First+game.ClientView.First/2)/game.GameParams.CSize)); i++ {
 		for j := math.Max(0, math.Floor((playerComp.Loc.Second-game.ClientView.Second/2)/game.GameParams.CSize)); j <= math.Min(float64(game.Height), math.Ceil((playerComp.Loc.Second+game.ClientView.Second/2)/game.GameParams.CSize)); j++ {
 			for coin, _ := range game.CoinMap[types.Pair[int, int]{First: int(i), Second: int(j)}] {
-				coins = append(coins, types.NearbyCoin{X: coin.Second.First, Y: coin.Second.Second, Value: coin.Second.Third})
+				coins.First = append(coins.First, coin.Second.First)
+				coins.Second = append(coins.Second, coin.Second.Second)
 			}
 		}
 	}
@@ -53,7 +58,10 @@ func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 	if foundPlayer == false {
 		// TODO: put the errors back in
 		log.Error().Msg("ReadPlayerCoins: Player with given name not found.")
-		coins := make([]types.NearbyCoin, 0)
+		coins := types.Pair[[]float64, []float64]{
+			make([]float64, 0),
+			make([]float64, 0),
+		}
 		var returnMsg []byte
 		returnMsg, err = json.Marshal(coins)
 		return returnMsg, nil
@@ -66,7 +74,7 @@ func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 		log.Error().Msg("ReadPlayerCoins: Player component not found")
 	}
 
-	var nearbyCoins []types.NearbyCoin
+	var nearbyCoins types.Pair[[]float64, []float64]
 	nearbyCoins = getNearbyCoins(comp)
 
 	// Return the component as bytes
