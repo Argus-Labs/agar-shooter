@@ -3,10 +3,12 @@ package systems
 import (
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
+	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
+	"github.com/rs/zerolog/log"
 	"math"
 )
 
@@ -14,9 +16,14 @@ import (
 func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	attackQueue := make([]types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
+	log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
 
-	for playerName, id := range game.Players {
-		tmpPlayer, err := components.Player.Get(world, id)
+	players := read.ReadPlayers(world)
+	// playerName, playerId
+	for _, player := range players {
+		player1Id := player.ID
+		player1Name := player.Component.Name
+		tmpPlayer, err := components.Player.Get(world, player1Id)
 
 		if err != nil {
 			return err
@@ -35,9 +42,9 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		assigned := false
 
-		for _, closestPlayerID := range game.Players {
-			if closestPlayerID != id {
-				closestPlayer, err := components.Player.Get(world, closestPlayerID)
+		for _, player := range players {
+			if player.ID != player1Id {
+				closestPlayer, err := components.Player.Get(world, player.ID)
 				if err != nil {
 					return err
 				}
@@ -45,7 +52,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 				dist := utils.Distance(closestPlayer.Loc, prevLoc)
 
 				if !assigned || minDistance > dist {
-					minID = closestPlayerID
+					minID = player.ID
 					minDistance = dist
 					closestPlayerName = closestPlayer.Name
 					assigned = true
@@ -55,15 +62,15 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		if assigned && minDistance <= game.WorldConstants.Weapons[tmpPlayer.Weapon].Range {
-			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, playerName, closestPlayerName}})
+			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, player1Name, closestPlayerName}})
 		}
 
 		// moving players
 
 		loc := utils.Move(tmpPlayer)
 
-		delete(game.PlayerMap[utils.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: prevLoc})
-		game.PlayerMap[utils.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: id, Second: loc}] = types.Pewp
+		delete(game.PlayerMap[utils.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: prevLoc})
+		game.PlayerMap[utils.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: loc}] = types.Pewp
 
 		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 
@@ -85,11 +92,11 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			} else {
 				extraCoins += coinVal
 			}
-
 		}
 
 		// modifies player location
-		components.Player.Update(world, game.Players[playerName], func(comp components.PlayerComponent) components.PlayerComponent {
+		components.Player.Update(world, player1Id, func(comp components.PlayerComponent) components.PlayerComponent {
+			log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
 
