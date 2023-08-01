@@ -109,7 +109,7 @@ func getPlayerHealth(w http.ResponseWriter, r *http.Request) {
 	writeResult(w, health)
 }
 
-func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locations of players --- array of pairs of strings and location (coordinate pairs)
+func getCoins(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 
 	if err := decode(r, &player); err != nil {
@@ -117,53 +117,9 @@ func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locatio
 		return
 	}
 
-	comp, err := GetPlayerState(player)
-
-	if err != nil {
-		writeError(w, "could not get player state", err)
-		return
-	}
-
-	writeResult(w, comp)
-}
-
-func checkExtraction(w http.ResponseWriter, r *http.Request) {
-	var player ModPlayer
-
-	if err := decode(r, &player); err != nil {
-		writeError(w, "invalid player name given", err)
-		return
-	}
-
-	coins := CheckExtraction(player)
+	coins := GetCoins(player)
 
 	writeResult(w, coins)
-}
-
-func getMaxCoins(w http.ResponseWriter, r *http.Request) {
-	var player ModPlayer
-
-	if err := decode(r, &player); err != nil {
-		writeError(w, "invalid player name given", err)
-		return
-	}
-
-	coins := GetMaxCoins(player)
-
-	writeResult(w, coins)
-}
-
-func getExtractionPoint(w http.ResponseWriter, r *http.Request) {
-	var player ModPlayer
-
-	if err := decode(r, &player); err != nil {
-		writeError(w, "invalid player name given", err)
-		return
-	}
-
-	extract := GetExtractionPoint(player)
-
-	writeResult(w, fmt.Sprintf("{\"X\":%f, \"Y\":%f}", extract.First, extract.Second))
 }
 
 func testAddHealth(w http.ResponseWriter, r *http.Request) {

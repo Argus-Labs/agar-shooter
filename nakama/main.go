@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 	"time"
-	"strconv"
 	"regexp"
 	"math"
 
@@ -27,7 +26,7 @@ const (
 	DED int64				= 5
 	TESTADDHEALTH int64			= 6
 	EXTRACTION_POINT int64			= 7
-	MAX_COINS int64				= 8
+	TOTAL_COINS int64			= 8
 	NICKNAME int64				= 9
 	HEALTH int64				= 10
 	OUT_OF_RANGE int64			= 11
@@ -226,12 +225,6 @@ var (
     };
 )
 
-type DBPlayer struct {
-	ID				string
-	StoredCoins, CurrCoins 	int
-	// add weapon & other base information
-}
-
 type MatchState struct {}// contains match data as the match progresses
 
 type Match struct{
@@ -270,16 +263,6 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	time.Sleep(5*time.Second)
 
-	if _, err := db.Query("DROP TABLE IF EXISTS dbplayer"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error())// drop table and replace with new table
-	}
-
-	if _, err := db.Query("CREATE TABLE dbplayer (id text, storedcoins int, currcoins int)"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error creating table: ", err).Error())
-	} else {
-		logger.Debug("Nakama: initialized Postgres table")
-	}
-
 	return MatchState{}, tickRate, label
 }
 
@@ -297,41 +280,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, p := range presences {
 		Presences[p.GetUserId()] = p
 
-		// fetch any player information from db
-		pingErr := db.Ping()
-		if pingErr != nil {
-			logger.Error(fmt.Errorf("Nakama: error accessing database: ", pingErr).Error())
-		}
-
-		fmt.Println("Connected to database")
-
-		var (
-			coins int
-			discard1, discard2 string
-		)
-
-		row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", p.GetUserId())
-
-		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
-			if err == sql.ErrNoRows {
-				logger.Debug("Nakama: player does not already exist in database; adding player to database")
-				
-				_, err := db.Exec("INSERT INTO dbplayer (id, storedcoins, currcoins) VALUES ($1, $2, $3)", p.GetUserId(), 0, 0)
-				if err != nil {
-					logger.Error(fmt.Errorf("Nakama: error inserting player into database: ", err).Error())
-				}
-
-				coins = 0
-			} else {
-				logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
-				return state
-			}
-		} else {
-			logger.Debug(fmt.Sprintf("Nakama: player exists in database with coins", coins))
-		}
-		
-		// send player database information to Cardinal if it exists when initializing player
-		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":" + strconv.Itoa(coins) + "}"))
 		_, err := CallRPCs["games/push"](ctx, logger, db, nk, "{\"Name\":\"" + p.GetUserId() +  "\",\"Coins\":0}")
 
 		if err != nil {
@@ -466,79 +414,19 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				}
 			}
 
-			if extractionPoint, err := CallRPCs["games/extract"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
+			if intCoins, err := CallRPCs["games/totalcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 				return err
 			} else {
-				if err = dispatcher.BroadcastMessage(EXTRACTION_POINT, []byte(extractionPoint), []runtime.Presence{pp}, nil, true); err != nil {
+				if err = dispatcher.BroadcastMessage(TOTAL_COINS, []byte(intCoins), nil, nil, true); err != nil {// send coins to all players
 					return err
 				}
-			}
-
-			if intCoins, err := CallRPCs["games/maxcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
-				return err
-			} else {
-				if err = dispatcher.BroadcastMessage(MAX_COINS, []byte(intCoins), nil, nil, true); err != nil {// send max coins to all players
-					return err
-				}
-			}
-		}
-		
-		// offload coins to database
-		coins, err := CallRPCs["games/offload"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}")
-		var intCoins int
-	
-		if err != nil {
-			logger.Error(fmt.Errorf("Nakama: error fetching extraction point stuff: ", err).Error())
-		}
-
-		if intCoins, err = strconv.Atoi(strings.TrimSpace(coins)); err != nil {
-			logger.Error(fmt.Errorf("Nakama:", err).Error())
-		}
-
-		if intCoins > 0 {
-			var (
-				coins int
-				discard1, discard2 string
-			)
-
-			row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", pp.GetUserId())
-
-			if err := row.Scan(&discard1, &coins, &discard2); err != nil {
-				if err != sql.ErrNoRows && err != nil {
-					logger.Error(fmt.Errorf("Nakama: error getting player information from database: ", err).Error())
-					return state
-				} else {
-					logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
-					return state
-				}
-			}
-		
-			if _, err = db.Exec("UPDATE dbplayer SET storedcoins = $1 WHERE id = $2", intCoins + coins, pp.GetUserId()); err != nil {
-				logger.Error(fmt.Errorf("Nakama: error updating player's coins: ", err).Error())
-			} else {
-				logger.Debug(fmt.Sprintf("Nakama: player's coins updated: ", intCoins + coins))
 			}
 		}
 	}
 
 	// kick all dead players
-	var (
-		coins int
-		discard1, discard2 string
-	)
 	for _, pid := range kickList {
-		row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", pid)
-
-		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
-			if err != sql.ErrNoRows && err != nil {
-				logger.Error(fmt.Errorf("Nakama: error getting player information from database: ", err).Error())
-			} else {
-				logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
-			}
-			coins = -1
-		}
-
-		if err := dispatcher.BroadcastMessage(DED, []byte(strconv.Itoa(coins)), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
+		if err := dispatcher.BroadcastMessage(DED, []byte(""), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
 			return err
 		}
 

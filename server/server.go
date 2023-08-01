@@ -89,7 +89,7 @@ func PushPlayer(player PlayerComponent) error {
 		return nil
 	}
 
-	PlayerMaxCoins[player.Name] = 0
+	PlayerCoins[player.Name] = 0
 
 	playerID, err := World.Create(PlayerComp)// creates new player
 	if err != nil {
@@ -125,7 +125,7 @@ func PopPlayer(player PlayerComponent) error {
 func HandlePlayerPush(player AddPlayer) error {
 	weapon, _ := World.Create(WeaponComp)
 	WeaponComp.Set(World, weapon, WeaponComponent{Pair[float64, float64]{-1,-1}, DefaultWeapon, Weapons[DefaultWeapon].MaxAmmo, 0})
-	playerComp := PlayerComponent{player.Name, 100, player.Coins, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second},time.Now().UnixNano(), true, -1}
+	playerComp := PlayerComponent{player.Name, 100, player.Coins, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, true, -1, 0}
 	return PushPlayer(playerComp)
 }
 
@@ -202,16 +202,6 @@ func GetPlayerState(player ModPlayer) (PlayerComponent, error) {// testing funct
 	return comp, nil
 }
 
-func GetPlayerStatus() ([]Pair[string, Pair[float64, float64]]) {// sends all player information to each player
-	locs := make([]Pair[string, Pair[float64, float64]], 0)
-	for key, id := range Players {
-		comp, _ := PlayerComp.Get(World, id)
-		locs = append(locs, Pair[string, Pair[float64, float64]]{key, comp.Loc})
-	}
-
-	return locs
-}
-
 func HandleMakeMove(move Move) {
 	MoveTx.AddToQueue(World, move)// adds "move" transaction to World transaction queue
 }
@@ -229,6 +219,43 @@ func CreateGame(game Game) error {
 	World.LoadGameState()
 	MoveTx.SetID(0)
 	playerIDs, err := World.CreateMany(len(GameParams.Players), PlayerComp)// creates player entities
+
+	LevelCoins = map[int] int {
+		0: 0,
+		1: 20,
+		2: 30,
+		3: 40,
+		4: 50,
+		5: 60,
+		6: 70,
+		7: 80,
+		8: 90,
+		9: 100,
+	}
+	LevelHealth = map[int] int {
+		0: 100,
+		1: 110,
+		2: 120,
+		3: 130,
+		4: 140,
+		5: 150,
+		6: 160,
+		7: 170,
+		8: 180,
+		9: 190,
+	}
+	LevelAttack = map[int] float64 {
+		0: 0,
+		1: 0.05,
+		2: 0.1,
+		3: 0.15,
+		4: 0.2,
+		5: 0.25,
+		6: 0.3,
+		7: 0.35,
+		8: 0.4,
+		9: 0.45,
+	}
 
 	Players = make(map[string] storage.EntityID)
 	for i, playername := range GameParams.Players {// associates storage.EntityIDs with each player
@@ -254,7 +281,7 @@ func CreateGame(game Game) error {
 	for _, playername := range GameParams.Players {
 		weapon, _ := World.Create(WeaponComp)
 		WeaponComp.Set(World, weapon, WeaponComponent{Pair[float64, float64]{-1,-1}, DefaultWeapon, Weapons[DefaultWeapon].MaxAmmo, 0})
-		playercomp := PlayerComponent{playername, 100, 0, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, time.Now().UnixNano(), true, -1}// initializes player entities through their component
+		playercomp := PlayerComponent{playername, 100, 0, weapon, Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, true, -1, 0}// initializes player entities through their component
 
 		if err := PushPlayer(playercomp); err != nil {
 			return err
@@ -398,44 +425,8 @@ func NearbyHealths(player ModPlayer) []NearbyHealth {
 	return healths
 }
 
-func GetExtractionPoint(player ModPlayer) Pair[float64, float64] {
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-	
-	if err != nil {
-		fmt.Errorf("Error getting player component: %w", err)
-	}
-	
-	if time.Now().UnixNano() - playercomp.LastExtract >= ExtractionCooldown {
-		return playercomp.Extract
-	} else {
-		return Pair[float64, float64]{-1,-1}
-	}
-}
-
-func CheckExtraction(player ModPlayer) int {
-	playercomp, err := PlayerComp.Get(World, Players[player.Name])
-
-	if err != nil {
-		fmt.Errorf("Error getting  player component: %w", err)
-	}
-
-	if time.Now().UnixNano() - playercomp.LastExtract >= ExtractionCooldown && distance(playercomp.Loc, playercomp.Extract) <= ExtractionRadius {
-		PlayerComp.Update(World, Players[player.Name], func(comp PlayerComponent) PlayerComponent{
-			comp.Coins = 0// extraction point offloading
-			playercomp.LastExtract = time.Now().UnixNano()
-			playercomp.Extract = Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}
-
-			return comp
-		})
-
-		return playercomp.Coins
-	} else {
-		return 0
-	}
-}
-
-func GetMaxCoins(player ModPlayer) int {
-	return PlayerMaxCoins[player.Name]
+func GetCoins(player ModPlayer) int {
+	return PlayerCoins[player.Name]
 }
 
 func RecentAttacks() []AttackTriple {
