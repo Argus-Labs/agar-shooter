@@ -8,7 +8,7 @@ go mod tidy
 go mod vendor
 cd ..
 
-cd server
+cd cardinal
 rm -rf vendor/
 go mod tidy
 go mod vendor
