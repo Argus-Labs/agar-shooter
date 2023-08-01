@@ -62,6 +62,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		if assigned && minDistance <= game.WorldConstants.Weapons[tmpPlayer.Weapon].Range {
+			log.Debug().Msgf("Player with name %s attacks player with name %s", player1Name, closestPlayerName)
 			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, player1Name, closestPlayerName}})
 		}
 
@@ -75,7 +76,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		for i := int(math.Floor(prevLoc.First / game.GameParams.CSize)); i <= int(math.Floor(loc.First/game.GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second / game.GameParams.CSize)); j <= int(math.Floor(loc.Second/game.GameParams.CSize)); j++ {
-				for coin, _ := range game.CoinMap[types.Pair[int, int]{i, j}] {
+				for coin, _ := range game.CoinMap[types.Pair[int, int]{First: i, Second: j}] {
 					if utils.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}

@@ -43,9 +43,11 @@ const (
 )
 
 var (
-	CallRPCs  = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error)) // contains all RPC endpoint functions
-	Presences = make(map[string]runtime.Presence)                                                                                                      // contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
-	nonnum    = regexp.MustCompile(`[^0-9]`)
+	t           = time.Now()
+	CallRPCs    = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error)) // contains all RPC endpoint functions
+	Presences   = make(map[string]runtime.Presence)                                                                                                      // contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
+	nonnum      = regexp.MustCompile(`[^0-9]`)
+	joinTimeMap = make(map[string]time.Time) // mapping player id to time they joined
 )
 
 type DBPlayer struct {
@@ -82,7 +84,6 @@ func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime
 }
 
 func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
-
 	tickRate := 10
 	label := ""
 
@@ -111,9 +112,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
-	//for pres := range presences {
-	//	fmt.Printf("%s: k: %s, v: %s\n", pres.GetUserId())
-	//}
 	logger.Debug("List of presences in Match Join: %+v", presences)
 
 	for _, p := range presences {
@@ -160,7 +158,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 
-		// TODO: global.StartTimeMap[pp.GetUserId()] = time.Now()
+		joinTimeMap[p.GetUserId()] = time.Now()
 		fmt.Println("player joined: ", p.GetUserId(), "; result: ", result)
 	}
 
@@ -231,14 +229,15 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	kickList := make([]string, 0)
 	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
-		// TODO: check map to see if pp.userid start time > 500ms
-
+		// Check that it's been 500ms since the player joined, before querying for their state
+		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
+			continue
+		}
 		// get player state
 		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
-			//kickList = append(kickList, pp.GetUserId()) TODO: put this back in
-			logger.Info("Error with ReadPlayerState")
+			kickList = append(kickList, pp.GetUserId())
 		} else { // send everyone player state & send player its nearby coins
 			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true) // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 
@@ -249,9 +248,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
-				// TODO: put this error back in
-				//return err
-				logger.Info("Error with ReadPlayerCoins")
+				return err
 			}
 
 			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
@@ -271,19 +268,20 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		delete(Presences, pid)
 	}
 
+	// TODO: @fareed, gotta fix this read-attack stuff
 	// send attack information to all players
-	//attacks, err := CallRPCs["read-attacks"](ctx, logger, db, nk, "{}")
-	//
-	//if err != nil {
-	//	logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
-	//}
-	//
-	//if attacks != "[]\n" {
-	//	//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
-	//	if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
-	//		return err
-	//	}
-	//}
+	attacks, err := CallRPCs["read-attacks"](ctx, logger, db, nk, "{}")
+
+	if err != nil {
+		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
+	}
+
+	if attacks != "[]\n" {
+		//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
+		if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
+			return err
+		}
+	}
 
 	return state
 }

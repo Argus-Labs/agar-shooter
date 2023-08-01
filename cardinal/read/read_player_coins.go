@@ -2,6 +2,7 @@ package read
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
@@ -18,10 +19,9 @@ type ReadPlayerCoinsMsg struct {
 var PlayerCoins = ecs.NewReadType[ReadPlayerCoinsMsg]("player-coins", readPlayerCoins)
 
 func getNearbyCoins(playerComp components.PlayerComponent) types.Pair[[]float64, []float64] {
-	//coins := make([]types.NearbyCoin, 0)
 	coins := types.Pair[[]float64, []float64]{
-		make([]float64, 0),
-		make([]float64, 0),
+		First:  make([]float64, 0),
+		Second: make([]float64, 0),
 	}
 
 	for i := math.Max(0, math.Floor((playerComp.Loc.First-game.ClientView.First/2)/game.GameParams.CSize)); i <= math.Min(float64(game.Width), math.Ceil((playerComp.Loc.First+game.ClientView.First/2)/game.GameParams.CSize)); i++ {
@@ -55,16 +55,7 @@ func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 		}
 	}
 	if foundPlayer == false {
-		// TODO: put the errors back in
-		log.Error().Msg("ReadPlayerCoins: Player with given name not found.")
-		coins := types.Pair[[]float64, []float64]{
-			make([]float64, 0),
-			make([]float64, 0),
-		}
-		var returnMsg []byte
-		returnMsg, err = json.Marshal(coins)
-		return returnMsg, nil
-		//return nil, errors.New("ReadPlayerCoins: Player with given name not found")
+		return nil, errors.New("ReadPlayerCoins: Player with given name not found")
 	}
 
 	// Get the Player's Component
