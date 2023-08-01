@@ -109,24 +109,6 @@ func getPlayerHealth(w http.ResponseWriter, r *http.Request) {
 	writeResult(w, health)
 }
 
-func getPlayerStatus(w http.ResponseWriter, r *http.Request) {// get all locations of players --- array of pairs of strings and location (coordinate pairs)
-	var player ModPlayer
-
-	if err := decode(r, &player); err != nil {
-		writeError(w, "invalid player name given", err)
-		return
-	}
-
-	comp, err := GetPlayerState(player)
-
-	if err != nil {
-		writeError(w, "could not get player state", err)
-		return
-	}
-
-	writeResult(w, comp)
-}
-
 func getCoins(w http.ResponseWriter, r *http.Request) {
 	var player ModPlayer
 
