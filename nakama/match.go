@@ -30,16 +30,6 @@ func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	time.Sleep(5 * time.Second)
 
-	if _, err := db.Query("DROP TABLE IF EXISTS dbplayer"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error removing all tables", err).Error()) // drop table and replace with new table
-	}
-
-	if _, err := db.Query("CREATE TABLE dbplayer (id text, storedcoins int, currcoins int)"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error creating table: ", err).Error())
-	} else {
-		logger.Debug("Nakama: initialized Postgres table")
-	}
-
 	return MatchState{}, tickRate, label
 }
 
@@ -57,40 +47,8 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, p := range presences {
 		Presences[p.GetUserId()] = p
 
-		// fetch any player information from db
-		pingErr := db.Ping()
-		if pingErr != nil {
-			logger.Error(fmt.Errorf("Nakama: error accessing database: ", pingErr).Error())
-		}
+		var coins int
 
-		fmt.Println("Connected to database")
-
-		var (
-			coins              int
-			discard1, discard2 string
-		)
-
-		row := db.QueryRow("SELECT * FROM dbplayer WHERE id = $1", p.GetUserId())
-
-		if err := row.Scan(&discard1, &coins, &discard2); err != nil {
-			if err == sql.ErrNoRows {
-				logger.Debug("Nakama: player does not already exist in database; adding player to database")
-
-				_, err := db.Exec("INSERT INTO dbplayer (id, storedcoins, currcoins) VALUES ($1, $2, $3)", p.GetUserId(), 0, 0)
-				if err != nil {
-					logger.Error(fmt.Errorf("Nakama: error inserting player into database: ", err).Error())
-				}
-
-				coins = 0
-			} else {
-				logger.Error(fmt.Errorf("Nakama: error querying prior player information: ", err).Error())
-				return state
-			}
-		} else {
-			logger.Debug(fmt.Sprintf("Nakama: player exists in database with coins", coins))
-		}
-
-		// send player database information to Cardinal if it exists when initializing player
 		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":"+strconv.Itoa(coins)+"}"))
 		result, err := CallRPCs["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
 
@@ -167,7 +125,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
-	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
 		// Check that it's been 500ms since the player joined, before querying for their state
 		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
