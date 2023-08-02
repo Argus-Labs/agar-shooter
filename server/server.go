@@ -15,7 +15,7 @@ func AddCoin(coin Triple[float64, float64, int]) (int, error) {
 	coinID, err := World.Create(CoinComp)
 	CoinComp.Set(World, coinID, CoinComponent{Pair[float64, float64]{coin.First, coin.Second}, coin.Third})
 
-	if err != nil e
+	if err != nil {
 		return -1, fmt.Errorf("Coin creation failed: %w", err)
 	}
 

@@ -13,9 +13,6 @@ import (
 )
 
 type IWorldConstants struct {
-	Dud					types.WeaponData // empty weapon, iota - 1
-	Melee           	types.WeaponData // weapon two
-	Slug            	types.WeaponData // weapon three
 	Weapons         	map[types.Weapon] types.WeaponData
 	TickRate			int // Ticks per second
 	ClientTickRate  	int // used to determine tickrate relative to cardinal server
@@ -115,24 +112,24 @@ var (
 		8: 0.4,
 		9: 0.45,
 	}
-	Width, Height	int
-	CoinMutex		= &sync.RWMutex{}
-	HealthMutex		= &sync.RWMutex{}
-	ClientView		= types.Pair[float64, float64]{First: 30, Second: 20} // client viewing window
-	DefaulWeapon	= Melee
-	Attacks			= make([]types.AttackTriple, 0)
-	MaxCoinsInCell	= func() int {
+	Width, Height				int
+	CoinMutex					= &sync.RWMutex{}
+	HealthMutex					= &sync.RWMutex{}
+	ClientView					= types.Pair[float64, float64]{First: 30, Second: 20} // client viewing window
+	DefaultWeapon types.Weapon	= Melee
+	Attacks						= make([]types.AttackTriple, 0)
+	MaxCoinsInCell				= func() int {
 		return int(GameParams.CSize * GameParams.CSize / (3 * WorldConstants.CoinRadius * WorldConstants.CoinRadius * math.Pi))
 	}
-	MaxCoins		= func() int {
+	MaxCoins					= func() int {
 		return int(math.Min(float64(MaxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second/GameParams.CSize/GameParams.CSize/4+float64(3*len(Players)), float64(WorldConstants.MaxEntities-len(Players))))
 	}
-	MaxHealth		= func() int {
+	MaxHealth					= func() int {
 		return int(math.Ceil(float64(GameParams.Dims.First * GameParams.Dims.Second) * WorldConstants.HealthDensity))
 	}
-	MaxHealthInCell	= func() int {
+	MaxHealthInCell				= func() int {
 		return int(math.Max(1, math.Ceil(float64(MaxHealth()) / float64(GameParams.CSize * GameParams.CSize))))
 	}
-	TotalCoins		= 0
-	TotalHealth		= 0
+	TotalCoins					= 0
+	TotalHealth					= 0
 )

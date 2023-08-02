@@ -26,7 +26,7 @@ func diff(a, b bool) float64 {
 func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	// playerId -> Move Directions Struct mapping
 	moveMap := make(map[string][]msg.MovePlayerMsg)
-	log.Debug().Msgf("Entered MoveSystem, world.CurrentTick: %d", world.CurrentTick())
+	//log.Debug().Msgf("Entered MoveSystem, world.CurrentTick: %d", world.CurrentTick())
 	// Build the moveMap from the txQueue
 	for key, move := range msg.TxMovePlayer.In(q) {
 		log.Debug().Msgf("Found a TX number %d for the current tick", key)

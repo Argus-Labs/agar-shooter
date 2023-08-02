@@ -43,15 +43,17 @@ func main() {
 		tx.TxAddPlayer,
 		tx.TxRemovePlayer,
 		tx.TxSpawnCoins,
+		tx.TxSpawnHealths,
 	))
 
 	// Register the reads
 	utils.Must(world.RegisterReads(
 		read.Constant,
 		read.PlayerState,
-		read.PlayersStatus,
 		read.PlayerCoins,
 		read.ReadAttacks,
+		read.PlayerHealths,
+		read.PlayerTotalCoins,
 	))
 
 	// Register the systems

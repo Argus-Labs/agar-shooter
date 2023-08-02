@@ -96,17 +96,58 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 	return nil
 }
 
+func AddPlayer(world *ecs.World, playerName string, playerCoins int) error {
+	// Check whether the player exists
+	if _, contains := game.Players[playerName]; contains {
+		return fmt.Errorf("Cardinal: cannot add player with duplicate name")
+	}
+
+	game.PlayerCoins[playerName] = 0
+
+	// Create the player
+	playerID, err := world.Create(components.Player)
+
+	if err != nil {
+		return fmt.Errorf("Error adding player to world:", err)
+	}
+
+	game.Players[playerName] = playerID
+
+	// Set the component to the correct values
+	weaponID, err := world.Create(components.Weapon)
+	components.Weapon.Set(world, weaponID, components.WeaponComponent{
+		Loc: types.Pair[float64, float64]{-1, -1},
+		Val: game.DefaultWeapon,
+		Ammo: game.WorldConstants.Weapons[game.DefaultWeapon].MaxAmmo,
+		LastAttack: 0,
+	})
+
+	components.Player.Set(world, playerID, components.PlayerComponent{
+		Name: playerName,
+		Health: 100,
+		Coins: playerCoins,
+		Weapon: weaponID,
+		Loc: types.Pair[float64, float64]{0, 0},
+		Dir: types.Pair[float64, float64]{0, 0},
+		LastMove: types.Pair[float64, float64]{0, 0},
+		IsRight: false,
+		MoveNum: -1,
+		Level: 0,
+	})
+
+	// Add player to local PlayerTree
+	playerComp, err := components.Player.Get(world, playerID)
+	game.PlayerTree.Insert(&types.P{vector.V{playerComp.Loc.First, playerComp.Loc.Second}, playerComp.Name})
+	log.Debug().Msgf("Created player with name", playerComp.Name)
+
+	return nil
+}
+
 func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerPair) error {
 	// Check that the player exists
-	var playerFound bool = false
-	for _, player := range playerList {
-		if player.Component.Name == playerName {
-			playerFound = true
-		}
-	}
-	if playerFound == false {
-		log.Error().Msg("player name already exists")
-		return errors.New("RemovePlayerSystem: Player does not exist")
+	if _, contains := game.Players[playerName]; !contains {
+		log.Error().Msg("player name does not exist")
+		return fmt.Errorf("Cardinal: cannot remove player that does not exist")
 	}
 
 	// Get the player id and component
@@ -117,12 +158,12 @@ func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerP
 
 	// Remove the player from the World
 	if err := world.Remove(player.ID); err != nil {
-		log.Error().Msg("RemovePlayerSystem: Error removing player from world")
+		return fmt.Errorf("RemovePlayerSystem: Error removing player", err)
 	}
 
 	// Put all the coins around the player
 	coins := player.Component.Coins
-	tot := int(math.Max(1, float64(coins/10+(coins%10)/5+coins%5)))
+	tot := int(math.Max(1, float64(coins/10 + (coins%10)/5 + coins%5)))
 	start := 0
 	rad := float64(tot) / (2 * math.Pi)
 	newCoins := make([]types.Triple[float64, float64, int], 0)
@@ -149,7 +190,7 @@ func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerP
 			}
 		}
 
-		peep := Bound(player.Component.Loc.First+rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), player.Component.Loc.Second+rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
+		peep := Bound(player.Component.Loc.First + rad*math.Cos(2*math.Pi*float64(start)/float64(tot)), player.Component.Loc.Second + rad*math.Sin(2*math.Pi*float64(start)/float64(tot)))
 		newCoins = append(newCoins, types.Triple[float64, float64, int]{peep.First, peep.Second, addCoins})
 		start++
 	}
@@ -160,12 +201,14 @@ func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerP
 		}
 	}
 
-	// Delete the player from the local PlayerMap
-	oldPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{player.ID, player.Component.Loc}
+	if _, err := AddHealth(world, types.Triple[float64, float64, int]{player.Component.Loc.First, player.Component.Loc.Second, player.Component.Health}); err != nil {
+		return err
+	}
 
+	// Delete the player from the local PlayerTree
 	delete(game.Players, player.Component.Name)
 
-	point := &types.P{vector.V{oldPlayer.Second.First, oldPlayer.Second.Second}, player.Component.Name}
+	point := &types.P{vector.V{player.Component.Loc.First, player.Component.Loc.Second}, player.Component.Name}
 	game.PlayerTree.Remove(point.P(), point.Equal)
 
 	return err
@@ -183,7 +226,7 @@ func Distance(loc1, loc2 types.Mult) float64 {
 	return math.Sqrt(math.Pow(loc1.GetFirst()-loc2.GetFirst(), 2) + math.Pow(loc1.GetSecond()-loc2.GetSecond(), 2))
 }
 
-// change speed function
+// contains speed function
 func Move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	dir := tmpPlayer.Dir
 	coins := tmpPlayer.Coins
@@ -195,6 +238,7 @@ func Move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	)
 }
 
+// closest distance the coin is from the player obtained by checking the orthogonal projection of the coin with the segment defiend by [start.end]
 func CoinProjDist(start, end types.Pair[float64, float64], coin types.Triple[float64, float64, int]) float64 {
 	vec := types.Pair[float64, float64]{
 		First:  end.First - start.First,
@@ -215,7 +259,7 @@ func CoinProjDist(start, end types.Pair[float64, float64], coin types.Triple[flo
 		Second: coin.Second - proj.Second,
 	}
 
-	if proj.First*vec.First+proj.Second*vec.Second < 0 || proj.First*proj.First+proj.Second*proj.Second > vec.First*vec.First+vec.Second*vec.Second {
+	if proj.First*vec.First+proj.Second*vec.Second < 0 || proj.First*proj.First+proj.Second*proj.Second > vec.First*vec.First+vec.Second*vec.Second {// outside span of [start, end]
 		return math.Sqrt(math.Min(coin.First*coin.First+coin.Second*coin.Second, (coin.First-vec.First)*(coin.First-vec.First)+(coin.Second-vec.Second)*(coin.Second-vec.Second)))
 	} else {
 		return math.Sqrt(ortho.First*ortho.First + ortho.Second*ortho.Second)
@@ -258,6 +302,23 @@ func RemoveCoin(world *ecs.World, coinID types.Pair[storage.EntityID, types.Trip
 	return coin.Val, nil
 }
 
+func AddHealth(world *ecs.World, health types.Triple[float64, float64, int]) (int, error) {
+	healthID, err := world.Create(components.Health)
+
+	if err != nil {
+		return -1, fmt.Errorf("Health creation failed: %w", err)
+	}
+
+	components.Health.Set(world, healthID, components.HealthComponent{types.Pair[float64, float64]{health.First, health.Second}, health.Third})
+
+	game.HealthMutex.Lock()
+	game.HealthMap[GetCell(health)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{healthID, health}] = types.Pewp
+	game.HealthMutex.Unlock()
+	game.TotalHealth++
+
+	return health.Third, nil
+}
+
 func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.Triple[float64, float64, int]]) (int, error) {
 	health, err := components.Health.Get(world, healthID.First)
 
@@ -270,7 +331,7 @@ func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.
 	game.HealthMutex.Unlock()
 
 	if err := world.Remove(healthID.First); err != nil {
-		return -1, err
+		return -1, fmt.Errorf("Cardinal: error removing health entity:", err)
 	}
 
 	game.TotalHealth--
@@ -278,7 +339,17 @@ func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.
 	return health.Val, nil
 }
 
-func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
+func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, defender string) error {
+	wipun, err := components.Weapon.Get(world, weapon)
+
+	if err != nil {
+		return fmt.Errorf("Cardinal: error fetching weapon:", err)
+	}
+
+	if wipun.Ammo == 0 || wipun.Val == game.Dud || (wipun.LastAttack + game.WorldConstants.Weapons[wipun.Val].Reload) > time.Now().UnixNano() {
+		return nil
+	}
+
 	kill := false
 	coins := false
 	var loc types.Pair[float64, float64]
@@ -290,7 +361,9 @@ func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 			comp.Coins--
 			coins = true
 		} else {
-			comp.Health -= worldConstants.Weapons[weapon].Attack
+			if attacker_, err := components.Player.Get(world, game.Players[attacker]); err == nil {
+				comp.Health -= int(math.Floor(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack[attacker_.Level])))
+			}
 		}
 		kill = comp.Health <= 0
 		name = comp.Name
@@ -303,7 +376,7 @@ func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 
 	if coins {
 		randfloat := rand.Float64() * 2 * math.Pi
-		loc = Bound(loc.First+3*math.Cos(randfloat), loc.Second+3*math.Sin(randfloat))
+		loc = Bound(loc.First + 3*math.Cos(randfloat), loc.Second + 3*math.Sin(randfloat))
 
 		if _, err := AddCoin(world, types.Triple[float64, float64, int]{First: loc.First, Second: loc.Second, Third: 1}); err != nil {
 			return err
@@ -311,7 +384,7 @@ func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 
 		game.Attacks = append(game.Attacks, types.AttackTriple{AttackerID: attacker, DefenderID: defender, Damage: -1})
 	} else { // adds attack to display queue if it was executed
-		game.Attacks = append(game.Attacks, types.AttackTriple{AttackerID: attacker, DefenderID: defender, Damage: worldConstants.Weapons[weapon].Attack})
+		game.Attacks = append(game.Attacks, types.AttackTriple{AttackerID: attacker, DefenderID: defender, Damage: worldConstants.Weapons[wipun.Val].Attack})
 	}
 
 	// removes player from map if they die

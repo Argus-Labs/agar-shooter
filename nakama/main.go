@@ -397,7 +397,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 					return err
 				}
 			}
-
+/*
 			if nearbyHealth, err := CallRPCs["read-player-health"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 				return err
 			} else {
@@ -413,6 +413,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 					return err
 				}
 			}
+*/
 		}
 	}
 

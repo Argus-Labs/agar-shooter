@@ -2,10 +2,10 @@ package systems
 
 import (
 	"math"
+	"fmt"
 
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
-	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
@@ -13,68 +13,64 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
 )
 
 // moves player based on the coin-speed
 func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
-	attackQueue := make([]types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]], 0)
+	attackQueue := make([]types.Triple[storage.EntityID, storage.EntityID, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
-	log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
+	maxDepth := 0
+	//log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
 
-	players := read.ReadPlayers(world)
-	// playerName, playerId
-	for _, player := range players {
-		player1Id := player.ID
-		player1Name := player.Component.Name
-		tmpPlayer, err := components.Player.Get(world, player1Id)
+	for playerName, id := range game.Players {
+		tmpPlayer, err := components.Player.Get(world, id)
 
 		if err != nil {
 			return err
 		}
 
-		prevLoc := tmpPlayer.Loc
+		weapon, err := components.Weapon.Get(world, tmpPlayer.Weapon)
 
-		// attacking players; each player attacks the closest player TODO: change targetting system later
-
-		var (
-			minID             storage.EntityID
-			minDistance       float64
-			closestPlayerName string
-			left              bool
-		)
-
-		assigned := false
-
-		for _, player := range players {
-			if player.ID != player1Id {
-				closestPlayer, err := components.Player.Get(world, player.ID)
-				if err != nil {
-					return err
-				}
-
-				dist := utils.Distance(closestPlayer.Loc, prevLoc)
-
-				if !assigned || minDistance > dist {
-					minID = player.ID
-					minDistance = dist
-					closestPlayerName = closestPlayer.Name
-					assigned = true
-					left = tmpPlayer.Loc.First <= closestPlayer.Loc.First
-				}
-			}
+		if err != nil {
+			return err
 		}
 
-		if assigned && minDistance <= game.WorldConstants.Weapons[tmpPlayer.Weapon].Range {
-			log.Debug().Msgf("Player with name %s attacks player with name %s", player1Name, closestPlayerName)
-			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, player1Name, closestPlayerName}})
+		attackRange := game.WorldConstants.Weapons[weapon.Val].Range
+		prevLoc := tmpPlayer.Loc
+
+		// attacking players; each player attacks the closest player
+		depth := 0
+		knn := kd.KNN[*types.P](game.PlayerTree, vector.V{prevLoc.First, prevLoc.Second}, 2, func(q *types.P) bool {
+			depth++
+			return true
+		})
+
+		if maxDepth < depth { maxDepth = depth }
+
+		if len(knn) > 1 {
+			nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[1].Name])
+			left := tmpPlayer.Loc.First <= nearestPlayerComp.Loc.First
+
+			if err != nil {
+				return fmt.Errorf("Cardinal: error fetching player: %w", err)
+			}
+
+			if utils.Distance(nearestPlayerComp.Loc, prevLoc) <= attackRange {
+				attackQueue = append(attackQueue, types.Triple[storage.EntityID, storage.EntityID, types.Triple[bool, string, string]]{
+					First: game.Players[knn[1].Name],
+					Second: tmpPlayer.Weapon,
+					Third: types.Triple[bool, string, string]{left, tmpPlayer.Name, nearestPlayerComp.Name},
+				})
+			}
 		}
 
 		// moving players
 		loc := utils.Move(tmpPlayer)
 
-		point := &types.P{vector.V{prevLoc.First, prevLoc.Second}, player1Name}
+		point := &types.P{vector.V{prevLoc.First, prevLoc.Second}, playerName}
 		game.PlayerTree.Remove(point.P(), point.Equal)
-		game.PlayerTree.Insert(&types.P{vector.V{loc.First, loc.Second}, player1Name})
+		game.PlayerTree.Insert(&types.P{vector.V{loc.First, loc.Second}, playerName})
 
 		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 		hitHealth := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
@@ -116,11 +112,11 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		// modifies player location and health
-		components.Player.Update(world, player1Id, func(comp components.PlayerComponent) components.PlayerComponent {
+		components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent {
 			log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
-			game.PlayerCoins[player1Name] = comp.Coins
+			game.PlayerCoins[playerName] = comp.Coins
 
 			if _, goodLevel := game.LevelCoins[comp.Level]; goodLevel {
 				for game.LevelCoins[comp.Level] <= comp.Coins {
@@ -144,6 +140,10 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		if err := utils.Attack(world, triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
 			return err
 		}
+	}
+
+	if float64(maxDepth) > 1 + float64(game.WorldConstants.BalanceFactor) * math.Log(float64(len(game.Players))) {
+		game.PlayerTree.Balance()
 	}
 
 	return nil
