@@ -9,6 +9,8 @@ type Weapon int
 type WeaponData struct {
 	Attack int
 	Range  float64
+	MaxAmmo	int
+	Reload int64
 }
 
 type Game struct {

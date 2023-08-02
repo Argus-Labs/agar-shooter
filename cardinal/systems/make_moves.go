@@ -1,6 +1,8 @@
 package systems
 
 import (
+	"math"
+
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/read"
@@ -9,7 +11,8 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"github.com/rs/zerolog/log"
-	"math"
+
+	"github.com/downflux/go-geometry/nd/vector"
 )
 
 // moves player based on the coin-speed
@@ -69,16 +72,24 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		// moving players
 		loc := utils.Move(tmpPlayer)
 
-		delete(game.PlayerMap[utils.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: prevLoc})
-		game.PlayerMap[utils.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: loc}] = types.Pewp
+		point := &types.P{vector.V{prevLoc.First, prevLoc.Second}, player1Name}
+		game.PlayerTree.Remove(point.P(), point.Equal)
+		game.PlayerTree.Insert(&types.P{vector.V{loc.First, loc.Second}, player1Name})
 
 		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
+		hitHealth := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 
 		for i := int(math.Floor(prevLoc.First / game.GameParams.CSize)); i <= int(math.Floor(loc.First/game.GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second / game.GameParams.CSize)); j <= int(math.Floor(loc.Second/game.GameParams.CSize)); j++ {
 				for coin, _ := range game.CoinMap[types.Pair[int, int]{First: i, Second: j}] {
 					if utils.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
 						hitCoins = append(hitCoins, coin)
+					}
+				}
+
+				for health, _ := range game.HealthMap[types.Pair[int, int]{i, j}] {
+					if utils.CoinProjDist(prevLoc, loc, health.Second) <= game.WorldConstants.PlayerRadius {
+						hitHealth = append(hitHealth, health)
 					}
 				}
 			}
@@ -94,11 +105,36 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			}
 		}
 
-		// modifies player location
+		extraHealth := 0
+
+		for _, entityID := range hitHealth {
+			if healthVal, err := utils.RemoveHealth(world, entityID); err != nil {
+				return err
+			} else {
+				extraHealth += healthVal
+			}
+		}
+
+		// modifies player location and health
 		components.Player.Update(world, player1Id, func(comp components.PlayerComponent) components.PlayerComponent {
 			log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
+			game.PlayerCoins[player1Name] = comp.Coins
+
+			if _, goodLevel := game.LevelCoins[comp.Level]; goodLevel {
+				for game.LevelCoins[comp.Level] <= comp.Coins {
+					comp.Coins -= game.LevelCoins[comp.Level]
+					comp.Level++
+				}
+			}
+
+			comp.Health += extraHealth
+			if _, goodLevel := game.LevelHealth[comp.Level]; goodLevel {
+				if comp.Health > game.LevelHealth[comp.Level] {
+					comp.Health = game.LevelHealth[comp.Level]
+				}
+			}
 
 			return comp
 		})

@@ -3,6 +3,10 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
+	"time"
+
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/read"
@@ -10,9 +14,9 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"github.com/rs/zerolog/log"
-	"math"
-	"math/rand"
-	"time"
+	
+	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
 )
 
 func InitializeGame(world *ecs.World, gameParams types.Game) error {
@@ -31,20 +35,9 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 	for i := 0; i <= game.Width; i++ {
 		for j := 0; j <= game.Height; j++ {
 			game.CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void)
-			game.HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
-			game.WeaponMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
-			game.PlayerMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Pair[float64, float64]]]types.Void)
+			game.HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void)
 		}
 	}
-
-	//for _, playername := range game.GameParams.Players {
-	//	playercomp := components.PlayerComponent{playername, 100, 0, game.DefaultWeapon, types.Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
-	//	//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
-	//
-	//	if err := PushPlayer(playercomp); err != nil {
-	//		return err
-	//	}
-	//}
 
 	for i := 0; i < game.WorldConstants.InitRepeatSpawn; i++ {
 		go SpawnCoins(world)
@@ -66,18 +59,27 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 		}
 
 		for i := math.Max(0, float64(coinRound.First-1)); i <= math.Min(float64(game.Width), float64(coinRound.First+1)); i++ {
-			for j := math.Max(0, float64(coinRound.Second-1)); i <= math.Min(float64(game.Height), float64(coinRound.Second+1)); i++ {
-				game.Mutex.RLock()
+			for j := math.Max(0, float64(coinRound.Second-1)); j <= math.Min(float64(game.Height), float64(coinRound.Second+1)); j++ {
+				game.CoinMutex.RLock()
 				for coin, _ := range game.CoinMap[types.Pair[int, int]{int(i), int(j)}] {
 					keep = keep && (Distance(coin.Second, newCoin) > 2*consts.CoinRadius)
 				}
-				game.Mutex.RUnlock()
+				game.CoinMutex.RUnlock()
 
-				for player, _ := range game.PlayerMap[types.Pair[int, int]{int(i), int(j)}] {
-					keep = keep && (Distance(player.Second, newCoin) > consts.PlayerRadius+1+consts.CoinRadius)
+				knn := kd.KNN[*types.P](game.PlayerTree, vector.V{newCoin.First, newCoin.Second}, 1, func(q *types.P) bool {
+					return true
+				})
+
+				if len(knn) > 0 {
+					if nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[0].Name]); err != nil {
+						return fmt.Errorf("Cardinal: player obtain: %w", err)
+					} else {
+						keep = keep && (Distance(nearestPlayerComp.Loc, newCoin) > consts.PlayerRadius + 1 + consts.CoinRadius)
+					}
 				}
 			}
 		}
+
 		if keep {
 			if _, err := AddCoin(world, newCoin); err != nil {
 				return err
@@ -160,9 +162,11 @@ func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerP
 
 	// Delete the player from the local PlayerMap
 	oldPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{player.ID, player.Component.Loc}
-	delete(game.PlayerMap[GetCell(player.Component.Loc)], oldPlayer)
 
 	delete(game.Players, player.Component.Name)
+
+	point := &types.P{vector.V{oldPlayer.Second.First, oldPlayer.Second.Second}, player.Component.Name}
+	game.PlayerTree.Remove(point.P(), point.Equal)
 
 	return err
 }
@@ -226,9 +230,9 @@ func AddCoin(world *ecs.World, coin types.Triple[float64, float64, int]) (int, e
 		return -1, fmt.Errorf("Coin creation failed: %w", err)
 	}
 
-	game.Mutex.Lock()
+	game.CoinMutex.Lock()
 	game.CoinMap[GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = types.Pewp
-	game.Mutex.Unlock()
+	game.CoinMutex.Unlock()
 	game.TotalCoins++
 
 	return coin.Third, nil
@@ -241,9 +245,9 @@ func RemoveCoin(world *ecs.World, coinID types.Pair[storage.EntityID, types.Trip
 		return -1, fmt.Errorf("Cardinal: could not get coin entity: %w", err)
 	}
 
-	game.Mutex.Lock()
+	game.CoinMutex.Lock()
 	delete(game.CoinMap[types.Pair[int, int]{int(math.Floor(coinID.Second.First / game.GameParams.CSize)), int(math.Floor(coinID.Second.Second / game.GameParams.CSize))}], coinID)
-	game.Mutex.Unlock()
+	game.CoinMutex.Unlock()
 
 	if err := world.Remove(coinID.First); err != nil {
 		return -1, err
@@ -252,6 +256,26 @@ func RemoveCoin(world *ecs.World, coinID types.Pair[storage.EntityID, types.Trip
 	game.TotalCoins--
 
 	return coin.Val, nil
+}
+
+func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.Triple[float64, float64, int]]) (int, error) {
+	health, err := components.Health.Get(world, healthID.First)
+
+	if err != nil {
+		return -1, fmt.Errorf("Cardinal: could not get health entity: %w", err)
+	}
+
+	game.HealthMutex.Lock()
+	delete(game.HealthMap[types.Pair[int, int]{int(math.Floor(healthID.Second.First / game.GameParams.CSize)), int(math.Floor(healthID.Second.Second / game.GameParams.CSize))}], healthID)
+	game.HealthMutex.Unlock()
+
+	if err := world.Remove(healthID.First); err != nil {
+		return -1, err
+	}
+
+	game.TotalHealth--
+
+	return health.Val, nil
 }
 
 func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left bool, attacker, defender string) error {
