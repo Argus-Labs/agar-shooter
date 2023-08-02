@@ -36,7 +36,7 @@ func ReadPlayers(world *ecs.World) []PlayerPair {
 	return playerPairs
 }
 
-func GetPlayerByName(world *ecs.World, name string) (PlayerPair, error) {
+func GetPlayerByPersona(world *ecs.World, persona string) (PlayerPair, error) {
 	var player PlayerPair
 	var err error
 	ecs.NewQuery(filter.Exact(components.Player)).Each(world, func(id storage.EntityID) {
@@ -45,7 +45,7 @@ func GetPlayerByName(world *ecs.World, name string) (PlayerPair, error) {
 			return
 		}
 
-		if playerComp.Name == name {
+		if playerComp.PersonaTag == persona {
 			pair := PlayerPair{
 				ID:        id,
 				Component: playerComp,

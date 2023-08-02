@@ -19,10 +19,9 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
 
 	players := read.ReadPlayers(world)
-	// playerName, playerId
 	for _, player := range players {
 		player1Id := player.ID
-		player1Name := player.Component.Name
+		player1Persona := player.Component.PersonaTag
 		tmpPlayer, err := components.Player.Get(world, player1Id)
 
 		if err != nil {
@@ -34,10 +33,10 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		// attacking players; each player attacks the closest player TODO: change targetting system later
 
 		var (
-			minID             storage.EntityID
-			minDistance       float64
-			closestPlayerName string
-			left              bool
+			minID                storage.EntityID
+			minDistance          float64
+			closestPlayerPersona string
+			left                 bool
 		)
 
 		assigned := false
@@ -54,7 +53,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 				if !assigned || minDistance > dist {
 					minID = player.ID
 					minDistance = dist
-					closestPlayerName = closestPlayer.Name
+					closestPlayerPersona = closestPlayer.PersonaTag
 					assigned = true
 					left = tmpPlayer.Loc.First <= closestPlayer.Loc.First
 				}
@@ -62,8 +61,8 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		if assigned && minDistance <= game.WorldConstants.Weapons[tmpPlayer.Weapon].Range {
-			log.Debug().Msgf("Player with name %s attacks player with name %s", player1Name, closestPlayerName)
-			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, player1Name, closestPlayerName}})
+			log.Debug().Msgf("Player with name %s attacks player with name %s", player1Persona, closestPlayerPersona)
+			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, player1Persona, closestPlayerPersona}})
 		}
 
 		// moving players

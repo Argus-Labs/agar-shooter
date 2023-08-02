@@ -42,7 +42,7 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		var entityID storage.EntityID
 		players := read.ReadPlayers(world)
 		for _, player := range players {
-			if player.Component.Name == playerID {
+			if player.Component.PersonaTag == playerID {
 				contains = true
 				entityID = player.ID
 			}
@@ -102,7 +102,7 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	}
 	players := read.ReadPlayers(world)
 	for _, player := range players {
-		_, contains := moveMap[player.Component.Name]
+		_, contains := moveMap[player.Component.PersonaTag]
 		if contains {
 			continue
 		}

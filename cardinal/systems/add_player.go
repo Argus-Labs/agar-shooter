@@ -22,13 +22,13 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 
 		// check if player already exists; don't do anything
 		for _, player := range players {
-			if player.Component.Name == tx.Name {
-				log.Error().Msg("player name already exists")
-				return errors.New("AddPlayerSystem: Player name already exists.")
+			if player.Component.PersonaTag == tx.PersonaTag {
+				log.Error().Msg("player persona already exists")
+				return errors.New("AddPlayerSystem: Player Persona already exists")
 			}
 		}
 
-		log.Debug().Msgf("Adding player with name: %s", tx.Name)
+		log.Debug().Msgf("Adding player with Persona: %s", tx.PersonaTag)
 
 		// Create the player
 		playerID, err := world.Create(components.Player)
@@ -39,15 +39,18 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 
 		// Set the component to the correct values
 		components.Player.Set(world, playerID, components.PlayerComponent{
-			Name:   tx.Name,
-			Coins:  tx.Coins,
-			Weapon: types.Weapon(game.Melee), // This is the default weaponehn
+			PersonaTag: tx.PersonaTag,
+			Coins:      tx.Coins,
+			Weapon:     types.Weapon(game.Melee), // This is the default weapon
 		})
 
 		// Add player to local PlayerMap
 		playerComp, err := components.Player.Get(world, playerID)
-		log.Debug().Msgf("Created player with name", playerComp.Name)
-		newPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{playerID, playerComp.Loc}
+		log.Debug().Msgf("Created player with Persona", playerComp.PersonaTag)
+		newPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{
+			First:  playerID,
+			Second: playerComp.Loc,
+		}
 		game.PlayerMap[utils.GetCell(playerComp.Loc)][newPlayer] = types.Pewp
 	}
 

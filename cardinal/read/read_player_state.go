@@ -10,7 +10,7 @@ import (
 )
 
 type ReadPlayerStateMsg struct {
-	PlayerName string `json:"player_name"`
+	PlayerPersona string `json:"player_persona"`
 }
 
 var PlayerState = ecs.NewReadType[ReadPlayerStateMsg]("player-state", readPlayerState)
@@ -31,13 +31,13 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 	var foundPlayerID storage.EntityID
 	players := ReadPlayers(world)
 	for _, player := range players {
-		if player.Component.Name == msg.PlayerName {
+		if player.Component.PersonaTag == msg.PlayerPersona {
 			foundPlayer = true
 			foundPlayerID = player.ID
 		}
 	}
 	if foundPlayer == false {
-		return nil, fmt.Errorf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
+		return nil, fmt.Errorf("ReadPlayerState: Player with name %s not found", msg.PlayerPersona)
 	}
 
 	// Get the Player's Component

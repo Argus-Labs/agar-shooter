@@ -27,7 +27,7 @@ func readPlayersStatus(world *ecs.World, m []byte) ([]byte, error) {
 		}
 
 		nameToLocation = append(nameToLocation, types.Pair[string, types.Pair[float64, float64]]{
-			First:  playerComp.Name,
+			First:  playerComp.PersonaTag,
 			Second: playerComp.Loc,
 		})
 	})

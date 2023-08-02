@@ -13,7 +13,7 @@ import (
 )
 
 type ReadPlayerCoinsMsg struct {
-	PlayerName string `json:"player_name"`
+	PlayerPersona string `json:"player_persona"`
 }
 
 var PlayerCoins = ecs.NewReadType[ReadPlayerCoinsMsg]("player-coins", readPlayerCoins)
@@ -49,7 +49,7 @@ func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 	var foundPlayerID storage.EntityID
 	players := ReadPlayers(world)
 	for _, player := range players {
-		if player.Component.Name == msg.PlayerName {
+		if player.Component.PersonaTag == msg.PlayerPersona {
 			foundPlayer = true
 			foundPlayerID = player.ID
 		}
