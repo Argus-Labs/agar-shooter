@@ -9,7 +9,6 @@ import (
 	"github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
-	"github.com/rs/zerolog/log"
 )
 
 func diff(a, b bool) float64 {
@@ -28,8 +27,8 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	moveMap := make(map[string][]msg.MovePlayerMsg)
 	//log.Debug().Msgf("Entered MoveSystem, world.CurrentTick: %d", world.CurrentTick())
 	// Build the moveMap from the txQueue
-	for key, move := range msg.TxMovePlayer.In(q) {
-		log.Debug().Msgf("Found a TX number %d for the current tick", key)
+	for _, move := range msg.TxMovePlayer.In(q) {
+		//log.Debug().Msgf("Found a TX number %d for the current tick", key)
 		if _, contains := moveMap[move.PlayerID]; !contains {
 			pcomp, err := components.Player.Get(world, game.Players[move.PlayerID])
 
@@ -92,10 +91,10 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		// Update the player's direction in their PlayerComponent in Cardinal
 		components.Player.Update(world, entityID, func(comp components.PlayerComponent) components.PlayerComponent {
-			log.Debug().Msgf("tx-move-player: Updating player direction with the following attributes")
-			log.Debug().Msgf("dir: %v", dir)
-			log.Debug().Msgf("MoveNum: %d", moveList[len(moveList)-1].Input_sequence_number)
-			log.Debug().Msgf("LastMove: %v", lastMove)
+			//log.Debug().Msgf("tx-move-player: Updating player direction with the following attributes")
+			//log.Debug().Msgf("dir: %v", dir)
+			//log.Debug().Msgf("MoveNum: %d", moveList[len(moveList)-1].Input_sequence_number)
+			//log.Debug().Msgf("LastMove: %v", lastMove)
 			comp.Dir = dir                                                           // Adjust the player's move directions
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number // Set the player's latest input sequence number
 			comp.LastMove = lastMove                                                 // Update the player's last movement

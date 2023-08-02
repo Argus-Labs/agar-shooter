@@ -6,7 +6,6 @@ import (
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
-	"github.com/rs/zerolog/log"
 )
 
 type ReadPlayerStateMsg struct {
@@ -24,7 +23,7 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Info().Msgf("ReadPlayerStateMsg: %+v", msg)
+	//log.Info().Msgf("ReadPlayerStateMsg: %+v", msg)
 
 	// Check that the player exists
 	if _, contains := game.Players[msg.PlayerName]; !contains {
@@ -34,11 +33,11 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 	// Get the Player's Component
 	comp, err := components.Player.Get(world, game.Players[msg.PlayerName])
 	if err != nil {
-		log.Error().Msg("ReadPlayerState: Player component not found")
+		fmt.Errorf("ReadPlayerState: Player component not found")
 	}
 
 	// Return the component as bytes
-	log.Debug().Msgf("read-player-state: PlayerLocation is %v", comp.Loc)
+	//log.Debug().Msgf("read-player-state: PlayerLocation is %v", comp.Loc)
 	var returnMsg []byte
 	returnMsg, err = json.Marshal(comp.Simplify())
 

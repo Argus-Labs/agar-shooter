@@ -10,7 +10,6 @@ import (
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-	"github.com/rs/zerolog/log"
 
 	"github.com/downflux/go-geometry/nd/vector"
 	"github.com/downflux/go-kd/kd"
@@ -113,7 +112,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		// modifies player location and health
 		components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent {
-			log.Debug().Msgf("Updating player location to: %v", loc)
+			//log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
 			game.PlayerCoins[playerName] = comp.Coins
