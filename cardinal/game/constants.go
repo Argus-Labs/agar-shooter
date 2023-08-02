@@ -56,7 +56,7 @@ var (
 			Slug: types.WeaponData{Attack: 3, Range: 6.9, MaxAmmo: 6, Reload: 5*time.Second.Nanoseconds()},
 			TestWeapon: types.WeaponData{Attack: 2, Range: 4.0, MaxAmmo: -1, Reload: -1},
 		},
-		TickRate: 10,// ticks per second
+		TickRate: 100,// ticks in ms
 		ClientTickRate: 60,// used to determine tickrate relative to client
 		PlayerRadius: 0.5,// used to determine which coins are close enough to collect
 		PlayerSpeed: 2,
