@@ -37,9 +37,9 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 		}
 	}
 
-	//for _, playername := range game.GameParams.Players {
-	//	playercomp := components.PlayerComponent{playername, 100, 0, game.DefaultWeapon, types.Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
-	//	//PlayerComp.Set(World, Players[playername], PlayerComponent{playername, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
+	//for _, playerpersona := range game.GameParams.Players {
+	//	playercomp := components.PlayerComponent{playerpersona, 100, 0, game.DefaultWeapon, types.Pair[float64,float64]{25 + (rand.Float64()-0.5)*10,25 + (rand.Float64()-0.5)*10}, Pair[float64,float64]{0,0}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, true, -1}// initializes player entities through their component
+	//	//PlayerComp.Set(World, Players[playerpersona], PlayerComponent{playerpersona, 100, 0, Dud, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, Pair[float64,float64]{0,0}, Pair[float64,float64]{rand.Float64()*GameParams.Dims.First, rand.Float64()*GameParams.Dims.Second}, -1})// initializes player entitities through their component
 	//
 	//	if err := PushPlayer(playercomp); err != nil {
 	//		return err
@@ -94,21 +94,21 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 	return nil
 }
 
-func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerPair) error {
+func RemovePlayer(world *ecs.World, playerPersona string, playerList []read.PlayerPair) error {
 	// Check that the player exists
 	var playerFound bool = false
 	for _, player := range playerList {
-		if player.Component.Name == playerName {
+		if player.Component.PersonaTag == playerPersona {
 			playerFound = true
 		}
 	}
 	if playerFound == false {
-		log.Error().Msg("player name already exists")
+		log.Error().Msg("player persona already exists")
 		return errors.New("RemovePlayerSystem: Player does not exist")
 	}
 
 	// Get the player id and component
-	player, err := read.GetPlayerByName(world, playerName)
+	player, err := read.GetPlayerByPersona(world, playerPersona)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerP
 	oldPlayer := types.Pair[storage.EntityID, types.Pair[float64, float64]]{player.ID, player.Component.Loc}
 	delete(game.PlayerMap[GetCell(player.Component.Loc)], oldPlayer)
 
-	delete(game.Players, player.Component.Name)
+	delete(game.Players, player.Component.PersonaTag)
 
 	return err
 }
@@ -258,7 +258,7 @@ func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 	kill := false
 	coins := false
 	var loc types.Pair[float64, float64]
-	var name string
+	var persona string
 	worldConstants := game.WorldConstants
 
 	if err := components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent { // modifies player location
@@ -269,7 +269,7 @@ func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 			comp.Health -= worldConstants.Weapons[weapon].Attack
 		}
 		kill = comp.Health <= 0
-		name = comp.Name
+		persona = comp.PersonaTag
 		loc = comp.Loc
 
 		return comp
@@ -293,7 +293,7 @@ func Attack(world *ecs.World, id storage.EntityID, weapon types.Weapon, left boo
 	// removes player from map if they die
 	if kill {
 		playerList := read.ReadPlayers(world)
-		if err := RemovePlayer(world, name, playerList); err != nil {
+		if err := RemovePlayer(world, persona, playerList); err != nil {
 			return err
 		}
 	}

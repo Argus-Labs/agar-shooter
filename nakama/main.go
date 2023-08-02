@@ -39,18 +39,15 @@ const (
 )
 
 var (
-	CallRPCs         = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error)) // contains all RPC endpoint functions
-	Presences        = make(map[string]runtime.Presence)                                                                                                      // contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
-	joinTimeMap      = make(map[string]time.Time)                                                                                                             // mapping player id to time they joined
+	// rpcEndpoints contains all RPC endpoint functions
+	rpcEndpoints = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error))
+	// Presences contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
+	Presences = make(map[string]runtime.Presence)
+	// mapping player id to time they joined
+	joinTimeMap      = make(map[string]time.Time)
 	nakamaPersonaTag = "nakama-persona"
 	globalNamespace  = "agar-shooter"
 )
-
-type DBPlayer struct {
-	ID                     string
-	StoredCoins, CurrCoins int
-	// add weapon & other base information
-}
 
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error { // called when connection is established
 	if err := initCardinalAddress(); err != nil {
@@ -72,6 +69,35 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	return nil
 }
 
+func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
+	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		logger.Debug("Got request for %q, with payload: %q", currEndpoint, payload)
+
+		signedPayload, err := makeSignedPayload(ctx, nk, payload)
+		if err != nil {
+			return logError(logger, "unable to make signed payload: %v", err)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", makeURL(currEndpoint), signedPayload)
+		if err != nil {
+			return logError(logger, "request setup failed for endpoint %q: %v", currEndpoint, err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return logError(logger, "request failed for endpoint %q: %v", currEndpoint, err)
+		}
+		if resp.StatusCode != 200 {
+			body, _ := io.ReadAll(resp.Body)
+			return logError(logger, "bad status code: %v: %s", resp.Status, body)
+		}
+		str, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return logError(logger, "can't read body: %v", err)
+		}
+		return string(str), nil
+	}
+}
+
 // initCardinalEndpoints queries the cardinal server to find the list of existing endpoints, and attempts to
 // set up RPC wrappers around each one.
 func initCardinalEndpoints(logger runtime.Logger, initializer runtime.Initializer) error {
@@ -86,32 +112,8 @@ func initCardinalEndpoints(logger runtime.Logger, initializer runtime.Initialize
 		if currEndpoint[0] == '/' {
 			currEndpoint = currEndpoint[1:]
 		}
-		err := initializer.RegisterRpc(currEndpoint, func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
-			logger.Debug("Got request for %q", currEndpoint)
-
-			signedPayload, err := makeSignedPayload(ctx, nk, payload)
-			if err != nil {
-				return logError(logger, "unable to make signed payload: %v", err)
-			}
-
-			req, err := http.NewRequestWithContext(ctx, "POST", makeURL(currEndpoint), signedPayload)
-			if err != nil {
-				return logError(logger, "request setup failed for endpoint %q: %v", currEndpoint, err)
-			}
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				return logError(logger, "request failed for endpoint %q: %v", currEndpoint, err)
-			}
-			if resp.StatusCode != 200 {
-				body, _ := io.ReadAll(resp.Body)
-				return logError(logger, "bad status code: %v: %s", resp.Status, body)
-			}
-			str, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return logError(logger, "can't read body: %v", err)
-			}
-			return string(str), nil
-		})
+		rpcEndpoints[e] = makeEndpoint(currEndpoint, makeURL)
+		err := initializer.RegisterRpc(currEndpoint, rpcEndpoints[e])
 		if err != nil {
 			return err
 		}
@@ -122,11 +124,15 @@ func initCardinalEndpoints(logger runtime.Logger, initializer runtime.Initialize
 func makeSignedPayload(ctx context.Context, nk runtime.NakamaModule, payload string) (io.Reader, error) {
 	personaTag := nakamaPersonaTag
 
-	pk, nonce, err := getPrivateKeyAndANonce(ctx, nk)
-	sp, err := sign.NewSignedString(pk, personaTag, globalNamespace, nonce, payload)
-	if err != nil {
-		return nil, err
+	//pk, nonce, err := getPrivateKeyAndANonce(ctx, nk)
+	sp := &sign.SignedPayload{
+		PersonaTag: personaTag,
+		Namespace:  globalNamespace,
+		Nonce:      1000,
+		Signature:  "pk",
+		Body:       json.RawMessage(payload),
 	}
+
 	buf, err := json.Marshal(sp)
 	if err != nil {
 		return nil, err

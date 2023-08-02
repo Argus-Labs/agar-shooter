@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/heroiclabs/nakama-common/runtime"
-	"strconv"
 	"time"
 )
 
@@ -13,9 +12,8 @@ import (
 type MatchState struct{}
 
 // Match should contain data on the match, but because this is being handled
-// through Cardinal, it's an empty struct that does nothing ---
-// all match functions call Cardinal endpoints rather than actually
-// updating some Nakama match state
+// through Cardinal, it's an empty struct that does nothing --- all match functions
+// call Cardinal endpoints rather than actually updating some Nakama match state
 type Match struct {
 	tick int
 }
@@ -47,10 +45,14 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, p := range presences {
 		Presences[p.GetUserId()] = p
 
-		var coins int
+		// Call tx-create-persona to get a persona tag for the player
+		_, err := cardinalCreatePersona(ctx, nk, p.GetUserId())
+		// Wait for the persona to be created in cardinal
+		time.Sleep(time.Millisecond * 200)
 
-		logger.Debug(fmt.Sprintf("Nakama: player push JSON:", "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":"+strconv.Itoa(coins)+"}"))
-		result, err := CallRPCs["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
+		// Call tx-add-player with newly created persona
+		logger.Debug(fmt.Sprint("Nakama: Add Player, JSON:", "{\"PersonaTag\":\""+p.GetUserId()+"\",\"Coins\":0}"))
+		result, err := rpcEndpoints["tx-add-player"](ctx, logger, db, nk, "{\"PersonaTag\":\""+p.GetUserId()+"\",\"Coins\":0}")
 
 		if err != nil {
 			return err
@@ -69,7 +71,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	}
 
 	for i := 0; i < len(presences); i++ {
-		result, err := CallRPCs["tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
+		result, err := rpcEndpoints["tx-remove-player"](ctx, logger, db, nk, "{\"PlayerPersona\":\""+presences[i].GetUserId()+"\"}")
 
 		if err != nil {
 			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
@@ -110,7 +112,8 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			switch opCode {
 			case MOVE:
 				for _, matchData := range matchDataArray {
-					if _, err = CallRPCs["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil { // the move should contain the player name, so it shouldn't be necessary to also include the presence name in here
+					// the move should contain the player persona, so it shouldn't be necessary to also include the presence persona in here
+					if _, err = rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil {
 						logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 					}
 
@@ -131,7 +134,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			continue
 		}
 		// get player state
-		playerState, err := CallRPCs["read-player-state"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
+		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
 
 		if err != nil { // assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())
@@ -142,7 +145,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				return err
 			}
 
-			nearbyCoins, err := CallRPCs["read-player-coins"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
+			nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
 
 			if err != nil {
 				return err
@@ -167,18 +170,18 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	// TODO: @fareed, gotta fix this read-attack stuff
 	// send attack information to all players
-	attacks, err := CallRPCs["read-attacks"](ctx, logger, db, nk, "{}")
-
-	if err != nil {
-		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
-	}
-
-	if attacks != "[]\n" {
-		//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
-		if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
-			return err
-		}
-	}
+	//attacks, err := rpcEndpoints["read-attacks"](ctx, logger, db, nk, "{}")
+	//
+	//if err != nil {
+	//	logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
+	//}
+	//
+	//if attacks != "[]\n" {
+	//	//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
+	//	if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
+	//		return err
+	//	}
+	//}
 
 	return state
 }

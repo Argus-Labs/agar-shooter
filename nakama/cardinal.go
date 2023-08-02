@@ -14,6 +14,7 @@ import (
 
 	"github.com/argus-labs/world-engine/sign"
 	"github.com/heroiclabs/nakama-common/runtime"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -27,6 +28,8 @@ var (
 	readPersonaSignerStatusAssigned  = "assigned"
 
 	globalCardinalAddress string
+	fakeSignerAddress     = "0xsigneraddress"
+	fakePrivateKey        = "fake-private-key"
 
 	ErrorPersonaSignerAvailable = errors.New("persona signer is available")
 	ErrorPersonaSignerUnknown   = errors.New("persona signer is unknown.")
@@ -79,26 +82,27 @@ func cardinalListAllEndpoints() ([]string, error) {
 }
 
 func cardinalCreatePersona(ctx context.Context, nk runtime.NakamaModule, personaTag string) (tick uint64, err error) {
-	signerAddress := getSignerAddress()
 	createPersonaTx := struct {
 		PersonaTag    string
 		SignerAddress string
 	}{
 		PersonaTag:    personaTag,
-		SignerAddress: signerAddress,
+		SignerAddress: fakeSignerAddress,
 	}
 
-	key, nonce, err := getPrivateKeyAndANonce(ctx, nk)
+	body, err := json.Marshal(createPersonaTx)
 	if err != nil {
-		return 0, fmt.Errorf("unable to get the private key or a nonce: %w", err)
+		log.Error().Msgf("Error marshalling JSON for CreatePersonaTx: %v", err)
+	}
+	sp := &sign.SignedPayload{
+		PersonaTag: personaTag,
+		Namespace:  globalNamespace,
+		Nonce:      1000,
+		Signature:  "pk",
+		Body:       body,
 	}
 
-	signedPayload, err := sign.NewSignedPayload(key, personaTag, globalNamespace, nonce, createPersonaTx)
-	if err != nil {
-		return 0, fmt.Errorf("unable to create signed payload: %w", err)
-	}
-
-	buf, err := signedPayload.Marshal()
+	buf, err := sp.Marshal()
 	if err != nil {
 		return 0, fmt.Errorf("unable to marshal signed payload: %w", err)
 	}
