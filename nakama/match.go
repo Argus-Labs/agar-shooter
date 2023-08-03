@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"time"
+
+	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 // MatchState contains match data as the match progresses
@@ -16,6 +17,12 @@ type MatchState struct{}
 // call Cardinal endpoints rather than actually updating some Nakama match state
 type Match struct {
 	tick int
+}
+
+type PlayerMessage struct {
+	UserID string
+	OpCode int64
+	Data   [][]byte
 }
 
 func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule) (m runtime.Match, err error) {
@@ -77,7 +84,8 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
 		}
 
-		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true) // broadcast player removal to all players
+		// broadcast player removal to all players
+		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true)
 
 		if _, contains := Presences[presences[i].GetUserId()]; contains {
 			delete(Presences, presences[i].GetUserId())
@@ -90,38 +98,36 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 }
 
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-	// process player input for each type of input
+	// Map of Player Move messages sent from the game client
 	messageMap := make(map[string]map[int64][][]byte)
 
 	for _, match := range messages {
-		if messageMap[match.GetUserId()] == nil {
-			messageMap[match.GetUserId()] = make(map[int64][][]byte)
-		}
+		userID := match.GetUserId() // this is the player's persona tag
+		opCode := match.GetOpCode() // this is the operation code for the message
 
-		messageMap[match.GetUserId()][match.GetOpCode()] = append(messageMap[match.GetUserId()][match.GetOpCode()], match.GetData())
-
-		if _, contains := Presences[match.GetUserId()]; !contains {
+		// Check for unregistered player
+		if _, contains := Presences[userID]; !contains {
 			return fmt.Errorf("Nakama: unregistered player is moving")
 		}
+
+		if _, exists := messageMap[userID]; !exists {
+			messageMap[userID] = make(map[int64][][]byte)
+		}
+
+		// The data represents the actual message sent from the client
+		messageMap[userID][opCode] = append(messageMap[userID][opCode], match.GetData())
 	}
 
 	for _, matchMap := range messageMap {
 		for opCode, matchDataArray := range matchMap {
-			var err error
-
 			switch opCode {
 			case MOVE:
 				for _, matchData := range matchDataArray {
-					// the move should contain the player persona, so it shouldn't be necessary to also include the presence persona in here
-					if _, err = rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil {
-						logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
+					if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil {
+						logger.Error("Nakama: error registering input:", err)
+						return err
 					}
-
 				}
-			}
-
-			if err != nil {
-				return err
 			}
 		}
 	}
@@ -139,20 +145,17 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if err != nil { // assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())
 		} else { // send everyone player state & send player its nearby coins
-			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true) // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-
+			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)
 			if err != nil {
 				return err
 			}
 
 			nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
-
 			if err != nil {
 				return err
 			}
 
 			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
-
 			if err != nil {
 				return err
 			}

@@ -6,11 +6,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/argus-labs/world-engine/sign"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/argus-labs/world-engine/sign"
+	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 const (
