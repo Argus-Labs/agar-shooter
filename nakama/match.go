@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -19,10 +20,8 @@ type Match struct {
 	tick int
 }
 
-type PlayerMessage struct {
-	UserID string
-	OpCode int64
-	Data   [][]byte
+type PlayerPersonaRequest struct {
+	PlayerPersona string `json:"player_persona"`
 }
 
 func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule) (m runtime.Match, err error) {
@@ -54,7 +53,10 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		// Call tx-create-persona to get a persona tag for the player
 		_, err := cardinalCreatePersona(ctx, nk, p.GetUserId())
-		// Wait for the persona to be created in cardinal
+		if err != nil {
+			return err
+		}
+		// Wait for the persona to be created in cardinal, 200ms = 2 ticks
 		time.Sleep(time.Millisecond * 200)
 
 		// Call tx-add-player with newly created persona
@@ -135,22 +137,31 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
 	for _, pp := range Presences {
-		// Check that it's been 500ms since the player joined, before querying for their state
-		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
-			continue
+		userID := pp.GetUserId()
+
+		// Check if the user has been created in cardinal already, before querying for its state
+		if !isUserIDSafeToQuery(userID, joinTimeMap, isSafeToQueryMap) {
+			continue // Skip further processing for this user ID if it's not safe to query
 		}
-		// get player state
-		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
+
+		// Create request body
+		reqBody := PlayerPersonaRequest{PlayerPersona: userID}
+		reqJSON, err := json.Marshal(reqBody)
+		if err != nil {
+			return err // Or appropriate error handling
+		}
+		// Get player state
+		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, string(reqJSON))
 
 		if err != nil { // assume that an error here means the player is dead
-			kickList = append(kickList, pp.GetUserId())
+			kickList = append(kickList, userID)
 		} else { // send everyone player state & send player its nearby coins
 			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)
 			if err != nil {
 				return err
 			}
 
-			nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
+			nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, string(reqJSON))
 			if err != nil {
 				return err
 			}

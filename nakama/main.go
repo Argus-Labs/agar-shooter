@@ -45,7 +45,10 @@ var (
 	// Presences contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
 	Presences = make(map[string]runtime.Presence)
 	// mapping player id to time they joined
-	joinTimeMap      = make(map[string]time.Time)
+	joinTimeMap = make(map[string]time.Time)
+	// mapping player id to whether or not this player has been created in cardinal
+	isSafeToQueryMap = make(map[string]bool)
+
 	nakamaPersonaTag = "nakama-persona"
 	globalNamespace  = "agar-shooter"
 )
