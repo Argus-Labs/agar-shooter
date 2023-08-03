@@ -823,12 +823,12 @@ GameObject:
   - component: {fileID: 595068098}
   - component: {fileID: 595068097}
   m_Layer: 0
-  m_Name: ExtractionPoint
+  m_Name: BestPlayerIndicator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!212 &595068097
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -893,8 +893,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54c03ecda15143cc80fbf2a9a6275325, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  extractionPointTransform: {fileID: 595068099}
-  extractionPointSpriteRenderer: {fileID: 595068097}
+  bestPlayerTransform: {fileID: 0}
+  extractionPointSpriteRenderer: {fileID: 0}
   indicator: {fileID: 1228457498}
 --- !u!4 &595068099
 Transform:
@@ -1450,6 +1450,7 @@ MonoBehaviour:
   refreshRate: 1
   scoreboardSize: 10
   virtualJoystick: {fileID: 1603249788}
+  bestPlayerIndicator: {fileID: 595068098}
 --- !u!4 &977874917
 Transform:
   m_ObjectHideFlags: 0
@@ -1594,12 +1595,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Sprite: {fileID: 21300000, guid: da47717e11568fd4c83a8ba189d68298, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1.4, y: 0.9}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -1613,7 +1614,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1228457498}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.81, y: 1.59, z: 0}
+  m_LocalPosition: {x: 2.726, y: 2.618, z: 0}
   m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -1875,7 +1876,7 @@ MonoBehaviour:
   isRight: 1
   coinText: {fileID: 1928963256}
   healthBar: {fileID: 464556398}
-  sprite: {fileID: 162252067}
+  sprite: {fileID: 460875983}
   body: {fileID: 1804135554}
   posText: {fileID: 367039407}
   levelText: {fileID: 489824207}
