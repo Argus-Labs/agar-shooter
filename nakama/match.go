@@ -101,35 +101,13 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
 	// Map of Player Move messages sent from the game client
-	messageMap := make(map[string]map[int64][][]byte)
 
-	for _, match := range messages {
-		userID := match.GetUserId() // this is the player's persona tag
-		opCode := match.GetOpCode() // this is the operation code for the message
-
-		// Check for unregistered player
-		if _, contains := Presences[userID]; !contains {
-			return fmt.Errorf("Nakama: unregistered player is moving")
-		}
-
-		if _, exists := messageMap[userID]; !exists {
-			messageMap[userID] = make(map[int64][][]byte)
-		}
-
-		// The data represents the actual message sent from the client
-		messageMap[userID][opCode] = append(messageMap[userID][opCode], match.GetData())
-	}
-
-	for _, matchMap := range messageMap {
-		for opCode, matchDataArray := range matchMap {
-			switch opCode {
-			case MOVE:
-				for _, matchData := range matchDataArray {
-					if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil {
-						logger.Error("Nakama: error registering input:", err)
-						return err
-					}
-				}
+	for _, msg := range messages {
+		switch msg.GetOpCode() {
+		case MOVE:
+			data := msg.GetData()
+			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
+				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 			}
 		}
 	}
