@@ -66,4 +66,5 @@ public class RemotePlayer : MonoBehaviour
             levelAnimator.Play("levelUp");
         }
     }
+
 }

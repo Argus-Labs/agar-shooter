@@ -7,7 +7,6 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
-using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -122,8 +121,18 @@ public class GameManager : MonoBehaviour
     public int scoreboardSize = 5;
 
     #endregion
+
+    #region Input
     
     public GameObject virtualJoystick;
+
+    #endregion
+
+    #region BestPlayer
+
+    public BestPlayerIndicator bestPlayerIndicator;
+
+    #endregion
 
     // Start is called before the first frame update
     private void Awake()
@@ -222,7 +231,57 @@ public class GameManager : MonoBehaviour
             {
                 bestScore = player.Coin;
             }
+
+            RemotePlayer bestPlayerPos =  FindTheBestPlayerPos();
+            if (bestPlayerPos == null)
+            {
+                bestPlayerIndicator.enabled = false;
+                return;
+            }
+            bestPlayerIndicator.SetExtractPoint(bestPlayerPos.transform,bestPlayerPos.body);
         }
+    }
+
+    private RemotePlayer FindTheBestPlayerPos()
+    {
+        // based on the level if level tie, use coin to find the best position
+        // higher level, higher coin
+        RemotePlayer bestPlayer = null;
+        int bestLevel = 0;
+        int bestCoin = -1;
+        
+        foreach (KeyValuePair<string, RemotePlayer> otherPlayer in otherPlayers)
+        {
+            if (otherPlayer.Value.currLevel > bestLevel)
+            {
+                bestLevel = otherPlayer.Value.currLevel;
+                bestPlayer = otherPlayer.Value;
+                bestCoin = otherPlayer.Value.coin;
+            }
+            else if (otherPlayer.Value.currLevel == bestLevel)
+            {
+                if (otherPlayer.Value.coin > bestCoin)
+                {
+                    bestCoin = otherPlayer.Value.coin;
+                    bestPlayer = otherPlayer.Value;
+                }
+            }
+        }
+        //compare with the player itself
+        if (player.currLevel > bestLevel)
+        {
+            return null;
+        }
+        if (player.currLevel == bestLevel)
+        {
+            if (player.Coin > bestCoin)
+            {
+                return null;
+            }
+        }
+        return bestPlayer;
+        
+       
     }
 
     private void OnApplicationQuit()
@@ -502,13 +561,14 @@ public class GameManager : MonoBehaviour
                 otherPlayers.Remove(content);
                 break;
             default:
-                print("opcode: " + newState.OpCode + " "+ content);
+                // print("opcode: " + newState.OpCode + " "+ content);
                 break;
         }
     }
 
     public void SendMessageToServer(int opcode, string message)
     {
+        print(message);
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode, message);
     }
 
