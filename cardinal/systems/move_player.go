@@ -9,7 +9,7 @@ import (
 	"github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
-	"github.com/rs/zerolog/log"
+	//"github.com/rs/zerolog/log"
 )
 
 func diff(a, b bool) float64 {
@@ -101,7 +101,7 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			//log.Debug().Msgf("dir: %v", dir)
 			//log.Debug().Msgf("MoveNum: %d", moveList[len(moveList)-1].Input_sequence_number)
 			//log.Debug().Msgf("LastMove: %v", lastMove)
-			log.Debug().Msgf("IsRight: %v, comp IsRight: %v, nonzero x-input: %v", isRight, comp.IsRight, nonZero)
+			//log.Debug().Msgf("IsRight: %v, comp IsRight: %v, nonzero x-input: %v", isRight, comp.IsRight, nonZero)
 			comp.Dir = dir // Adjust the player's move directions
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number // Set the player's latest input sequence number
 			comp.LastMove = lastMove// Update the player's last movement
