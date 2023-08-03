@@ -9,6 +9,7 @@ import (
 	"github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
+	"github.com/rs/zerolog/log"
 )
 
 func diff(a, b bool) float64 {
@@ -30,6 +31,7 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	for _, move := range msg.TxMovePlayer.In(q) {
 		//log.Debug().Msgf("Found a TX number %d for the current tick", key)
 		if _, contains := moveMap[move.PlayerID]; !contains {
+			/*
 			pcomp, err := components.Player.Get(world, game.Players[move.PlayerID])
 
 			if err != nil {
@@ -39,13 +41,16 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			if pcomp.MoveNum != move.Input_sequence_number -1 {
 				fmt.Println("Difference in input sequence number is not 1; received sequence number", move.Input_sequence_number, "after sequence number", pcomp.MoveNum)
 			}
+			*/
 
 			moveMap[move.PlayerID] = []msg.MovePlayerMsg{move}
 		} else {
+			/*
 			if num := moveMap[move.PlayerID][len(moveMap[move.PlayerID]) - 1].Input_sequence_number; move.Input_sequence_number != num + 1 {
 				fmt.Println("Difference in input sequence number is not 1; received sequence number", move.Input_sequence_number, "after sequence number", num)
 				return nil
 			}
+			*/
 
 			moveMap[move.PlayerID] = append(moveMap[move.PlayerID], move)
 		}
@@ -66,7 +71,7 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 
 		var dir types.Pair[float64, float64]
-		isRight := false
+		isRight, nonZero := false, false
 
 		for _, move := range moveList {
 			moove := types.Pair[float64, float64]{
@@ -76,10 +81,11 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			norm := math.Max(1, math.Sqrt(moove.First*moove.First + moove.Second*moove.Second)) // Calculate the magnitude of the movement vector
 
 			dir = types.Pair[float64, float64]{
-				First:  dir.First + move.Delta*moove.First/norm,   // Update the current horizontal direction based on movement inputs
-				Second: dir.Second + move.Delta*moove.Second/norm, // Update the current vertical direction based on movement inputs
+				First:  dir.First + (move.Delta*moove.First)/norm,   // Update the current horizontal direction based on movement inputs
+				Second: dir.Second + (move.Delta*moove.Second)/norm, // Update the current vertical direction based on movement inputs
 			}
 			if moove.First != 0 {
+				nonZero = true
 				isRight = moove.First > 0 // Determine the dominant horizontal movement direction
 			}
 		}
@@ -95,16 +101,16 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			//log.Debug().Msgf("dir: %v", dir)
 			//log.Debug().Msgf("MoveNum: %d", moveList[len(moveList)-1].Input_sequence_number)
 			//log.Debug().Msgf("LastMove: %v", lastMove)
-			comp.Dir = dir                                                           // Adjust the player's move directions
+			log.Debug().Msgf("IsRight: %v, comp IsRight: %v, nonzero x-input: %v", isRight, comp.IsRight, nonZero)
+			comp.Dir = dir // Adjust the player's move directions
 			comp.MoveNum = moveList[len(moveList)-1].Input_sequence_number // Set the player's latest input sequence number
-			comp.LastMove = lastMove                                                 // Update the player's last movement
-			if lastMove.First != 0 {
+			comp.LastMove = lastMove// Update the player's last movement
+			if nonZero {
 				comp.IsRight = isRight // Set the dominant horizontal movement direction
 			}
 
 			return comp
 		})
-
 	}
 
 	for player, entityID := range game.Players {

@@ -233,8 +233,8 @@ func Move(tmpPlayer components.PlayerComponent) types.Pair[float64, float64] {
 	playerSpeed := float64(game.WorldConstants.PlayerSpeed)
 
 	return Bound(
-		tmpPlayer.Loc.First+(playerSpeed*dir.First*math.Exp(-0.01*float64(coins))),
-		tmpPlayer.Loc.Second+(playerSpeed*dir.Second*math.Exp(-0.01*float64(coins))),
+		tmpPlayer.Loc.First + (playerSpeed*dir.First*math.Exp(-0.01*float64(coins))),
+		tmpPlayer.Loc.Second + (playerSpeed*dir.Second*math.Exp(-0.01*float64(coins))),
 	)
 }
 

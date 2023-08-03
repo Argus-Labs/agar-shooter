@@ -377,7 +377,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
 		// Check that it's been 500ms since the player joined, before querying for their state
-		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
+		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 100).After(time.Now()) {
 			continue
 		}
 		// get player state
