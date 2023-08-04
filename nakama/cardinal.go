@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/argus-labs/world-engine/sign"
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -130,4 +131,22 @@ func cardinalCreatePersona(ctx context.Context, nk runtime.NakamaModule, persona
 		return 0, fmt.Errorf("create persona failed with status %q", s)
 	}
 	return createPersonaResponse.Tick, nil
+}
+
+// IsUserIDSafeToQuery checks if the user ID is safe to query and updates the safety map accordingly.
+func isUserIDSafeToQuery(userID string, joinTimeMap map[string]time.Time, isSafeToQueryMap map[string]bool) bool {
+	isSafeToQuery, exists := isSafeToQueryMap[userID]
+
+	// If the user ID is not in the safety map or is not safe, perform the calculation
+	if !exists || !isSafeToQuery {
+		// Perform the time calculation
+		isSafe := joinTimeMap[userID].Add(time.Millisecond * 500).Before(time.Now())
+
+		// Update the safety map
+		isSafeToQueryMap[userID] = isSafe
+
+		return isSafe
+	}
+
+	return true // Return true if the user ID was already marked as safe
 }

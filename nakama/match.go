@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"time"
+
+	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 // MatchState contains match data as the match progresses
@@ -16,6 +18,10 @@ type MatchState struct{}
 // call Cardinal endpoints rather than actually updating some Nakama match state
 type Match struct {
 	tick int
+}
+
+type PlayerPersonaRequest struct {
+	PlayerPersona string `json:"player_persona"`
 }
 
 func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule) (m runtime.Match, err error) {
@@ -47,7 +53,10 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		// Call tx-create-persona to get a persona tag for the player
 		_, err := cardinalCreatePersona(ctx, nk, p.GetUserId())
-		// Wait for the persona to be created in cardinal
+		if err != nil {
+			return err
+		}
+		// Wait for the persona to be created in cardinal, 200ms = 2 ticks
 		time.Sleep(time.Millisecond * 200)
 
 		// Call tx-add-player with newly created persona
@@ -77,7 +86,8 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
 		}
 
-		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true) // broadcast player removal to all players
+		// broadcast player removal to all players
+		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true)
 
 		if _, contains := Presences[presences[i].GetUserId()]; contains {
 			delete(Presences, presences[i].GetUserId())
@@ -90,38 +100,14 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 }
 
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-	// process player input for each type of input
-	messageMap := make(map[string]map[int64][][]byte)
+	// Map of Player Move messages sent from the game client
 
-	for _, match := range messages {
-		if messageMap[match.GetUserId()] == nil {
-			messageMap[match.GetUserId()] = make(map[int64][][]byte)
-		}
-
-		messageMap[match.GetUserId()][match.GetOpCode()] = append(messageMap[match.GetUserId()][match.GetOpCode()], match.GetData())
-
-		if _, contains := Presences[match.GetUserId()]; !contains {
-			return fmt.Errorf("Nakama: unregistered player is moving")
-		}
-	}
-
-	for _, matchMap := range messageMap {
-		for opCode, matchDataArray := range matchMap {
-			var err error
-
-			switch opCode {
-			case MOVE:
-				for _, matchData := range matchDataArray {
-					// the move should contain the player persona, so it shouldn't be necessary to also include the presence persona in here
-					if _, err = rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(matchData)); err != nil {
-						logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
-					}
-
-				}
-			}
-
-			if err != nil {
-				return err
+	for _, msg := range messages {
+		switch msg.GetOpCode() {
+		case MOVE:
+			data := msg.GetData()
+			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
+				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 			}
 		}
 	}
@@ -129,30 +115,36 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
 	for _, pp := range Presences {
-		// Check that it's been 500ms since the player joined, before querying for their state
-		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
-			continue
+		userID := pp.GetUserId()
+
+		// Check if the user has been created in cardinal already, before querying for its state
+		if !isUserIDSafeToQuery(userID, joinTimeMap, isSafeToQueryMap) {
+			continue // Skip further processing for this user ID if it's not safe to query
 		}
-		// get player state
-		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
+
+		// Create request body
+		reqBody := PlayerPersonaRequest{PlayerPersona: userID}
+		reqJSON, err := json.Marshal(reqBody)
+		if err != nil {
+			return err // Or appropriate error handling
+		}
+		// Get player state
+		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, string(reqJSON))
 
 		if err != nil { // assume that an error here means the player is dead
-			kickList = append(kickList, pp.GetUserId())
+			kickList = append(kickList, userID)
 		} else { // send everyone player state & send player its nearby coins
-			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true) // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-
+			err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true)
 			if err != nil {
 				return err
 			}
 
-			nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, "{\"player_persona\":\""+pp.GetUserId()+"\"}")
-
+			nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, string(reqJSON))
 			if err != nil {
 				return err
 			}
 
 			err = dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true)
-
 			if err != nil {
 				return err
 			}
