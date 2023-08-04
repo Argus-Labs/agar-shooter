@@ -1,6 +1,6 @@
 # TBD
 
-TBD is a agar.io style real-time multiplayer PVP game. The purpose of this game is to demonstrate usage of the [World Engine](github.com/argus-labs/world-engine) and more specifically, World Engine's ECS-based game shard [Cardinal](github.com/argus-labs/world-engine/cardinal). In this game we look to demonstrate that capabilities of Cardinal and create the **first ever, real-time, fully on-chain game** :).
+TBD is a agar.io style real-time multiplayer PVP game. The purpose of this game is to demonstrate usage of the [World Engine](https://www.github.com/argus-labs/world-engine) and more specifically, World Engine's ECS-based game shard [Cardinal](https://www.github.com/Argus-Labs/world-engine/tree/main/cardinal). In this game we look to demonstrate that capabilities of Cardinal and create the **first ever, real-time, fully on-chain game** :).
 
 ## Usage 
 
