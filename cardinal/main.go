@@ -80,7 +80,7 @@ func main() {
 	utils.InitializeGame(world, gameSettings)
 
 	// Start game loop as a goroutine
-	go utils.GameLoop(world)
+	//go utils.GameLoop(world)
 
 	// Register handlers
 	h, err := server.NewHandler(world, server.DisableSignatureVerification())
