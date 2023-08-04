@@ -344,6 +344,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
+	// call tick (could cause players to die, but we're fine as long as we check immediately after), then get player statuses and broadcast to everyone & offload coins; after this, send attack information to all existing players
+	// tick
+	if _, err := callRPCs["tx-tick"](ctx, logger, db, nk, "{}"); err != nil {
+		return fmt.Errorf("Nakama: tick error: %w", err)
+	}
+
+	m.tick++
+
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
 	logger.Debug("List of presences in MatchLoop: %v", Presences)
