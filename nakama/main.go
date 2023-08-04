@@ -281,6 +281,10 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 
+		if _, err := callRPCs["read-tick"](ctx, logger, db, nk, "{}"); err != nil {
+			return fmt.Errorf("Nakama: tick error: %w", err)
+		}
+
 		joinTimeMap[p.GetUserId()] = time.Now()
 
 		// assign name deterministically
@@ -418,7 +422,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	if _, err := callRPCs["tx-tick"](ctx, logger, db, nk, "{}"); err != nil {
+	if _, err := callRPCs["read-tick"](ctx, logger, db, nk, "{}"); err != nil {
 		return fmt.Errorf("Nakama: tick error: %w", err)
 	}
 

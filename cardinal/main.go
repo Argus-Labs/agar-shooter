@@ -44,7 +44,6 @@ func main() {
 		tx.TxRemovePlayer,
 		tx.TxSpawnCoins,
 		tx.TxSpawnHealths,
-		tx.TxTick,
 	))
 
 	// Register the reads
@@ -55,6 +54,7 @@ func main() {
 		read.ReadAttacks,
 		read.PlayerHealths,
 		read.PlayerTotalCoins,
+		read.ReadTick,
 	))
 
 	// Register the systems
@@ -63,7 +63,6 @@ func main() {
 	world.AddSystem(systems.ProcessMovesSystem)
 	world.AddSystem(systems.RemovePlayerSystem)
 	world.AddSystem(systems.SpawnCoinsSystem)
-	world.AddSystem(systems.TickSystem)
 
 	// Load game state
 	utils.Must(world.LoadGameState())
