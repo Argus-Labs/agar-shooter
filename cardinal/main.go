@@ -63,6 +63,7 @@ func main() {
 	world.AddSystem(systems.ProcessMovesSystem)
 	world.AddSystem(systems.RemovePlayerSystem)
 	world.AddSystem(systems.SpawnCoinsSystem)
+	world.AddSystem(systems.SpawnHealthsSystem)
 
 	// Load game state
 	utils.Must(world.LoadGameState())

@@ -17,10 +17,11 @@ type IWorldConstants struct {
 	TickRate			int // Ticks per second
 	ClientTickRate  	int // used to determine tickrate relative to cardinal server
 	PlayerRadius    	float64 // used to determine which coins to collect
+	PlayerSpeed     	int
+	HealthPackValue  	int // amount of health each healthpack restores
+	CoinRadius      	float64 // <= GameParams.CSize/2
 	HealthRadius		float64 // radius of health packs
 	HealthDensity		float64 // radius of health packs
-	PlayerSpeed     	int
-	CoinRadius      	float64 // <= GameParams.CSize/2
 	MaxCoinsPerTick		int
 	MaxHealthPerTick	int
 	MaxEntities			int
@@ -60,12 +61,14 @@ var (
 		ClientTickRate: 60,// used to determine tickrate relative to client
 		PlayerRadius: 0.5,// used to determine which coins are close enough to collect
 		PlayerSpeed: 2,
+		HealthPackValue: 5,
 		CoinRadius: 0.5,
 		HealthRadius: 0.5,
-		MaxCoinsPerTick: 1000,
+		MaxCoinsPerTick: 100,
+		MaxHealthPerTick: 100,
 		HealthDensity: 0.1,// number of health packs per square unit
 		MaxEntities: 4607704,
-		InitRepeatSpawn: 1,
+		InitRepeatSpawn: 10,
 		BalanceFactor: 3,// multiple of min tree depth after which we should rebalance
 	}
 
@@ -119,10 +122,10 @@ var (
 	DefaultWeapon types.Weapon	= Melee
 	Attacks						= make([]types.AttackTriple, 0)
 	MaxCoinsInCell				= func() int {
-		return int(GameParams.CSize * GameParams.CSize / (3 * WorldConstants.CoinRadius * WorldConstants.CoinRadius * math.Pi))
+		return int((GameParams.CSize * GameParams.CSize) / (3 * WorldConstants.CoinRadius * WorldConstants.CoinRadius * math.Pi))
 	}
 	MaxCoins					= func() int {
-		return int(math.Min(float64(MaxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second/GameParams.CSize/GameParams.CSize/4+float64(3*len(Players)), float64(WorldConstants.MaxEntities-len(Players))))
+		return int(math.Min((float64(MaxCoinsInCell())*GameParams.Dims.First*GameParams.Dims.Second)/float64(GameParams.CSize*GameParams.CSize*2)+float64(3*len(Players)), float64(WorldConstants.MaxEntities-len(Players))))
 	}
 	MaxHealth					= func() int {
 		return int(math.Ceil(float64(GameParams.Dims.First * GameParams.Dims.Second) * WorldConstants.HealthDensity))

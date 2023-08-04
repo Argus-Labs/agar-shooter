@@ -374,9 +374,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				if err := dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
-			}
-			/*
-				if nearbyHealth, err := callRPCs["read-player-health"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
+				if nearbyHealth, err := callRPCs["read-player-health"](ctx, logger, db, nk, "{\"player_name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 					return err
 				} else {
 					if err = dispatcher.BroadcastMessage(HEALTH, []byte(nearbyHealth), []runtime.Presence{pp}, nil, true); err != nil {
@@ -384,6 +382,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 					}
 				}
 
+			/*
 				if intCoins, err := callRPCs["read-player-totalcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 					return err
 				} else {
@@ -392,6 +391,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 					}
 				}
 			*/
+			}
 		}
 	}
 

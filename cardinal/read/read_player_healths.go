@@ -7,7 +7,7 @@ import (
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
-	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
+	//"github.com/argus-labs/world-engine/cardinal/ecs/storage"
 	"github.com/rs/zerolog/log"
 	"math"
 )
@@ -42,21 +42,12 @@ func readPlayerHealths(world *ecs.World, m []byte) ([]byte, error) {
 	}
 
 	// Check that the player exists
-	var foundPlayer bool = false
-	var foundPlayerID storage.EntityID
-	players := ReadPlayers(world)
-	for _, player := range players {
-		if player.Component.Name == msg.PlayerName {
-			foundPlayer = true
-			foundPlayerID = player.ID
-		}
-	}
-	if foundPlayer == false {
-		return nil, errors.New("ReadPlayerHealths: Player with given name not found")
+	if _, contains := game.Players[msg.PlayerName]; !contains {
+		return nil, errors.New("ReadPlayerHealths: Player with given name not found: " +  msg.PlayerName)
 	}
 
 	// Get the Player's Component
-	comp, err := components.Player.Get(world, foundPlayerID)
+	comp, err := components.Player.Get(world, game.Players[msg.PlayerName])
 	if err != nil {
 		log.Error().Msg("ReadPlayerHealths: Player component not found")
 	}

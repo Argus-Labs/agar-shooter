@@ -40,7 +40,8 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 	}
 
 	for i := 0; i < game.WorldConstants.InitRepeatSpawn; i++ {
-		go SpawnCoins(world)
+		SpawnCoins(world)
+		SpawnHealths(world)
 	}
 
 	return nil
@@ -49,6 +50,7 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board until the coin cap has been met
 	consts := game.WorldConstants
 	coinsToAdd := math.Min(float64(game.MaxCoins()-game.TotalCoins), float64(consts.MaxCoinsPerTick))
+	//fmt.Println("Coins to add:", coinsToAdd, game.MaxCoins(), game.TotalCoins)
 
 	for coinsToAdd > 0 { // generate coins if we haven't reached the max density
 		newCoin := types.Triple[float64, float64, int]{consts.CoinRadius + rand.Float64()*(game.GameParams.Dims.First-2*consts.CoinRadius), consts.CoinRadius + rand.Float64()*(game.GameParams.Dims.Second-2*consts.CoinRadius), 1} // random location over range where coins can actually be generated
@@ -86,12 +88,68 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 			}
 
 			coinsToAdd--
+			game.TotalCoins++
 		}
 	}
 
 	// create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
 	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
 	// maybe make this a system so it can be run async
+
+	//fmt.Println("SpawnCoins:", game.TotalCoins)
+	return nil
+}
+
+func SpawnHealths(world *ecs.World) error { // spawn healths randomly over the board until the coin cap has been met
+	consts := game.WorldConstants
+	healthToAdd := math.Min(float64(game.MaxHealth()-game.TotalHealth), float64(consts.MaxHealthPerTick))
+	//fmt.Println("Health to add:", healthToAdd)
+
+	for healthToAdd > 0 { // generate coins if we haven't reached the max density
+		newHealth := types.Triple[float64, float64, int]{consts.HealthRadius + rand.Float64()*(game.GameParams.Dims.First-2*consts.HealthRadius), consts.HealthRadius + rand.Float64()*(game.GameParams.Dims.Second-2*consts.HealthRadius), game.WorldConstants.HealthPackValue} // random location over range where coins can actually be generated
+		keep := true
+		healthRound := GetCell(newHealth)
+		if len(game.HealthMap[healthRound]) >= game.MaxHealthInCell() {
+			continue
+		}
+
+		for i := math.Max(0, float64(healthRound.First-1)); i <= math.Min(float64(game.Width), float64(healthRound.First+1)); i++ {
+			for j := math.Max(0, float64(healthRound.Second-1)); j <= math.Min(float64(game.Height), float64(healthRound.Second+1)); j++ {
+				game.HealthMutex.RLock()
+				for health, _ := range game.HealthMap[types.Pair[int, int]{int(i), int(j)}] {
+					keep = keep && (Distance(health.Second, newHealth) > 2*consts.HealthRadius)
+				}
+				game.HealthMutex.RUnlock()
+
+				knn := kd.KNN[*types.P](game.PlayerTree, vector.V{newHealth.First, newHealth.Second}, 1, func(q *types.P) bool {
+					return true
+				})
+
+				if len(knn) > 0 {
+					if nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[0].Name]); err != nil {
+						return fmt.Errorf("Cardinal: player obtain: %w", err)
+					} else {
+						keep = keep && (Distance(nearestPlayerComp.Loc, newHealth) > consts.PlayerRadius + 1 + consts.HealthRadius)
+					}
+				}
+			}
+		}
+
+		if keep {
+			if _, err := AddHealth(world, newHealth); err != nil {
+				return err
+			}
+
+			healthToAdd--
+			game.TotalHealth++
+		}
+	}
+
+	// create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
+	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
+	// maybe make this a system so it can be run async
+
+	//fmt.Println("SpawnHealths:", game.TotalHealth)
 
 	return nil
 }
@@ -294,7 +352,7 @@ func RemoveCoin(world *ecs.World, coinID types.Pair[storage.EntityID, types.Trip
 	game.CoinMutex.Unlock()
 
 	if err := world.Remove(coinID.First); err != nil {
-		return -1, err
+		return 0, err
 	}
 
 	game.TotalCoins--
@@ -323,7 +381,7 @@ func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.
 	health, err := components.Health.Get(world, healthID.First)
 
 	if err != nil {
-		return -1, fmt.Errorf("Cardinal: could not get health entity: %w", err)
+		return 0, fmt.Errorf("Cardinal: could not get health entity: %w", err)
 	}
 
 	game.HealthMutex.Lock()
@@ -331,7 +389,7 @@ func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.
 	game.HealthMutex.Unlock()
 
 	if err := world.Remove(healthID.First); err != nil {
-		return -1, fmt.Errorf("Cardinal: error removing health entity:", err)
+		return 0, fmt.Errorf("Cardinal: error removing health entity:", err)
 	}
 
 	game.TotalHealth--
@@ -355,6 +413,15 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 	var loc types.Pair[float64, float64]
 	var name string
 	worldConstants := game.WorldConstants
+
+	if err := components.Weapon.Update(world, weapon, func(comp components.WeaponComponent) components.WeaponComponent {// updates weapon ammo and last attack time
+		comp.Ammo--
+		comp.LastAttack = time.Now().UnixNano()
+
+		return comp
+	}); err != nil {
+		return fmt.Errorf("Cardinal: error modifying weapon:", err)
+	}
 
 	if err := components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent { // modifies player location
 		if left == comp.IsRight && comp.Coins > 0 {
