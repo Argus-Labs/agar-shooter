@@ -30,6 +30,7 @@ nakama/vendor
 
 # Go workspace file
 go.work
+go.work.sum
 
 ### JetBrains ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, 
