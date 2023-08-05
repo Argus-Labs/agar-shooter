@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/argus-labs/world-engine/sign v0.1.3-alpha
 	github.com/heroiclabs/nakama-common v1.27.0
+	github.com/rs/zerolog v1.30.0
 )
 
 require (
@@ -12,9 +13,11 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/ethereum/go-ethereum v1.12.0 // indirect
 	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 
-//replace golang.org/x/sys => golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43
+replace golang.org/x/sys => golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43

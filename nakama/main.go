@@ -1,19 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/argus-labs/world-engine/sign"
 	"io"
-	"math"
 	"net/http"
-	"os"
-	"strings"
 	"time"
+	"math"
 
+	"github.com/argus-labs/world-engine/sign"
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
@@ -39,11 +37,11 @@ const (
 )
 
 const (
-	EnvGameServer = "GAME_SERVER_ADDR"
+	EnvCardinalAddr = "GAME_SERVER_ADDR"
 )
 
 var (
-	callRPCs    = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error)) // contains all RPC endpoint functions
+	rpcEndpoints    = make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error)) // contains all RPC endpoint functions
 	Presences   = make(map[string]runtime.Presence)                                                                                                      // contains all in-game players; stopped storing in a MatchState struct because Nakama throws stupid errors for things that shouldn't happen when I do and checking all these errors is a waste of time
 	joinTimeMap = make(map[string]time.Time)                                                                                                             // mapping player id to time they joined
 	IDNameArr   = []string{
@@ -223,360 +221,99 @@ var (
 		"Charlotte": false,
 		"Eleanor":   false,
 	}
+	nakamaPersonaTag = "nakama-persona"
+	globalNamespace = "agar-shooter"
 )
-
-type MatchState struct{} // contains match data as the match progresses
-
-type Match struct {
-	tick int
-} // should contain data on the match, but because this is being handled through Cardinal, it's an empty struct that does nothing --- all match functions call Cardinal endpoints rather than actually updating some Nakama match state
-
-func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error { // called when connection is established
-	if err := InitializeCardinalProxy(logger, initializer); err != nil { // Register the RPC function of Cardinal to Nakama to create a proxy
-		return err
-	}
-
-	// Create the singleton match
-	if err := initializer.RegisterMatch("singleton_match", newMatch); err != nil {
-		return err
-	}
-
-	if _, err := nk.MatchCreate(ctx, "singleton_match", map[string]interface{}{}); err != nil { // calls the newMatch function, then calls MatchInit on the result
-		return err
-	}
-
-	return nil
-}
-
-func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule) (m runtime.Match, err error) {
-	return &Match{-1}, nil
-}
-
-func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
-	tickRate := 10
-	label := ""
-
-	time.Sleep(5 * time.Second)
-
-	return MatchState{}, tickRate, label
-}
-
-func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
-	_, contains := Presences[presence.GetUserId()] // whether user should be accepted
-	return MatchState{}, !contains, ""
-}
-
-func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
-	if presences == nil {
-		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
-	}
-	logger.Debug("List of presences in Match Join: %+v", presences)
-
-	for _, p := range presences {
-		Presences[p.GetUserId()] = p
-
-		result, err := callRPCs["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
-
-		if err != nil {
-			return err
-		}
-
-		if _, err := callRPCs["read-tick"](ctx, logger, db, nk, "{}"); err != nil {
-			return fmt.Errorf("Nakama: tick error: %w", err)
-		}
-
-		joinTimeMap[p.GetUserId()] = time.Now()
-
-		// assign name deterministically
-		name := ""
-		if len(Presences) > len(IDNameArr) {
-			logger.Error("Nakama: too many players in the game")
-			break
-		}
-		for i := rollHash(p.GetUserId()) % len(IDNameArr); ; i = (i + 1) % len(IDNameArr) {
-			if !NameTakenMap[IDNameArr[i]] {
-				name = IDNameArr[i]
-				break
-			}
-		}
-
-		NameTakenMap[name] = true
-		NameToNickname[p.GetUserId()] = name
-
-		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name, "; result: ", result)
-	}
-
-	return MatchState{}
-}
-
-func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
-	if Presences == nil {
-		return fmt.Errorf("Nakama: no presence exists")
-	}
-
-	for i := 0; i < len(presences); i++ {
-		result, err := callRPCs["tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
-
-		if err != nil {
-			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
-		}
-
-		err = dispatcher.BroadcastMessage(REMOVE, []byte(presences[i].GetUserId()), nil, nil, true) // broadcast player removal to all players
-
-		if _, contains := Presences[presences[i].GetUserId()]; contains {
-			delete(Presences, presences[i].GetUserId())
-		}
-
-		fmt.Println("player left: ", presences[i].GetUserId(), "; result: ", result)
-
-		// nickname stuff
-		NameTakenMap[NameToNickname[presences[i].GetUserId()]] = false
-		delete(NameToNickname, presences[i].GetUserId())
-	}
-
-	return MatchState{}
-}
-
-func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-	for _, m := range messages {
-		switch m.GetOpCode() {
-		case MOVE:
-			data := m.GetData()
-			if _, err := callRPCs["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
-				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
-			}
-		}
-	}
-
-	// call tick (could cause players to die, but we're fine as long as we check immediately after), then get player statuses and broadcast to everyone & offload coins; after this, send attack information to all existing players
-	// tick
-
-	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
-	kickList := make([]string, 0)
-	logger.Debug("List of presences in MatchLoop: %v", Presences)
-	for _, pp := range Presences {
-		// Check that it's been 500ms since the player joined, before querying for their state
-		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
-			continue
-		}
-		// get player state
-		playerState, err := callRPCs["read-player-state"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}")
-		if err != nil { // assume that an error here means the player is dead
-			kickList = append(kickList, pp.GetUserId())
-		} else { // send everyone player state & send player its nearby coins
-			if err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true); err != nil { // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
-				return err
-			}
-
-			if nearbyCoins, err := callRPCs["read-player-coins"](ctx, logger, db, nk, "{\"player_name\":\""+pp.GetUserId()+"\"}"); err != nil {
-				return err
-			} else {
-				if err := dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
-					return err
-				}
-				if nearbyHealth, err := callRPCs["read-player-health"](ctx, logger, db, nk, "{\"player_name\":\"" + pp.GetUserId() + "\"}"); err != nil {
-					return err
-				} else {
-					if err = dispatcher.BroadcastMessage(HEALTH, []byte(nearbyHealth), []runtime.Presence{pp}, nil, true); err != nil {
-						return err
-					}
-				}
-
-			/*
-				if intCoins, err := callRPCs["read-player-totalcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
-					return err
-				} else {
-					if err = dispatcher.BroadcastMessage(TOTAL_COINS, []byte(intCoins), nil, nil, true); err != nil {// send coins to all players
-						return err
-					}
-				}
-			*/
-			}
-		}
-	}
-
-	// kick all dead players
-	for _, pid := range kickList {
-		if err := dispatcher.BroadcastMessage(DED, []byte(""), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
-			return err
-		}
-
-		if err := dispatcher.BroadcastMessage(REMOVE, []byte(pid), nil, nil, true); err != nil { // broadcast player removal to all players
-			return err
-		}
-
-		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
-		delete(Presences, pid)
-	}
-
-	// TODO: @fareed, gotta fix this read-attack stuff
-	// send attack information to all players
-	if attacks, err := callRPCs["read-attacks"](ctx, logger, db, nk, "{}"); err != nil {
-		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
-	} else {
-		if attacks != "[]\n" {
-			//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
-			if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
-				return err
-			}
-		}
-	}
-
-	if _, err := callRPCs["read-tick"](ctx, logger, db, nk, "{}"); err != nil {
-		return fmt.Errorf("Nakama: tick error: %w", err)
-	}
-
-	m.tick++
-	//broadcast player nicknames
-	if len(NameToNickname) > 0 {
-		stringmap := "["
-		for key, val := range NameToNickname {
-			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"},"
-		}
-		stringmap = stringmap[:len(stringmap)-1] + "]"
-
-		if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
-			return err
-		}
-	}
-
-	return MatchState{}
-}
-
-func (m *Match) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, graceSeconds int) interface{} {
-	return MatchState{} // there is nothing to do on the Cardinal side to shut the game/world down
-}
-
-func (m *Match) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, data string) (interface{}, string) {
-	return MatchState{}, "" //, "signal received: " + data
-}
-
-func makeTxEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
+/**
+*/
+func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		logger.Debug("Got request for %q, with payload: %q", currEndpoint, payload)
 
-		signedPayload := &sign.SignedPayload{
-			PersonaTag: "sender's tag",
-			Namespace:  "0",
-			Nonce:      1000,
-			Signature:  "pk",
-			Body:       json.RawMessage(payload),
-		}
-
-		logger.Debug("Got request for %q, payload: %s", currEndpoint, payload)
-		payloadStr, err := json.Marshal(signedPayload)
-		//logger.Debug("PayloadStr: %v ", payloadStr)
-		readerStr := strings.NewReader(string(payloadStr))
-		logger.Debug("string from Reader: %s", readerStr)
-
-		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(string(payloadStr)))
+		signedPayload, err := makeSignedPayload(ctx, nk, payload)
 		if err != nil {
-			logger.Error("request setup failed for endpoint %q: %v", currEndpoint, err)
-			return "", runtime.NewError("request setup failed", INTERNAL)
+			return logError(logger, "unable to make signed payload: %v", err)
 		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", makeURL(currEndpoint), signedPayload)
+		if err != nil {
+			return logError(logger, "request setup failed for endpoint %q: %v", currEndpoint, err)
+		}
+		
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			logger.Error("request failed for endpoint %q: %v", currEndpoint, err)
-			return "", runtime.NewError("request failed", INTERNAL)
+			return logError(logger, "request failed for endpoint %q: %v", currEndpoint, err)
 		}
 		if resp.StatusCode != 200 {
 			body, _ := io.ReadAll(resp.Body)
-			logger.Error("bad status code: %v: %s", resp.Status, body)
-			return "", runtime.NewError("bad status code", INTERNAL)
+			return logError(logger, "bad status code: %v: %s", resp.Status, body)
 		}
+		
 		str, err := io.ReadAll(resp.Body)
 		if err != nil {
-			logger.Error("can't read body")
-			return "", runtime.NewError("read body failed", INTERNAL)
+			return logError(logger, "can't read body: %v", err)
 		}
+
 		return string(str), nil
 	}
-	// the currEndpoint in callEndpoint is declared by the parent environment, which is this function
 }
 
-func makeReadEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
-	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+// initCardinalEndpoints queries the cardinal server to find the list of existing endpoint, and attempts to set up RPC wrappers around each one.
+func initCardinalEndpoints(logger runtime.Logger, initializer runtime.Initializer) error {
+	endpoints, err := cardinalListAllEndpoints()
 
-		req, err := http.NewRequestWithContext(ctx, "GET", makeURL(currEndpoint), strings.NewReader(payload))
-		if err != nil {
-			logger.Error("request setup failed for endpoint %q: %v", currEndpoint, err)
-			return "", runtime.NewError("request setup failed", INTERNAL)
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			logger.Error("request failed for endpoint %q: %v", currEndpoint, err)
-			return "", runtime.NewError("request failed", INTERNAL)
-		}
-		if resp.StatusCode != 200 {
-			body, _ := io.ReadAll(resp.Body)
-			logger.Error("bad status code: %v: %s", resp.Status, body)
-			return "", runtime.NewError("bad status code", INTERNAL)
-		}
-		str, err := io.ReadAll(resp.Body)
-		if err != nil {
-			logger.Error("can't read body")
-			return "", runtime.NewError("read body failed", INTERNAL)
-		}
-		return string(str), nil
-	}
-	// the currEndpoint in callEndpoint is declared by the parent environment, which is this function
-}
-
-func InitializeCardinalProxy(logger runtime.Logger, initializer runtime.Initializer) error { // initializes cardinal endpoints
-	gameServerAddr := os.Getenv(EnvGameServer)
-	if gameServerAddr == "" {
-		msg := fmt.Sprintf("Must specify a game server via %s", EnvGameServer)
-		logger.Error(msg)
-		return errors.New(msg)
-	}
-
-	makeURL := func(resource string) string {
-		return fmt.Sprintf("%s/%s", gameServerAddr, resource)
-	}
-
-	// get the list of available endpoints from the backend server
-	resp, err := http.Get(makeURL("list/tx-endpoints"))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get list of cardinal endpoints: %w", err)
 	}
-
-	dec := json.NewDecoder(resp.Body)
-	var endpoints []string
-	if err := dec.Decode(&endpoints); err != nil {
-		return err
-	}
-
-	// get the list of available endpoints from the backend server
-	resp, err = http.Get(makeURL("list/read-endpoints"))
-	if err != nil {
-		return err
-	}
-
-	dec = json.NewDecoder(resp.Body)
-	var endpoints2 []string
-	if err := dec.Decode(&endpoints2); err != nil {
-		return err
-	}
-
-	endpoints = append(endpoints, endpoints2...)
 
 	for _, e := range endpoints {
-		endpoint := e
-		endpoint = endpoint[1:]
-		logger.Debug("registering: %v", endpoint)
-
-		// function creates functions to use for calling endpoints within the code
-		if strings.HasPrefix(endpoint, "read") {
-			callRPCs[endpoint] = makeReadEndpoint(endpoint, makeURL)
-		} else if strings.HasPrefix(endpoint, "tx") {
-			callRPCs[endpoint] = makeTxEndpoint(endpoint, makeURL)
-		} else {
-			logger.Error("The following endpoint does not have the correct format: %s", endpoint)
+		logger.Debug("registering: %v", e)
+		currEndpoint := e
+	
+		if currEndpoint[0] == '/' {
+			currEndpoint = currEndpoint[1:]
 		}
-		err := initializer.RegisterRpc(endpoint, callRPCs[endpoint])
+	
+		rpcEndpoints[e] = makeEndpoint(currEndpoint, makeURL)
+		err := initializer.RegisterRpc(currEndpoint, rpcEndpoints[e])
 		if err != nil {
-			logger.Error("failed to register endpoint %q: %v", endpoint, err)
+			return err
 		}
 	}
 
 	return nil
+}
+
+func makeSignedPayload(ctx context.Context, nk runtime.NakamaModule, payload string) (io.Reader, error) {
+	personaTag := nakamaPersonaTag
+
+	// pk, nonce, err := getPrivateKeyAndANonce(ctx, nk)
+	sp := &sign.SignedPayload {
+		PersonaTag: personaTag,
+		Namespace: globalNamespace,
+		Nonce: 1000,
+		Signature: "pk",
+		Body: json.RawMessage(payload),
+	}
+
+	buf, err := json.Marshal(sp)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(buf), nil
+}
+
+func logCode(logger runtime.Logger, code int, format string, v ...interface{}) (string, error) {
+	err := fmt.Errorf(format, v...)
+	logger.Error(err.Error())
+
+	return "", runtime.NewError(err.Error(), code)
+}
+
+func logError(logger runtime.Logger, format string, v ...interface{}) (string, error) {
+	err := fmt.Errorf(format, v...)
+	logger.Error(err.Error())
+
+	return "", runtime.NewError(err.Error(), INTERNAL)
 }
