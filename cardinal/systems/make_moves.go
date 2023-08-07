@@ -129,6 +129,11 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 				if comp.Health > game.LevelHealth[comp.Level] {
 					comp.Health = game.LevelHealth[comp.Level]
 				}
+			} else {
+				if comp.Health > 100 {
+					comp.Health = 100
+				}
+				fmt.Println("Cardinal: level not in level maps")
 			}
 
 			return comp
