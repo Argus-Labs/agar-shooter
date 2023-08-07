@@ -1,0 +1,73 @@
+name: Dark Forest Backend - Deploy
+
+## workflow will need manual trigger from actions page
+on:
+  workflow_dispatch:
+    inputs:
+      DEPLOY_VERSION_TAG:
+        description: 'Tag version to deploy'
+        required: true
+        
+env:
+  GCP_REGISTRY_ARTIFACT_PATH: us-docker.pkg.dev/world-engine-test/agar-shooter
+  GCP_PROJECT_ID: world-engine-test
+  GCP_COMPUTE_INSTANCE_STAGING: gamebackend-agar-shooter-latest-1
+  GCP_ZONE: us-west1-b
+  GCP_SERVICE_DEPLOY_DIR: /opt/agar-shooter
+
+jobs:
+  backend-deploy-staging-on-tag:
+    runs-on: ubuntu-latest
+    ## Add "id-token" with the intended google-github-actions/auth permissions.
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: GCP auth
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: GCP - Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+      - name: GCP - SCP compose files
+        run: |
+          gcloud compute scp --zone "${{ env.GCP_ZONE }}" backend/docker-compose-staging.yml "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}":/tmp/docker-compose.yml --project "${{ env.GCP_PROJECT_ID }}" --quiet
+      - name: GCP - Compute deploy exec
+        id: compute-ssh-deploy
+        uses: google-github-actions/ssh-compute@v0
+        with:
+          instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
+          zone: ${{ env.GCP_ZONE }}
+          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          command: |
+            gcloud auth configure-docker us-docker.pkg.dev --quiet
+            sudo mkdir -p ${{ env.GCP_SERVICE_DEPLOY_DIR }}
+            echo "Deploying: ${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}"
+            export VERSION_TAG=${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}
+            sudo cp /tmp/docker-compose.yml ${{ env.GCP_SERVICE_DEPLOY_DIR }}/docker-compose.yml
+            cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
+            docker compose up --detach --wait --wait-timeout 60
+      - name: GCP - Check Deployments
+        id: compute-ssh-check-deployment
+        uses: google-github-actions/ssh-compute@v0
+        with:
+          instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
+          zone: ${{ env.GCP_ZONE }}
+          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          command: |
+            cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
+            docker compose ps | tr -d \'\"
+            docker compose ps --status running | grep cardinal > /dev/null
+            docker compose ps --status running | grep nakama > /dev/null
+      - name: GCP - Deployment Output
+        run: |-
+          echo "----------------------------------------------"
+          echo "🎉 Dark Forest backend deployed: [${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}]"
+          printf "${{ steps.compute-ssh-check-deployment.outputs.stdout }}"
+          echo "----------------------------------------------"
