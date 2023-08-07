@@ -294,7 +294,7 @@ func initCardinalEndpoints(logger runtime.Logger, initializer runtime.Initialize
 			currEndpoint = currEndpoint[1:]
 		}
 	
-		rpcEndpoints[e] = makeEndpoint(currEndpoint, makeURL)
+		rpcEndpoints[currEndpoint] = makeEndpoint(currEndpoint, makeURL)
 		err := initializer.RegisterRpc(currEndpoint, rpcEndpoints[e])
 		if err != nil {
 			return err

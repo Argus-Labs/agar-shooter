@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
+	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
 type ReadPlayerStateMsg struct {
-	PlayerName string `json:"player_name"`
+	PlayerName string `json:"player_persona"`
 }
 
 var PlayerState = ecs.NewReadType[ReadPlayerStateMsg]("player-state", readPlayerState)
@@ -17,13 +18,13 @@ var PlayerState = ecs.NewReadType[ReadPlayerStateMsg]("player-state", readPlayer
 func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 
 	// Read the msg data from bytes
-	var msg ReadPlayerStateMsg
-	err := json.Unmarshal(m, &msg)
+	var pkg types.Package[ReadPlayerStateMsg]//ReadPlayerStateMsg
+	err := json.Unmarshal(m, &pkg)
 	if err != nil {
 		return nil, err
 	}
 
-	//log.Info().Msgf("ReadPlayerStateMsg: %+v", msg)
+	msg := pkg.Body
 
 	// Check that the player exists
 	if _, contains := game.Players[msg.PlayerName]; !contains {

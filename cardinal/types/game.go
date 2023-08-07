@@ -31,3 +31,7 @@ type NearbyHealth struct { // nearby coins for client retrieval
 	X, Y		float64
 	Value       int
 }
+
+type Package[T any] struct { // used to parse JSON objects with the new PersonaTag stuff
+	Body T
+}

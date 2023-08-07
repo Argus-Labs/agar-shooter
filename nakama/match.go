@@ -146,7 +146,7 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		// Create request body
 		reqBody := PlayerPersonaRequest{PlayerPersona: pp.GetUserId()}
 		reqJSON, err := json.Marshal(reqBody)
-		req := string(reqJSON)// "{\"player_name\":\"" + pp.GetUserId() + "\"}"
+		req := string(reqJSON)//"{\"player_name\":\"" + pp.GetUserId() + "\"}"
 		if err != nil {
 			return err// Or appropriate error handling
 		}
@@ -204,10 +204,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// send attack information to all players
-	if _, contains := rpcEndpoints["read-attacks"]; contains == false {
-		logger.Error("read-attacks endpoint does not exist")
-	}
-
 	if attacks, err := rpcEndpoints["read-attacks"](ctx, logger, db, nk, "{}"); err != nil {
 		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
 	} else {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/systems"
@@ -10,11 +9,9 @@ import (
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
 	"github.com/argus-labs/world-engine/cardinal/server"
-	//"github.com/rs/zerolog"
 )
 
 func main() {
-	fmt.Println("Cardinal: SERVER HAS STARTED1")
 	//zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	//cfg := utils.GetConfig()
 
@@ -26,7 +23,6 @@ func main() {
 	// This is the easiest way to run Cardinal locally, but doen't work with Retool.
 	// world := utils.NewInmemWorld()
 	world := inmem.NewECSWorld()
-	fmt.Println("Cardinal: SERVER HAS STARTED2")
 
 	// Register components
 	// NOTE: You must register your components here,
@@ -37,7 +33,6 @@ func main() {
 		components.Health,
 		components.Weapon,
 	))
-	fmt.Println("Cardinal: SERVER HAS STARTED3")
 
 	// Register transactions
 	// NOTE: You must register your transactions here,
@@ -49,7 +44,6 @@ func main() {
 		tx.TxSpawnCoins,
 		tx.TxSpawnHealths,
 	))
-	fmt.Println("Cardinal: SERVER HAS STARTED4")
 
 	// Register the reads
 	utils.Must(world.RegisterReads(
@@ -61,25 +55,17 @@ func main() {
 		read.PlayerTotalCoins,
 		read.ReadTick,
 	))
-	fmt.Println("Cardinal: SERVER HAS STARTED5")
 
 	// Register the systems
 	world.AddSystem(systems.AddPlayerSystem)
-	fmt.Println("Cardinal: SERVER HAS STARTED6")
 	world.AddSystem(systems.MoveSystem)
-	fmt.Println("Cardinal: SERVER HAS STARTED7")
 	world.AddSystem(systems.ProcessMovesSystem)
-	fmt.Println("Cardinal: SERVER HAS STARTED8")
 	world.AddSystem(systems.RemovePlayerSystem)
-	fmt.Println("Cardinal: SERVER HAS STARTED9")
 	world.AddSystem(systems.SpawnCoinsSystem)
-	fmt.Println("Cardinal: SERVER HAS STARTED10")
 	world.AddSystem(systems.SpawnHealthsSystem)
-	fmt.Println("Cardinal: SERVER HAS STARTED11")
 
 	// Load game state
 	utils.Must(world.LoadGameState())
-	fmt.Println("Cardinal: SERVER HAS STARTED12")
 
 	// Setup some game settings
 	gameSettings := types.Game{
@@ -91,18 +77,14 @@ func main() {
 		Players: []string{},
 	}
 	utils.InitializeGame(world, gameSettings)
-	fmt.Println("Cardinal: SERVER HAS STARTED13")
 
 	// Start game loop as a goroutine
 	//go utils.GameLoop(world)
 
 	// Register handlers
 	h, err := server.NewHandler(world, server.DisableSignatureVerification())
-	fmt.Println("Cardinal: SERVER HAS STARTED14")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Cardinal: SERVER HAS STARTED15")
 	h.Serve("", "3333")
-	fmt.Println("Cardinal: SERVER HAS STARTED16")
 }

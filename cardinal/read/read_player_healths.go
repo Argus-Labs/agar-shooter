@@ -13,7 +13,7 @@ import (
 )
 
 type ReadPlayerHealthsMsg struct {
-	PlayerName string `json:"player_name"`
+	PlayerName string `json:"player_persona"`
 }
 
 var PlayerHealths = ecs.NewReadType[ReadPlayerHealthsMsg]("player-health", readPlayerHealths)
@@ -35,11 +35,13 @@ func getNearbyHealths(playerComp components.PlayerComponent) []types.NearbyHealt
 func readPlayerHealths(world *ecs.World, m []byte) ([]byte, error) {
 
 	// Read the msg data from bytes
-	var msg ReadPlayerHealthsMsg
-	err := json.Unmarshal(m, &msg)
+	var pkg types.Package[ReadPlayerHealthsMsg]
+	err := json.Unmarshal(m, &pkg)
 	if err != nil {
 		return nil, err
 	}
+	
+	msg := pkg.Body
 
 	// Check that the player exists
 	if _, contains := game.Players[msg.PlayerName]; !contains {

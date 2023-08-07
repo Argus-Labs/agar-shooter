@@ -14,7 +14,7 @@ import (
 )
 
 type ReadPlayerCoinsMsg struct {
-	PlayerName string `json:"player_name"`
+	PlayerName string `json:"player_persona"`
 }
 
 var PlayerCoins = ecs.NewReadType[ReadPlayerCoinsMsg]("player-coins", readPlayerCoins)
@@ -36,11 +36,13 @@ func getNearbyCoins(playerComp components.PlayerComponent) []types.NearbyCoin {
 func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 
 	// Read the msg data from bytes
-	var msg ReadPlayerCoinsMsg
-	err := json.Unmarshal(m, &msg)
+	var pkg types.Package[ReadPlayerCoinsMsg]
+	err := json.Unmarshal(m, &pkg)
 	if err != nil {
 		return nil, err
 	}
+
+	msg := pkg.Body
 
 	// Check that the player exists
 	if _, contains := game.Players[msg.PlayerName]; !contains {
