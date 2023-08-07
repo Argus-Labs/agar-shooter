@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/systems"
@@ -9,11 +10,12 @@ import (
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
 	"github.com/argus-labs/world-engine/cardinal/server"
-	"github.com/rs/zerolog"
+	//"github.com/rs/zerolog"
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	fmt.Println("Cardinal: SERVER HAS STARTED1")
+	//zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	//cfg := utils.GetConfig()
 
 	// NOTE: Uses a Redis container
@@ -56,6 +58,7 @@ func main() {
 		read.PlayerTotalCoins,
 		read.ReadTick,
 	))
+	fmt.Println("Cardinal: SERVER HAS STARTED2")
 
 	// Register the systems
 	world.AddSystem(systems.AddPlayerSystem)
@@ -78,6 +81,7 @@ func main() {
 		Players: []string{},
 	}
 	utils.InitializeGame(world, gameSettings)
+	fmt.Println("Cardinal: SERVER HAS STARTED3")
 
 	// Start game loop as a goroutine
 	//go utils.GameLoop(world)
@@ -87,5 +91,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Cardinal: SERVER HAS STARTED4")
 	h.Serve("", "3333")
+	fmt.Println("Cardinal: SERVER HAS STARTED5")
 }

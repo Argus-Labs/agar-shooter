@@ -224,8 +224,27 @@ var (
 	nakamaPersonaTag = "nakama-persona"
 	globalNamespace = "agar-shooter"
 )
-/**
-*/
+
+func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error { // called when connection is established
+	if err := initCardinalAddress(); err != nil {
+		return err
+	}	
+
+	if err := initCardinalEndpoints(logger, initializer); err != nil { // Register the RPC function of Cardinal to Nakama to create a proxy
+		return err
+	}
+
+	if err := initializer.RegisterMatch("singleton_match", newMatch); err != nil {
+		return err
+	}
+
+	if _, err := nk.MatchCreate(ctx, "singleton_match", map[string]interface{}{}); err != nil { // calls the newMatch function, then calls MatchInit on the result
+		return err
+	}
+
+	return nil
+}
+
 func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 		logger.Debug("Got request for %q, with payload: %q", currEndpoint, payload)
