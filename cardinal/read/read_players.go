@@ -36,7 +36,7 @@ func ReadPlayers(world *ecs.World) []PlayerPair {
 	return playerPairs
 }
 
-func GetPlayerByPersona(world *ecs.World, persona string) (PlayerPair, error) {
+func GetPlayerByPersonaTag(world *ecs.World, personaTag string) (PlayerPair, error) {
 	var player PlayerPair
 	var err error
 	ecs.NewQuery(filter.Exact(components.Player)).Each(world, func(id storage.EntityID) {
@@ -45,7 +45,7 @@ func GetPlayerByPersona(world *ecs.World, persona string) (PlayerPair, error) {
 			return
 		}
 
-		if playerComp.PersonaTag == persona {
+		if playerComp.PersonaTag == personaTag {
 			pair := PlayerPair{
 				ID:        id,
 				Component: playerComp,
@@ -55,7 +55,7 @@ func GetPlayerByPersona(world *ecs.World, persona string) (PlayerPair, error) {
 		}
 	})
 	if err != nil {
-		err = errors.New("No player with the given name exists.")
+		err = errors.New("No player with the given PersonaTag exists.")
 	}
 
 	return player, err

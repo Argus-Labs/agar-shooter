@@ -15,7 +15,6 @@ import (
 
 	"github.com/argus-labs/world-engine/sign"
 	"github.com/heroiclabs/nakama-common/runtime"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -71,7 +70,7 @@ func cardinalListAllEndpoints() ([]string, error) {
 	var endpoints []string
 	txs, err := cardinalListEndpoints(listTxEndpointsEndpoint)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Nakama: error fetching endpoint list:", err)
 	}
 	endpoints = append(endpoints, txs...)
 	reads, err := cardinalListEndpoints(listReadEndpoints)
@@ -93,7 +92,7 @@ func cardinalCreatePersona(ctx context.Context, nk runtime.NakamaModule, persona
 
 	body, err := json.Marshal(createPersonaTx)
 	if err != nil {
-		log.Error().Msgf("Error marshalling JSON for CreatePersonaTx: %v", err)
+		fmt.Errorf("Error marshalling JSON for CreatePersonaTx: %v", err)
 	}
 	sp := &sign.SignedPayload{
 		PersonaTag: personaTag,

@@ -9,11 +9,10 @@ import (
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs/inmem"
 	"github.com/argus-labs/world-engine/cardinal/server"
-	"github.com/rs/zerolog"
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	//zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	//cfg := utils.GetConfig()
 
 	// NOTE: Uses a Redis container
@@ -43,15 +42,18 @@ func main() {
 		tx.TxAddPlayer,
 		tx.TxRemovePlayer,
 		tx.TxSpawnCoins,
+		tx.TxSpawnHealths,
 	))
 
 	// Register the reads
 	utils.Must(world.RegisterReads(
 		read.Constant,
 		read.PlayerState,
-		read.PlayersStatus,
 		read.PlayerCoins,
 		read.ReadAttacks,
+		read.PlayerHealths,
+		read.PlayerTotalCoins,
+		read.ReadTick,
 	))
 
 	// Register the systems
@@ -60,6 +62,7 @@ func main() {
 	world.AddSystem(systems.ProcessMovesSystem)
 	world.AddSystem(systems.RemovePlayerSystem)
 	world.AddSystem(systems.SpawnCoinsSystem)
+	world.AddSystem(systems.SpawnHealthsSystem)
 
 	// Load game state
 	utils.Must(world.LoadGameState())
@@ -76,7 +79,7 @@ func main() {
 	utils.InitializeGame(world, gameSettings)
 
 	// Start game loop as a goroutine
-	go utils.GameLoop(world)
+	//go utils.GameLoop(world)
 
 	// Register handlers
 	h, err := server.NewHandler(world, server.DisableSignatureVerification())

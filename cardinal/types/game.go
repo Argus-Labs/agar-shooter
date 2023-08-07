@@ -4,11 +4,11 @@ type Void struct{}
 
 var Pewp Void
 
-type Weapon int
-
 type WeaponData struct {
 	Attack int
 	Range  float64
+	MaxAmmo	int
+	Reload int64
 }
 
 type Game struct {
@@ -23,6 +23,15 @@ type AttackTriple struct {
 }
 
 type NearbyCoin struct { // nearby coins for client retrieval
-	First, Second float64
-	Value         int
+	X, Y		float64
+	Value       int
+}
+
+type NearbyHealth struct { // nearby coins for client retrieval
+	X, Y		float64
+	Value       int
+}
+
+type Package[T any] struct { // used to parse JSON objects with the new PersonaTag stuff
+	Body T
 }
