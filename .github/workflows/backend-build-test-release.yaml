@@ -38,6 +38,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
       - name: Use git SSH Deploy Key
         run: git config --global --add url."git@github.com:".insteadOf "https://github.com/"
       - name: Set up Docker Buildx

@@ -1,15 +1,16 @@
 name: Backend - Codecov
 on:
-  pull_request:
-    branches:
-      - main
-      - develop
-  push:
-    branches:
-      - main
-      - develop
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+#  pull_request:
+#    branches:
+#      - main
+#      - develop
+#  push:
+#    branches:
+#      - main
+#      - develop
+#    tags:
+#      - 'v*.*.*'
 jobs:
   backend-codecov:
     runs-on: ubuntu-latest
