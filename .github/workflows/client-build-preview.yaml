@@ -1,0 +1,97 @@
+name: Game CI
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  client-build:
+    name: PR Preview
+    defaults:
+      run:
+        shell: bash
+        working-directory: Client
+    runs-on: ubuntu-latest
+    steps:
+      # Build
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS Cache
+        uses: actions/cache@v3
+        id: lfs-cache
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Git LFS Pull
+        run: |
+          git lfs pull
+          git add .
+          git reset --hard
+
+      - name: Library Cache
+        uses: actions/cache@v3
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      - name: Build Project
+        uses: game-ci/unity-builder@v2
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+
+      - name: Purge Stale Artifacts
+        uses: c-hive/gha-remove-artifacts@v1.2.0
+        with:
+          age: "7 days"
+          skip-tags: true
+          skip-recent: 3
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: WebGL Build
+          path: ./build/WebGL/WebGL
+
+      # Deploy
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - run: sudo chown $USER ./build/WebGL/WebGL
+
+      - name: Copy Vercel Config
+        uses: canastro/copy-action@master
+        with:
+          source: .github/vercel.json
+          target: ./build/WebGL/WebGL
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL
+
+      - name: Deploy Project Artifacts to Vercel
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL

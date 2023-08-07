@@ -1,0 +1,89 @@
+name: Game CI
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  client-build:
+    name: Production Build
+    defaults:
+      run:
+        shell: bash
+        working-directory: Client
+    runs-on: ubuntu-latest
+    steps:
+      # Build
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS Cache
+        uses: actions/cache@v2
+        id: lfs-cache
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Git LFS Pull
+        run: |
+          git lfs pull
+          git add .
+          git reset --hard
+
+      - name: Library Cache
+        uses: actions/cache@v2
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      - name: Build Project
+        uses: game-ci/unity-builder@v2
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+
+      - name: Purge Stale Artifacts
+        uses: c-hive/gha-remove-artifacts@v1.2.0
+        with:
+          age: "7 days"
+          skip-tags: true
+          skip-recent: 3
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: WebGL Build
+          path: ./build/WebGL/WebGL
+
+      # Deploy
+      - name: Copy Vercel Config
+        uses: canastro/copy-action@master
+        with:
+          source: .github/vercel.json
+          target: ./build/WebGL/WebGL
+
+      - name: Deploy
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: self
+          BRANCH: build/production
+          FOLDER: ./build/WebGL/WebGL
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: Publish production build - {sha}
