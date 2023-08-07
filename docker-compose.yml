@@ -1,6 +1,6 @@
 version: '3'
 services:
-  server:
+  cardinal:
     build: ./cardinal
     expose:
       - "3333"
@@ -28,9 +28,9 @@ services:
     build: ./nakama
     depends_on:
       - postgres
-      - server
+      - cardinal
     environment:
-      - GAME_SERVER_ADDR=http://server:3333
+      - GAME_SERVER_ADDR=http://cardinal:3333
     entrypoint:
       - "/bin/sh"
       - "-ecx"
