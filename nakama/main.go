@@ -226,6 +226,7 @@ var (
 )
 
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error { // called when connection is established
+	time.Sleep(1*time.Second)
 	if err := initCardinalAddress(); err != nil {
 		return err
 	}	

@@ -204,6 +204,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// send attack information to all players
+	if _, contains := rpcEndpoints["read-attacks"]; contains == false {
+		logger.Error("read-attacks endpoint does not exist")
+	}
+
 	if attacks, err := rpcEndpoints["read-attacks"](ctx, logger, db, nk, "{}"); err != nil {
 		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
 	} else {
