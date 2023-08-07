@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Serialization;
 
 public class BestPlayerIndicator : MonoBehaviour
@@ -34,7 +35,7 @@ public class BestPlayerIndicator : MonoBehaviour
             Vector3 newpos = Camera.main.ScreenToWorldPoint(indicatorPosition);
             newpos.z = 0;
             indicator.transform.position = newpos;
-            indicator.transform.up = enemyToCenterVector;
+            indicator.transform.LookAt(newpos-enemyToCenterVector,new Vector3(0,0,-1));
         }
         else
         {
@@ -42,6 +43,14 @@ public class BestPlayerIndicator : MonoBehaviour
             {
                 indicator.SetActive(false);
             }
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (indicator!=null)
+        {
+            indicator.SetActive(false);
         }
     }
 

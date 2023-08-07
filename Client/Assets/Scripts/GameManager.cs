@@ -25,7 +25,7 @@ public class GameManager : MonoBehaviour
 
     struct ServerPacket
     {
-        public string Name;
+        public string PersonaTag;
         public int Health;
         public int Coins;
         public float LocX;
@@ -36,7 +36,7 @@ public class GameManager : MonoBehaviour
 
         public ServerPacket(string name, int health, int coins, int locX, int locY, bool isRight, int inputNum)
         {
-            Name = name;
+            PersonaTag = name;
             Health = health;
             Coins = coins;
             LocX = locX;
@@ -138,7 +138,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         // let the game run 60fps
-        Application.targetFrameRate = 59;
+        Application.targetFrameRate = 15;
         
     }
 
@@ -330,25 +330,25 @@ public class GameManager : MonoBehaviour
                 }
 
                 // handle other player
-                if (packet.Name != UserId)
+                if (packet.PersonaTag != UserId)
                 {
                     // print("content: " + content);
-                    if (!otherPlayers.ContainsKey(packet.Name))
+                    if (!otherPlayers.ContainsKey(packet.PersonaTag))
                     {
                         RemotePlayer newPlayer = Instantiate(prefab, Vector3.one * -1f, quaternion.identity);
-                        otherPlayers.Add(packet.Name, newPlayer);
+                        otherPlayers.Add(packet.PersonaTag, newPlayer);
                         newPlayer.transform.position = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
                         newPlayer.coin = packet.Coins;
                         newPlayer.currLevel = packet.Level;
                         // newPlayer.SetName(packet.Name);
-                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.Name.GetHashCode() / int.MaxValue),
+                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.PersonaTag.GetHashCode() / int.MaxValue),
                             0.75f, 0.75f));
                     }
                     else
                     {
-                        RemotePlayer otherPlayer = otherPlayers[packet.Name];
+                        RemotePlayer otherPlayer = otherPlayers[packet.PersonaTag];
                         otherPlayer.prevPos = otherPlayer.newPos;
                         otherPlayer.newPos = new Vector2(packet.LocX, packet.LocY);
                         otherPlayer.t = 0;
@@ -360,6 +360,7 @@ public class GameManager : MonoBehaviour
 
                     break;
                 }
+                print("server feedback: " + content);
 
                 Player.ServerPayload serverPayload;
                 // serverPayload.isRight = resultDict["IsRight"] == "True";

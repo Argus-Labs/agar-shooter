@@ -145,6 +145,9 @@ public class Player : MonoBehaviour
         int opCode = 17;;
         gameManager.SendMessageToServer(opCode, input.ToJson()); 
         ApplyInput(input, Time.deltaTime);
+        // print player pos (x,y) isright and also sequence number
+        //print("Client Sim: Pos: (" + pos.x + "," + pos.y + ") isRight: " + isRight + " sequenceNumber: " + sequenceNumber);
+        
         pendingInputs.Enqueue(new PlayerInputExtraInfo(input, Time.deltaTime, pos));
     }
     private void Vector2to4button(Vector2 input, out bool up, out bool down, out bool left, out bool right)
