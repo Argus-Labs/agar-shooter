@@ -58,7 +58,7 @@ jobs:
       - name: Docker Build
         run: |
           cd ${{ matrix.backend-dir }}
-          docker build agar-shooter-backend-${{ matrix.backend-dir }}:latest .
+          docker build -t agar-shooter-backend-${{ matrix.backend-dir }}:latest .
           docker save agar-shooter-backend-${{ matrix.backend-dir }}:latest > /tmp/agar-shooter-backend-${{ matrix.backend-dir }}-latest.tar
       - name: Upload local build images to temporary artifact
         uses: actions/upload-artifact@v3
