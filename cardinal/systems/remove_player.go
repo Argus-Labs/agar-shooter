@@ -14,8 +14,8 @@ func RemovePlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 	playerList := read.ReadPlayers(world)
 
 	for _, tx := range removePlayerTxs {
-		log.Debug().Msgf("Removing player with name: %s", tx.Name)
-		err = utils.RemovePlayer(world, tx.Name, playerList)
+		log.Debug().Msgf("Removing player with PersonaTag: %s", tx.PersonaTag)
+		err = utils.RemovePlayer(world, tx.PersonaTag, playerList)
 	}
 	return err
 }

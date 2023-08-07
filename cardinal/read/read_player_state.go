@@ -10,7 +10,7 @@ import (
 )
 
 type ReadPlayerStateMsg struct {
-	PlayerName string `json:"player_persona"`
+	PersonaTag string `json:"player_persona"`
 }
 
 var PlayerState = ecs.NewReadType[ReadPlayerStateMsg]("player-state", readPlayerState)
@@ -27,12 +27,12 @@ func readPlayerState(world *ecs.World, m []byte) ([]byte, error) {
 	msg := pkg.Body
 
 	// Check that the player exists
-	if _, contains := game.Players[msg.PlayerName]; !contains {
-		return nil, fmt.Errorf("ReadPlayerState: Player with name %s not found", msg.PlayerName)
+	if _, contains := game.Players[msg.PersonaTag]; !contains {
+		return nil, fmt.Errorf("ReadPlayerState: Player with PersonaTag %s not found", msg.PersonaTag)
 	}
 
 	// Get the Player's Component
-	comp, err := components.Player.Get(world, game.Players[msg.PlayerName])
+	comp, err := components.Player.Get(world, game.Players[msg.PersonaTag])
 	if err != nil {
 		fmt.Errorf("ReadPlayerState: Player component not found")
 	}

@@ -56,8 +56,8 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		}
 	}
 
-	for name, moveList := range moveMap {
-		entityID, contains := game.Players[name]
+	for personaTag, moveList := range moveMap {
+		entityID, contains := game.Players[personaTag]
 
 		// Check if the player making the move is registered
 		if !contains {

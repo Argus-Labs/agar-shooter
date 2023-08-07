@@ -22,7 +22,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	maxDepth := 0
 	//log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
 
-	for playerName, id := range game.Players {
+	for personaTag, id := range game.Players {
 		tmpPlayer, err := components.Player.Get(world, id)
 
 		if err != nil {
@@ -48,7 +48,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		if maxDepth < depth { maxDepth = depth }
 
 		if len(knn) > 1 {
-			nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[1].Name])
+			nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[1].PersonaTag])
 			left := tmpPlayer.Loc.First <= nearestPlayerComp.Loc.First
 
 			if err != nil {
@@ -57,9 +57,9 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 			if utils.Distance(nearestPlayerComp.Loc, prevLoc) <= attackRange {
 				attackQueue = append(attackQueue, types.Triple[storage.EntityID, storage.EntityID, types.Triple[bool, string, string]]{
-					First: game.Players[knn[1].Name],
+					First: game.Players[knn[1].PersonaTag],
 					Second: tmpPlayer.Weapon,
-					Third: types.Triple[bool, string, string]{left, tmpPlayer.Name, nearestPlayerComp.Name},
+					Third: types.Triple[bool, string, string]{left, tmpPlayer.PersonaTag, nearestPlayerComp.PersonaTag},
 				})
 			}
 		}
@@ -67,9 +67,9 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		// moving players
 		loc := utils.Move(tmpPlayer)
 
-		point := &types.P{vector.V{prevLoc.First, prevLoc.Second}, playerName}
+		point := &types.P{vector.V{prevLoc.First, prevLoc.Second}, personaTag}
 		game.PlayerTree.Remove(point.P(), point.Equal)
-		game.PlayerTree.Insert(&types.P{vector.V{loc.First, loc.Second}, playerName})
+		game.PlayerTree.Insert(&types.P{vector.V{loc.First, loc.Second}, personaTag})
 
 		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 		hitHealth := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
@@ -115,7 +115,7 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			//log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
-			game.PlayerCoins[playerName] = comp.Coins
+			game.PlayerCoins[personaTag] = comp.Coins
 
 			if _, goodLevel := game.LevelCoins[comp.Level]; goodLevel {
 				for game.LevelCoins[comp.Level] <= comp.Coins {

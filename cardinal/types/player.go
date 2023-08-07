@@ -1,7 +1,7 @@
 package types
 
 type BarePlayer struct {
-	Name		string
+	PersonaTag	string
 	Health		int
 	Coins		int
 	LocX		float64
@@ -12,7 +12,7 @@ type BarePlayer struct {
 }
 
 type TestPlayer struct {
-	Name		string
+	PersonaTag	string
 	Health		int
 	Coins		int
 	Weapon		Weapon
@@ -21,10 +21,10 @@ type TestPlayer struct {
 }
 
 type ModPlayer struct { // for modifying players
-	Name		string
+	PersonaTag	string
 }
 
 type AddPlayer struct {// for adding players
-	Name		string
+	PersonaTag	string
 	Coins		int
 }

@@ -14,7 +14,7 @@ import (
 )
 
 type ReadPlayerCoinsMsg struct {
-	PlayerName string `json:"player_persona"`
+	PersonaTag string `json:"player_persona"`
 }
 
 var PlayerCoins = ecs.NewReadType[ReadPlayerCoinsMsg]("player-coins", readPlayerCoins)
@@ -45,12 +45,12 @@ func readPlayerCoins(world *ecs.World, m []byte) ([]byte, error) {
 	msg := pkg.Body
 
 	// Check that the player exists
-	if _, contains := game.Players[msg.PlayerName]; !contains {
-		return nil, fmt.Errorf("ReadPlayerCoins: Player with given name not found")
+	if _, contains := game.Players[msg.PersonaTag]; !contains {
+		return nil, fmt.Errorf("ReadPlayerCoins: Player with given PersonaTag not found")
 	}
 
 	// Get the Player's Component
-	comp, err := components.Player.Get(world, game.Players[msg.PlayerName])
+	comp, err := components.Player.Get(world, game.Players[msg.PersonaTag])
 	if err != nil {
 		log.Error().Msg("ReadPlayerCoins: Player component not found")
 	}

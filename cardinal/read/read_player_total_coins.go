@@ -10,13 +10,13 @@ import (
 )
 
 type ReadPlayerTotalCoinsMsg struct {
-	PlayerName string `json:"player_persona"`
+	PersonaTag string `json:"player_persona"`
 }
 
 var PlayerTotalCoins = ecs.NewReadType[ReadPlayerTotalCoinsMsg]("player-total-coins", readPlayerTotalCoins)
 
-func getTotalCoins(playerName string) int {
-	return game.PlayerCoins[playerName]
+func getTotalCoins(personaTag string) int {
+	return game.PlayerCoins[personaTag]
 }
 
 func readPlayerTotalCoins(world *ecs.World, m []byte) ([]byte, error) {
@@ -31,11 +31,11 @@ func readPlayerTotalCoins(world *ecs.World, m []byte) ([]byte, error) {
 	msg := pkg.Body
 
 	// Check that the player exists
-	if _, contains := game.Players[msg.PlayerName]; !contains {
-		return nil, fmt.Errorf("ReadPlayerCoins: Player with given name not found")
+	if _, contains := game.Players[msg.PersonaTag]; !contains {
+		return nil, fmt.Errorf("ReadPlayerCoins: Player with given PersonaTag not found")
 	}
 
-	totalCoins := getTotalCoins(msg.PlayerName)
+	totalCoins := getTotalCoins(msg.PersonaTag)
 
 	// Return the component as bytes
 	returnMsg, err := json.Marshal(totalCoins)

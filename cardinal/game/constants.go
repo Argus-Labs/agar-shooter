@@ -78,7 +78,7 @@ var (
 
 	PlayerTree		= kd.New[*types.P](kd.O[*types.P]{ []*types.P{}, 2, 16, })
 	PlayerCoins		= make(map[string] int)// the current number of coins each player has
-	Players			= make(map[string] storage.EntityID) //players are names and components identified by strings; input into a map to make it easier to add and remove components
+	Players			= make(map[string] storage.EntityID) //players are personatags and components identified by strings; input into a map to make it easier to add and remove components
 	LevelCoins		= map[int] int {// maps from level to number of coins to next level
 		0: 0,
 		1: 20,

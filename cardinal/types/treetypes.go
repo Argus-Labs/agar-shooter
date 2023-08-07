@@ -5,8 +5,8 @@ import (
 )
 
 type P struct {
-	Point	vector.V
-	Name	string
+	Point		vector.V
+	PersonaTag	string
 }
 
 func (p *P) P() vector.V {
@@ -14,5 +14,5 @@ func (p *P) P() vector.V {
 }
 
 func (p *P) Equal(q *P) bool {
-	return vector.Within(p.P(), q.P()) && p.Name == q.Name
+	return vector.Within(p.P(), q.P()) && p.PersonaTag == q.PersonaTag
 }

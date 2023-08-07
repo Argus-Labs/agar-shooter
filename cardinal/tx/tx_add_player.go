@@ -5,7 +5,7 @@ import (
 )
 
 type AddPlayerMsg struct {
-	Name  string `json:"name"`
+	PersonaTag  string `json:"name"`
 	Coins int    `json:"coins"`
 }
 

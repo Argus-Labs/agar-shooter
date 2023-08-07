@@ -10,7 +10,7 @@ import (
 )
 
 type PlayerComponent struct {
-	Name string // username; ip for now
+	PersonaTag string // username/player Persona tag
 	Health int // current player health (cap enforced in update loop)
 	Coins int // how much money the player has
 	Weapon storage.EntityID// current player weapon; default is 0 for Melee
@@ -25,7 +25,7 @@ type PlayerComponent struct {
 var Player = ecs.NewComponentType[PlayerComponent]()
 
 func (p PlayerComponent) Simplify() types.BarePlayer {
-	return types.BarePlayer{p.Name, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum, p.Level} // update Simplify for weapons & extraction point
+	return types.BarePlayer{p.PersonaTag, p.Health, p.Coins, p.Loc.First, p.Loc.Second, p.IsRight, p.MoveNum, p.Level} // update Simplify for weapons & extraction point
 }
 
 func (p PlayerComponent) Testify(world *ecs.World) (types.TestPlayer, error) {
@@ -35,12 +35,12 @@ func (p PlayerComponent) Testify(world *ecs.World) (types.TestPlayer, error) {
 		return types.TestPlayer{}, fmt.Errorf("Cardinal: error fetching player weapon", err)
 	}
 
-	return types.TestPlayer{p.Name, p.Health, p.Coins, weapon.Val, p.Loc.First, p.Loc.Second}, nil
+	return types.TestPlayer{p.PersonaTag, p.Health, p.Coins, weapon.Val, p.Loc.First, p.Loc.Second}, nil
 }
 
 func (p PlayerComponent) String(world *ecs.World) (string, error) {
 	s := ""
-	s += "Name: " + p.Name + "\n"
+	s += "PersonaTag: " + p.PersonaTag + "\n"
 	s += "Health: " + strconv.Itoa(p.Health) + "\n"
 	s += "Coins: " + strconv.Itoa(p.Coins) + "\n"
 	weapon, err := Weapon.Get(world, p.Weapon)

@@ -73,7 +73,7 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 				})
 
 				if len(knn) > 0 {
-					if nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[0].Name]); err != nil {
+					if nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[0].PersonaTag]); err != nil {
 						return fmt.Errorf("Cardinal: player obtain: %w", err)
 					} else {
 						keep = keep && (Distance(nearestPlayerComp.Loc, newCoin) > consts.PlayerRadius + 1 + consts.CoinRadius)
@@ -126,7 +126,7 @@ func SpawnHealths(world *ecs.World) error { // spawn healths randomly over the b
 				})
 
 				if len(knn) > 0 {
-					if nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[0].Name]); err != nil {
+					if nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[0].PersonaTag]); err != nil {
 						return fmt.Errorf("Cardinal: player obtain: %w", err)
 					} else {
 						keep = keep && (Distance(nearestPlayerComp.Loc, newHealth) > consts.PlayerRadius + 1 + consts.HealthRadius)
@@ -154,13 +154,13 @@ func SpawnHealths(world *ecs.World) error { // spawn healths randomly over the b
 	return nil
 }
 
-func AddPlayer(world *ecs.World, playerName string, playerCoins int) error {
+func AddPlayer(world *ecs.World, personaTag string, playerCoins int) error {
 	// Check whether the player exists
-	if _, contains := game.Players[playerName]; contains {
-		return fmt.Errorf("Cardinal: cannot add player with duplicate name")
+	if _, contains := game.Players[personaTag]; contains {
+		return fmt.Errorf("Cardinal: cannot add player with duplicate PersonaTag")
 	}
 
-	game.PlayerCoins[playerName] = 0
+	game.PlayerCoins[personaTag] = 0
 
 	// Create the player
 	playerID, err := world.Create(components.Player)
@@ -169,7 +169,7 @@ func AddPlayer(world *ecs.World, playerName string, playerCoins int) error {
 		return fmt.Errorf("Error adding player to world:", err)
 	}
 
-	game.Players[playerName] = playerID
+	game.Players[personaTag] = playerID
 
 	// Set the component to the correct values
 	weaponID, err := world.Create(components.Weapon)
@@ -181,7 +181,7 @@ func AddPlayer(world *ecs.World, playerName string, playerCoins int) error {
 	})
 
 	components.Player.Set(world, playerID, components.PlayerComponent{
-		Name: playerName,
+		PersonaTag: personaTag,
 		Health: 100,
 		Coins: playerCoins,
 		Weapon: weaponID,
@@ -195,21 +195,21 @@ func AddPlayer(world *ecs.World, playerName string, playerCoins int) error {
 
 	// Add player to local PlayerTree
 	playerComp, err := components.Player.Get(world, playerID)
-	game.PlayerTree.Insert(&types.P{vector.V{playerComp.Loc.First, playerComp.Loc.Second}, playerComp.Name})
-	log.Debug().Msgf("Created player with name", playerComp.Name)
+	game.PlayerTree.Insert(&types.P{vector.V{playerComp.Loc.First, playerComp.Loc.Second}, playerComp.PersonaTag})
+	log.Debug().Msgf("Created player with PersonaTag", playerComp.PersonaTag)
 
 	return nil
 }
 
-func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerPair) error {
+func RemovePlayer(world *ecs.World, personaTag string, playerList []read.PlayerPair) error {
 	// Check that the player exists
-	if _, contains := game.Players[playerName]; !contains {
-		log.Error().Msg("player name does not exist")
+	if _, contains := game.Players[personaTag]; !contains {
+		log.Error().Msg("player PersonaTag does not exist")
 		return fmt.Errorf("Cardinal: cannot remove player that does not exist")
 	}
 
 	// Get the player id and component
-	player, err := read.GetPlayerByName(world, playerName)
+	player, err := read.GetPlayerByPersonaTag(world, personaTag)
 	if err != nil {
 		return err
 	}
@@ -264,9 +264,9 @@ func RemovePlayer(world *ecs.World, playerName string, playerList []read.PlayerP
 	}
 
 	// Delete the player from the local PlayerTree
-	delete(game.Players, player.Component.Name)
+	delete(game.Players, player.Component.PersonaTag)
 
-	point := &types.P{vector.V{player.Component.Loc.First, player.Component.Loc.Second}, player.Component.Name}
+	point := &types.P{vector.V{player.Component.Loc.First, player.Component.Loc.Second}, player.Component.PersonaTag}
 	game.PlayerTree.Remove(point.P(), point.Equal)
 
 	return err
@@ -411,7 +411,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 	kill := false
 	coins := false
 	var loc types.Pair[float64, float64]
-	var name string
+	var personaTag string
 	worldConstants := game.WorldConstants
 
 	if err := components.Weapon.Update(world, weapon, func(comp components.WeaponComponent) components.WeaponComponent {// updates weapon ammo and last attack time
@@ -433,7 +433,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 			}
 		}
 		kill = comp.Health <= 0
-		name = comp.Name
+		personaTag = comp.PersonaTag
 		loc = comp.Loc
 
 		return comp
@@ -457,7 +457,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 	// removes player from map if they die
 	if kill {
 		playerList := read.ReadPlayers(world)
-		if err := RemovePlayer(world, name, playerList); err != nil {
+		if err := RemovePlayer(world, personaTag, playerList); err != nil {
 			return err
 		}
 	}
