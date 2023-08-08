@@ -52,7 +52,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: Client/Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-${{ hashFiles('Client/Assets/**', 'Client/Packages/**', 'Client/ProjectSettings/**') }}
           restore-keys: |
             Library-
 
