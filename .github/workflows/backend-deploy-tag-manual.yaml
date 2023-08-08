@@ -37,7 +37,7 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
       - name: GCP - SCP compose files
         run: |
-          gcloud compute scp --zone "${{ env.GCP_ZONE }}" backend/docker-compose-staging.yml "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}":/tmp/docker-compose.yml --project "${{ env.GCP_PROJECT_ID }}" --quiet
+          gcloud compute scp --zone "${{ env.GCP_ZONE }}" docker-compose-staging.yml "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}":/tmp/docker-compose.yml --project "${{ env.GCP_PROJECT_ID }}" --quiet
       - name: GCP - Compute deploy exec
         id: compute-ssh-deploy
         uses: google-github-actions/ssh-compute@v0
@@ -68,6 +68,6 @@ jobs:
       - name: GCP - Deployment Output
         run: |-
           echo "----------------------------------------------"
-          echo "🎉 Dark Forest backend deployed: [${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}]"
+          echo "🎉 Agar Shooter backend deployed: [${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}]"
           printf "${{ steps.compute-ssh-check-deployment.outputs.stdout }}"
           echo "----------------------------------------------"

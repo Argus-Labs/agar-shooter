@@ -52,6 +52,7 @@ jobs:
             cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             git config --global --add url."git@github.com:".insteadOf "https://github.com/"
             bash ./start.sh build-only
+            docker compose up --detach --wait --wait-timeout 60
       - name: GCP - Check Deployments
         id: compute-ssh-check-deployment
         uses: google-github-actions/ssh-compute@v0
