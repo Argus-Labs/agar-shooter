@@ -360,7 +360,6 @@ public class GameManager : MonoBehaviour
 
                     break;
                 }
-                print("server feedback: " + content);
 
                 Player.ServerPayload serverPayload;
                 // serverPayload.isRight = resultDict["IsRight"] == "True";
@@ -569,7 +568,6 @@ public class GameManager : MonoBehaviour
 
     public void SendMessageToServer(int opcode, string message)
     {
-        print(message);
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode, message);
     }
 

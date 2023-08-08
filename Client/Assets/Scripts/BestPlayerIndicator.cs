@@ -35,7 +35,8 @@ public class BestPlayerIndicator : MonoBehaviour
             Vector3 newpos = Camera.main.ScreenToWorldPoint(indicatorPosition);
             newpos.z = 0;
             indicator.transform.position = newpos;
-            indicator.transform.LookAt(newpos-enemyToCenterVector,new Vector3(0,0,-1));
+            // indicator.transform.LookAt(newpos-enemyToCenterVector,new Vector3(0,0,-1));
+            indicator.transform.rotation = Quaternion.LookRotation(Vector3.forward, -enemyToCenterVector);
         }
         else
         {

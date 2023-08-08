@@ -124,12 +124,7 @@ public class Player : MonoBehaviour
         // update the player position on main thread
         transform.localPosition = pos;
         IsRight = isRight;
-        if (Input.GetKeyDown(KeyCode.L))
-        {
-            print("Play" +
-                  "");
-            animator.Play("levelUp");
-        }
+
     }
 
 
