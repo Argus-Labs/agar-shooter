@@ -14,8 +14,6 @@ replace (
 
 require (
 	github.com/argus-labs/world-engine/cardinal v0.1.18-alpha
-	github.com/downflux/go-geometry v0.15.0
-	github.com/downflux/go-kd v1.0.5
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	gotest.tools/v3 v3.5.0
 )
@@ -57,7 +55,6 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
-	github.com/downflux/go-pq v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ethereum/go-ethereum v1.12.0 // indirect
 	github.com/getsentry/sentry-go v0.21.0 // indirect

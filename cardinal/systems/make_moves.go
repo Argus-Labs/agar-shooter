@@ -1,90 +1,83 @@
 package systems
 
 import (
-	"math"
-	"fmt"
-
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
+	"github.com/argus-labs/new-game/read"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-
-	"github.com/downflux/go-geometry/nd/vector"
-	"github.com/downflux/go-kd/kd"
+	"github.com/rs/zerolog/log"
+	"math"
 )
 
 // moves player based on the coin-speed
 func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
-	attackQueue := make([]types.Triple[storage.EntityID, storage.EntityID, types.Triple[bool, string, string]], 0)
+	attackQueue := make([]types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
-	maxDepth := 0
-	//log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
+	log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
 
-	for personaTag, id := range game.Players {
-		tmpPlayer, err := components.Player.Get(world, id)
-
-		if err != nil {
-			return err
-		}
-
-		weapon, err := components.Weapon.Get(world, tmpPlayer.Weapon)
+	players := read.ReadPlayers(world)
+	for _, player := range players {
+		player1Id := player.ID
+		player1Persona := player.Component.PersonaTag
+		tmpPlayer, err := components.Player.Get(world, player1Id)
 
 		if err != nil {
 			return err
 		}
 
-		attackRange := game.WorldConstants.Weapons[weapon.Val].Range
 		prevLoc := tmpPlayer.Loc
 
-		// attacking players; each player attacks the closest player
-		depth := 0
-		knn := kd.KNN[*types.P](game.PlayerTree, vector.V{prevLoc.First, prevLoc.Second}, 2, func(q *types.P) bool {
-			depth++
-			return true
-		})
+		// attacking players; each player attacks the closest player TODO: change targetting system later
 
-		if maxDepth < depth { maxDepth = depth }
+		var (
+			minID                storage.EntityID
+			minDistance          float64
+			closestPlayerPersona string
+			left                 bool
+		)
 
-		if len(knn) > 1 {
-			nearestPlayerComp, err := components.Player.Get(world, game.Players[knn[1].PersonaTag])
-			left := tmpPlayer.Loc.First <= nearestPlayerComp.Loc.First
+		assigned := false
 
-			if err != nil {
-				return fmt.Errorf("Cardinal: error fetching player: %w", err)
+		for _, player := range players {
+			if player.ID != player1Id {
+				closestPlayer, err := components.Player.Get(world, player.ID)
+				if err != nil {
+					return err
+				}
+
+				dist := utils.Distance(closestPlayer.Loc, prevLoc)
+
+				if !assigned || minDistance > dist {
+					minID = player.ID
+					minDistance = dist
+					closestPlayerPersona = closestPlayer.PersonaTag
+					assigned = true
+					left = tmpPlayer.Loc.First <= closestPlayer.Loc.First
+				}
 			}
+		}
 
-			if utils.Distance(nearestPlayerComp.Loc, prevLoc) <= attackRange {
-				attackQueue = append(attackQueue, types.Triple[storage.EntityID, storage.EntityID, types.Triple[bool, string, string]]{
-					First: game.Players[knn[1].PersonaTag],
-					Second: tmpPlayer.Weapon,
-					Third: types.Triple[bool, string, string]{left, tmpPlayer.PersonaTag, nearestPlayerComp.PersonaTag},
-				})
-			}
+		if assigned && minDistance <= game.WorldConstants.Weapons[tmpPlayer.Weapon].Range {
+			log.Debug().Msgf("Player with name %s attacks player with name %s", player1Persona, closestPlayerPersona)
+			attackQueue = append(attackQueue, types.Triple[storage.EntityID, types.Weapon, types.Triple[bool, string, string]]{First: minID, Second: tmpPlayer.Weapon, Third: types.Triple[bool, string, string]{left, player1Persona, closestPlayerPersona}})
 		}
 
 		// moving players
 		loc := utils.Move(tmpPlayer)
 
-		point := &types.P{vector.V{prevLoc.First, prevLoc.Second}, personaTag}
-		game.PlayerTree.Remove(point.P(), point.Equal)
-		game.PlayerTree.Insert(&types.P{vector.V{loc.First, loc.Second}, personaTag})
+		delete(game.PlayerMap[utils.GetCell(prevLoc)], types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: prevLoc})
+		game.PlayerMap[utils.GetCell(loc)][types.Pair[storage.EntityID, types.Pair[float64, float64]]{First: player1Id, Second: loc}] = types.Pewp
 
 		hitCoins := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
-		hitHealth := make([]types.Pair[storage.EntityID, types.Triple[float64, float64, int]], 0)
 
 		for i := int(math.Floor(prevLoc.First / game.GameParams.CSize)); i <= int(math.Floor(loc.First/game.GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second / game.GameParams.CSize)); j <= int(math.Floor(loc.Second/game.GameParams.CSize)); j++ {
 				for coin, _ := range game.CoinMap[types.Pair[int, int]{First: i, Second: j}] {
 					if utils.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
 						hitCoins = append(hitCoins, coin)
-					}
-				}
-
-				for health, _ := range game.HealthMap[types.Pair[int, int]{i, j}] {
-					if utils.CoinProjDist(prevLoc, loc, health.Second) <= game.WorldConstants.PlayerRadius {
-						hitHealth = append(hitHealth, health)
 					}
 				}
 			}
@@ -100,41 +93,11 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			}
 		}
 
-		extraHealth := 0
-
-		for _, entityID := range hitHealth {
-			if healthVal, err := utils.RemoveHealth(world, entityID); err != nil {
-				return err
-			} else {
-				extraHealth += healthVal
-			}
-		}
-
-		// modifies player location and health
-		components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent {
-			//log.Debug().Msgf("Updating player location to: %v", loc)
+		// modifies player location
+		components.Player.Update(world, player1Id, func(comp components.PlayerComponent) components.PlayerComponent {
+			log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
-			game.PlayerCoins[personaTag] = comp.Coins
-
-			if _, goodLevel := game.LevelCoins[comp.Level]; goodLevel {
-				for game.LevelCoins[comp.Level] <= comp.Coins {
-					comp.Coins -= game.LevelCoins[comp.Level]
-					comp.Level++
-				}
-			}
-
-			comp.Health += extraHealth
-			if _, goodLevel := game.LevelHealth[comp.Level]; goodLevel {
-				if comp.Health > game.LevelHealth[comp.Level] {
-					comp.Health = game.LevelHealth[comp.Level]
-				}
-			} else {
-				if comp.Health > 100 {
-					comp.Health = 100
-				}
-				fmt.Println("Cardinal: level not in level maps")
-			}
 
 			return comp
 		})
@@ -144,10 +107,6 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 		if err := utils.Attack(world, triple.First, triple.Second, triple.Third.First, triple.Third.Second, triple.Third.Third); err != nil {
 			return err
 		}
-	}
-
-	if float64(maxDepth) > 1 + float64(game.WorldConstants.BalanceFactor) * math.Log(float64(len(game.Players))) {
-		game.PlayerTree.Balance()
 	}
 
 	return nil
