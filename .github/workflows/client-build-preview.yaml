@@ -6,6 +6,8 @@ env:
 
 on:
   pull_request:
+    paths:
+      - Client/**
     branches:
       - main
       - dev
