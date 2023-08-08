@@ -20,9 +20,6 @@ import (
 )
 
 func InitializeGame(world *ecs.World, gameParams types.Game) error {
-	//if World.stateIsLoaded {
-	//	return fmt.Errorf("already loaded state")
-	//}
 	rand.Seed(time.Now().UnixNano())
 	if gameParams.CSize == 0 {
 		return errors.New("Cardinal: CellSize is zero")
@@ -50,7 +47,6 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board until the coin cap has been met
 	consts := game.WorldConstants
 	coinsToAdd := math.Min(float64(game.MaxCoins()-game.TotalCoins), float64(consts.MaxCoinsPerTick))
-	//fmt.Println("Coins to add:", coinsToAdd, game.MaxCoins(), game.TotalCoins)
 
 	for coinsToAdd > 0 { // generate coins if we haven't reached the max density
 		newCoin := types.Triple[float64, float64, int]{consts.CoinRadius + rand.Float64()*(game.GameParams.Dims.First-2*consts.CoinRadius), consts.CoinRadius + rand.Float64()*(game.GameParams.Dims.Second-2*consts.CoinRadius), 1} // random location over range where coins can actually be generated
@@ -92,18 +88,12 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 		}
 	}
 
-	// create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
-	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
-	// maybe make this a system so it can be run async
-
-	//fmt.Println("SpawnCoins:", game.TotalCoins)
 	return nil
 }
 
 func SpawnHealths(world *ecs.World) error { // spawn healths randomly over the board until the coin cap has been met
 	consts := game.WorldConstants
 	healthToAdd := math.Min(float64(game.MaxHealth()-game.TotalHealth), float64(consts.MaxHealthPerTick))
-	//fmt.Println("Health to add:", healthToAdd)
 
 	for healthToAdd > 0 { // generate coins if we haven't reached the max density
 		newHealth := types.Triple[float64, float64, int]{consts.HealthRadius + rand.Float64()*(game.GameParams.Dims.First-2*consts.HealthRadius), consts.HealthRadius + rand.Float64()*(game.GameParams.Dims.Second-2*consts.HealthRadius), game.WorldConstants.HealthPackValue} // random location over range where coins can actually be generated
@@ -144,12 +134,6 @@ func SpawnHealths(world *ecs.World) error { // spawn healths randomly over the b
 			game.TotalHealth++
 		}
 	}
-
-	// create mutex to prevent concurrent ticks from causing problems; iterating through map above takes too much time to do, so when the second tick is called and iteration occurs, the first tick is still trying to add elements to the map
-	// also limit the number of coins in each cell of the coinmap and the size of the map so we don't have iteration problems
-	// maybe make this a system so it can be run async
-
-	//fmt.Println("SpawnHealths:", game.TotalHealth)
 
 	return nil
 }

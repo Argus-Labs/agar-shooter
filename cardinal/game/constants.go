@@ -66,7 +66,7 @@ var (
 		HealthRadius: 0.5,
 		MaxCoinsPerTick: 100,
 		MaxHealthPerTick: 100,
-		HealthDensity: 0.1,// number of health packs per square unit
+		HealthDensity: 0.025,// number of health packs per square unit
 		MaxEntities: 4607704,
 		InitRepeatSpawn: 10,
 		BalanceFactor: 3,// multiple of min tree depth after which we should rebalance

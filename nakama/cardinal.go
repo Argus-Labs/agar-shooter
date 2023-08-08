@@ -35,6 +35,7 @@ var (
 	ErrorPersonaSignerUnknown   = errors.New("persona signer is unknown.")
 )
 
+// Takes the Cardinal address variable and loads it into memory
 func initCardinalAddress() error {
 	globalCardinalAddress = os.Getenv(EnvCardinalAddr)
 	if globalCardinalAddress == "" {
@@ -43,6 +44,7 @@ func initCardinalAddress() error {
 	return nil
 }
 
+// Takes an endpoint name and appends it to the Cardinal address variable to produce a URL with which to access the endpoint
 func makeURL(resource string) string {
 	return fmt.Sprintf("%s/%s", globalCardinalAddress, resource)
 }
@@ -66,6 +68,7 @@ func cardinalListEndpoints(path string) ([]string, error) {
 
 }
 
+// Produces a list of all Cardinal endpoints
 func cardinalListAllEndpoints() ([]string, error) {
 	var endpoints []string
 	txs, err := cardinalListEndpoints(listTxEndpointsEndpoint)
@@ -81,6 +84,7 @@ func cardinalListAllEndpoints() ([]string, error) {
 	return endpoints, nil
 }
 
+// Creates a Persona for a given PersonaTag/name
 func cardinalCreatePersona(ctx context.Context, nk runtime.NakamaModule, personaTag string) (tick uint64, err error) {
 	createPersonaTx := struct {
 		PersonaTag    string

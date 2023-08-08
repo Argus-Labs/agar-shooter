@@ -28,21 +28,26 @@ func newMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime
 	return &Match{-1}, nil
 }
 
+// Initializes the Nakama match
 func (m *Match) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, params map[string]interface{}) (interface{}, int, string) {
 	tickRate := 10
 	label := ""
 
-	time.Sleep(5 * time.Second)
-
 	return MatchState{}, tickRate, label
 }
 
+// Checks whether a client that wants to join the game is allowed to join --- called when the client attempts to join the match; if the result is true, MatchJoin is called on the presence
 func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
 	_, contains := Presences[presence.GetUserId()] // whether user should be accepted
+
+	if contains {
+		dispatcher.BroadcastMessage(REJECT, []byte(""), []runtime.Presence{presence}, nil, true)
+	}
 
 	return MatchState{}, !contains, ""
 }
 
+// Called after MatchJoinAttempt to add the player to the Nakama match
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
@@ -55,8 +60,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if _, err := cardinalCreatePersona(ctx, nk, p.GetUserId()); err != nil {
 			return err
 		}
-		// Wait for the persona to be crearted in cardinal, 200ms = 2 ticks
-		time.Sleep(time.Millisecond * 200)
 
 		// Call tx-add-player with newly created persona
 		logger.Debug(fmt.Sprint("Nakama: Add Player, JSON:", "{\"PersonaTag\":\""+p.GetUserId()+"\",\"Coins\":0}"))
@@ -94,6 +97,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 	return MatchState{}
 }
 
+// Called when a player is kicked out of the game for dying
 func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
 	if Presences == nil {
 		return fmt.Errorf("Nakama: no presence exists")
@@ -123,6 +127,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	return MatchState{}
 }
 
+// Processes messages (the list of messages sent from each player to Nakama) and broadcasts necessary information to each player
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
 	for _, m := range messages {
 		switch m.GetOpCode() {
@@ -138,17 +143,17 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	kickList := make([]string, 0)
 	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
-		// Check that it's been 500ms since the player joined, before querying for their state
-		if joinTimeMap[pp.GetUserId()].Add(time.Millisecond * 500).After(time.Now()) {
+		// Check that it's been a second since the player joined before querying for their state to give Cardinal time to add them and give them a buffer
+		if joinTimeMap[pp.GetUserId()].Add(time.Second).After(time.Now()) {
 			continue
 		}
 
 		// Create request body
 		reqBody := PlayerPersonaRequest{PlayerPersona: pp.GetUserId()}
 		reqJSON, err := json.Marshal(reqBody)
-		req := string(reqJSON)//"{\"player_name\":\"" + pp.GetUserId() + "\"}"
+		req := string(reqJSON)
 		if err != nil {
-			return err// Or appropriate error handling
+			return err
 		}
 		// Get player state
 		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, req)

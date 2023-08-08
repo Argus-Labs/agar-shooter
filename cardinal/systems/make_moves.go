@@ -20,7 +20,6 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	attackQueue := make([]types.Triple[storage.EntityID, storage.EntityID, types.Triple[bool, string, string]], 0)
 	game.Attacks = make([]types.AttackTriple, 0)
 	maxDepth := 0
-	//log.Debug().Msgf("Entered ProcessMovesSystem, world.CurrentTick: %d", world.CurrentTick())
 
 	for personaTag, id := range game.Players {
 		tmpPlayer, err := components.Player.Get(world, id)
@@ -112,7 +111,6 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		// modifies player location and health
 		components.Player.Update(world, id, func(comp components.PlayerComponent) components.PlayerComponent {
-			//log.Debug().Msgf("Updating player location to: %v", loc)
 			comp.Loc = loc
 			comp.Coins += extraCoins
 			game.PlayerCoins[personaTag] = comp.Coins

@@ -3,7 +3,6 @@ package systems
 import (
 	"fmt"
 
-	//msg "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )

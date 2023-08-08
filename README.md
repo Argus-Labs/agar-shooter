@@ -21,6 +21,10 @@ Note, if any server endpoints have been added or removed, Nakama must be relaunc
 
 Once Nakama and the gameplay server are running, visit `localhost:7351` to access Nakama. For local development, use `admin:password` as your login credentials. The Account tab on the left will give you access to a valid account ID. The API Explorer tab on the left will allow you to make requests to the gameplay server.
 
+## Interaction Between Client, Nakama, & Cardinal
+
+To correctly use the client, Nakama, and the server together, we route client requests to Nakama using the Nakama API and server requests/responses to requests to Nakama using the Nakama Go API. Nakama handles processing and rerouting the requests between client and server through a game-based response system. Nakama first initializes all Cardinal endpoints, then starts a MatchLoop function that processes all client requests sent to Nakama since the last Nakama tick and runs the specified Cardinal functions (for now, we trigger each Cardinal tick through Nakama because if we have Cardinal and Nakama tick separately, minor timing differences causes some jitter when playing the game due to each Cardinal tick not being perfectly in sync with each Nakama tick). Finally, Nakama also handles player joins and leaves through asynchronous PlayerJoin/PlayerJoinAttempt and PlayerLeave functions. While these functions are called asynchronously, player joins and leaves are processed Cardinal-side during a game tick.
+
 ## Structure 
 
 ```bash

@@ -78,7 +78,7 @@ func main() {
 	}
 	utils.InitializeGame(world, gameSettings)
 
-	// Start game loop as a goroutine
+	// Start game loop as a goroutine --- this is currently being handled by Nakama
 	//go utils.GameLoop(world)
 
 	// Register handlers

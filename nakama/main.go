@@ -27,7 +27,7 @@ const (
 	TOTAL_COINS       int64 = 8
 	NICKNAME          int64 = 9
 	HEALTH            int64 = 10
-	OUT_OF_RANGE      int64 = 11
+	REJECT		      int64 = 11
 	UNIMPLEMENTED     int64 = 12
 	INTERNAL          int   = 13
 	UNAVAILABLE       int64 = 14
@@ -225,8 +225,9 @@ var (
 	globalNamespace = "agar-shooter"
 )
 
+// Initializes all functions and variables for Nakama: fetches all Cardinal endpoints, creates a Nakama match using the MatchCreate function, which calls newMatch, then passes the result to MatchInit
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error { // called when connection is established
-	time.Sleep(1*time.Second)
+	time.Sleep(1*time.Second) // This is necessary to allow Cardinal to load before Nakama tries to fetch the list of endpoints
 	if err := initCardinalAddress(); err != nil {
 		return err
 	}	
@@ -246,6 +247,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	return nil
 }
 
+// Returns a function that takes a request and sends it to the given endpoint
 func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 		logger.Debug("Got request for %q, with payload: %q", currEndpoint, payload)
@@ -304,6 +306,7 @@ func initCardinalEndpoints(logger runtime.Logger, initializer runtime.Initialize
 	return nil
 }
 
+// Converts a payload/message into a signed payload
 func makeSignedPayload(ctx context.Context, nk runtime.NakamaModule, payload string) (io.Reader, error) {
 	personaTag := nakamaPersonaTag
 
@@ -324,6 +327,7 @@ func makeSignedPayload(ctx context.Context, nk runtime.NakamaModule, payload str
 	return bytes.NewReader(buf), nil
 }
 
+// Debug function
 func logCode(logger runtime.Logger, code int, format string, v ...interface{}) (string, error) {
 	err := fmt.Errorf(format, v...)
 	logger.Error(err.Error())
@@ -331,6 +335,7 @@ func logCode(logger runtime.Logger, code int, format string, v ...interface{}) (
 	return "", runtime.NewError(err.Error(), code)
 }
 
+// Debug function
 func logError(logger runtime.Logger, format string, v ...interface{}) (string, error) {
 	err := fmt.Errorf(format, v...)
 	logger.Error(err.Error())
