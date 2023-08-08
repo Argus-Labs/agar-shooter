@@ -72,48 +72,24 @@ var (
 		BalanceFactor: 3,// multiple of min tree depth after which we should rebalance
 	}
 
-	GameParams		types.Game
-	CoinMap    		= make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of coin lists
-	HealthMap  		= make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of healthpack lists
+	GameParams				types.Game
+	CoinMap					= make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of coin lists
+	HealthMap				= make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of healthpack lists
 
-	PlayerTree		= kd.New[*types.P](kd.O[*types.P]{ []*types.P{}, 2, 16, })
-	PlayerCoins		= make(map[string] int)// the current number of coins each player has
-	Players			= make(map[string] storage.EntityID) //players are personatags and components identified by strings; input into a map to make it easier to add and remove components
-	LevelCoins		= map[int] int {// maps from level to number of coins to next level
-		0: 0,
-		1: 20,
-		2: 30,
-		3: 40,
-		4: 50,
-		5: 60,
-		6: 70,
-		7: 80,
-		8: 90,
-		9: 100,
+	PlayerTree				= kd.New[*types.P](kd.O[*types.P]{ []*types.P{}, 2, 16, })
+	PlayerCoins				= make(map[string] int)// the current number of coins each player has
+	Players					= make(map[string] storage.EntityID) //players are personatags and components identified by strings; input into a map to make it easier to add and remove components
+	LevelCoinParameters		= []float64{10, 10, 100}
+	LevelHealthParameters	= []float64{100, 10, 1000}
+	LevelAttackParameters	= []float64{0, 0.05, 1}
+	LevelCoins				= func(level int) int {
+		return int(math.Min(LevelCoinParameters[0] + LevelCoinParameters[1]*float64(level), LevelCoinParameters[2]))
 	}
-	LevelHealth		= map[int] int{// maps from level to max health
-		0: 100,
-		1: 110,
-		2: 120,
-		3: 130,
-		4: 140,
-		5: 150,
-		6: 160,
-		7: 170,
-		8: 180,
-		9: 190,
+	LevelHealth				= func(level int) int {
+		return int(math.Min(LevelHealthParameters[0] + LevelHealthParameters[1]*float64(level), LevelHealthParameters[2]))
 	}
-	LevelAttack		= map[int] float64 {// maps from level to damage bonus
-		0: 0,
-		1: 0.05,
-		2: 0.1,
-		3: 0.15,
-		4: 0.2,
-		5: 0.25,
-		6: 0.3,
-		7: 0.35,
-		8: 0.4,
-		9: 0.45,
+	LevelAttack				= func(level int) float64 {
+		return math.Min(LevelAttackParameters[0] + LevelAttackParameters[1]*float64(level), LevelAttackParameters[2])
 	}
 	Width, Height				int
 	CoinMutex					= &sync.RWMutex{}

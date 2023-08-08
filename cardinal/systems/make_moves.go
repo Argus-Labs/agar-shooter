@@ -115,23 +115,14 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			comp.Coins += extraCoins
 			game.PlayerCoins[personaTag] = comp.Coins
 
-			if _, goodLevel := game.LevelCoins[comp.Level]; goodLevel {
-				for game.LevelCoins[comp.Level] <= comp.Coins {
-					comp.Coins -= game.LevelCoins[comp.Level]
-					comp.Level++
-				}
+			for game.LevelCoins(comp.Level) <= comp.Coins {
+				comp.Coins -= game.LevelCoins(comp.Level)
+				comp.Level++
 			}
 
 			comp.Health += extraHealth
-			if _, goodLevel := game.LevelHealth[comp.Level]; goodLevel {
-				if comp.Health > game.LevelHealth[comp.Level] {
-					comp.Health = game.LevelHealth[comp.Level]
-				}
-			} else {
-				if comp.Health > 100 {
-					comp.Health = 100
-				}
-				fmt.Println("Cardinal: level not in level maps")
+			if comp.Health > game.LevelHealth(comp.Level) {
+				comp.Health = game.LevelHealth(comp.Level)
 			}
 
 			return comp

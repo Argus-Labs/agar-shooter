@@ -169,12 +169,12 @@ func AddPlayer(world *ecs.World, personaTag string, playerCoins int) error {
 		Health: 100,
 		Coins: playerCoins,
 		Weapon: weaponID,
-		Loc: types.Pair[float64, float64]{0, 0},
+		Loc: types.Pair[float64, float64]{game.WorldConstants.PlayerRadius + rand.Float64()*(game.GameParams.Dims.First-2*game.WorldConstants.PlayerRadius), game.WorldConstants.PlayerRadius + rand.Float64()*(game.GameParams.Dims.Second-2*game.WorldConstants.PlayerRadius)},
 		Dir: types.Pair[float64, float64]{0, 0},
 		LastMove: types.Pair[float64, float64]{0, 0},
 		IsRight: false,
 		MoveNum: -1,
-		Level: 0,
+		Level: 1,
 	})
 
 	// Add player to local PlayerTree
@@ -413,7 +413,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 			coins = true
 		} else {
 			if attacker_, err := components.Player.Get(world, game.Players[attacker]); err == nil {
-				comp.Health -= int(math.Floor(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack[attacker_.Level])))
+				comp.Health -= int(math.Floor(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack(attacker_.Level))))
 			}
 		}
 		kill = comp.Health <= 0

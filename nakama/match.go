@@ -94,7 +94,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if gameParameters, err := rpcEndpoints["read-game-parameters"](ctx, logger, db, nk, "{}"); err != nil { // assume that an error here means the player is dead
 			return err
 		} else { // send everyone player state & send player its nearby coins
-			fmt.Println("game parameters:", gameParameters)
 			if err = dispatcher.BroadcastMessage(PARAMS, []byte(gameParameters), []runtime.Presence{p}, nil, true); err != nil {
 				return err
 			}
