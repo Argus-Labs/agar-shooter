@@ -2,11 +2,12 @@ package read
 
 import (
 	"encoding/json"
+
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
-type ReadAttacksMsg struct{}
+type ReadAttacksMsg struct {}
 
 var ReadAttacks = ecs.NewReadType[ReadAttacksMsg]("attacks", readAttacks)
 

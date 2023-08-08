@@ -3,9 +3,10 @@ package utils
 import (
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog/log"
 	"net/http"
 	"reflect"
+
+	"github.com/rs/zerolog/log"
 )
 
 func Must(err error) {

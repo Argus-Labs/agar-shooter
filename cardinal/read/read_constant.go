@@ -3,6 +3,7 @@ package read
 import (
 	"encoding/json"
 	"errors"
+
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )

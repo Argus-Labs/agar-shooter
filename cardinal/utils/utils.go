@@ -13,8 +13,8 @@ import (
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-	"github.com/rs/zerolog/log"
 	
+	"github.com/rs/zerolog/log"
 	"github.com/downflux/go-geometry/nd/vector"
 	"github.com/downflux/go-kd/kd"
 )

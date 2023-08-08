@@ -6,7 +6,7 @@ import (
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
-type ReadTickMsg struct{}
+type ReadTickMsg struct {}
 
 var ReadTick = ecs.NewReadType[ReadTickMsg]("tick", readTick)
 

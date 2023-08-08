@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
 type Config struct {

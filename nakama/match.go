@@ -90,6 +90,15 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		NameTakenMap[name] = true
 		NameToNickname[p.GetUserId()] = name
+		
+		if gameParameters, err := rpcEndpoints["read-game-parameters"](ctx, logger, db, nk, "{}"); err != nil { // assume that an error here means the player is dead
+			return err
+		} else { // send everyone player state & send player its nearby coins
+			fmt.Println("game parameters:", gameParameters)
+			if err = dispatcher.BroadcastMessage(PARAMS, []byte(gameParameters), []runtime.Presence{p}, nil, true); err != nil {
+				return err
+			}
+		}
 
 		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name, "; result: ", result)
 	}
@@ -156,9 +165,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 		// Get player state
-		playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, req)
+		
 
-		if err != nil { // assume that an error here means the player is dead
+		if playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, req); err != nil { // assume that an error here means the player is dead
 			kickList = append(kickList, pp.GetUserId())
 		} else { // send everyone player state & send player its nearby coins
 			if err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true); err != nil { // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs

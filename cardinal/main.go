@@ -53,6 +53,7 @@ func main() {
 		read.ReadAttacks,
 		read.PlayerHealths,
 		read.PlayerTotalCoins,
+		read.GameParameters,
 		read.ReadTick,
 	))
 

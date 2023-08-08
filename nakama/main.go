@@ -16,24 +16,24 @@ import (
 )
 
 const (
-	LOCATION          int64 = 0
-	COINS             int64 = 1
-	REMOVE            int64 = 2
-	ATTACKS           int64 = 3
-	DEADLINE_EXCEEDED int64 = 4
-	DED               int64 = 5
-	TESTADDHEALTH     int64 = 6
-	EXTRACTION_POINT  int64 = 7
-	TOTAL_COINS       int64 = 8
-	NICKNAME          int64 = 9
-	HEALTH            int64 = 10
-	REJECT		      int64 = 11
-	UNIMPLEMENTED     int64 = 12
-	INTERNAL          int   = 13
-	UNAVAILABLE       int64 = 14
-	DATA_LOSS         int64 = 15
-	UNAUTHENTICATED   int64 = 16
-	MOVE              int64 = 17
+	LOCATION			int64 = 0
+	COINS				int64 = 1
+	REMOVE				int64 = 2
+	ATTACKS				int64 = 3
+	DEADLINE_EXCEEDED	int64 = 4
+	DED					int64 = 5
+	TESTADDHEALTH		int64 = 6
+	EXTRACTION_POINT	int64 = 7
+	TOTAL_COINS			int64 = 8
+	NICKNAME			int64 = 9
+	HEALTH				int64 = 10
+	REJECT				int64 = 11
+	UNIMPLEMENTED		int64 = 12
+	INTERNAL			int   = 13
+	PARAMS				int64 = 14
+	DATA_LOSS			int64 = 15
+	UNAUTHENTICATED		int64 = 16
+	MOVE				int64 = 17
 )
 
 const (
