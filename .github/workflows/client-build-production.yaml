@@ -21,7 +21,6 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: Client
     runs-on: ubuntu-latest
     steps:
       # Build
@@ -32,7 +31,7 @@ jobs:
         run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
 
       - name: Restore LFS Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: lfs-cache
         with:
           path: .git/lfs
@@ -45,12 +44,14 @@ jobs:
           git reset --hard
 
       - name: Library Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
-          path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          path: Client/Library
+          key: Library-${{ hashFiles('Client/Assets/**', 'Client/Packages/**', 'Client/ProjectSettings/**') }}
           restore-keys: |
             Library-
+
+      - run: sudo chown -R $USER ./
 
       - name: Build Project
         uses: game-ci/unity-builder@v2
@@ -59,6 +60,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
+          projectPath: Client
           targetPlatform: WebGL
 
       - name: Purge Stale Artifacts
@@ -75,17 +77,23 @@ jobs:
           path: ./build/WebGL/WebGL
 
       # Deploy
-      - name: Copy Vercel Config
-        uses: canastro/copy-action@master
-        with:
-          source: .github/vercel.json
-          target: ./build/WebGL/WebGL
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
 
-      - name: Deploy
-        uses: s0/git-publish-subdir-action@develop
-        env:
-          REPO: self
-          BRANCH: build/production
-          FOLDER: ./build/WebGL/WebGL
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MESSAGE: Publish production build - {sha}
+      - run: sudo chown $USER ./build/WebGL/WebGL
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL
+
+      - name: Deploy Project Artifacts to Vercel
+        working-directory: ./build/WebGL/WebGL
+        id: vercel-deploy-results
+        run: |
+          vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}  2>&1 | tee output.txt
+          echo ":mag: $(cat output.txt  | grep Inspect)"
+          echo ":globe_with_meridians: $(cat output.txt  | grep Production)"
