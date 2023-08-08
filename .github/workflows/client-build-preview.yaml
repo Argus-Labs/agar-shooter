@@ -1,4 +1,4 @@
-name: Game CI
+name: Game Client
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   client-build:
-    name: PR Preview
+    name: Build Preview
     defaults:
       run:
         shell: bash
