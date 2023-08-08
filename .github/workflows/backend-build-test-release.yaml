@@ -6,11 +6,11 @@ on:
   pull_request:
     branches:
       - main
-      - develop
+      - dev
   push:
     branches:
       - main
-      - develop
+      - dev
     tags:
       - 'v*.*.*'
 
