@@ -31,5 +31,3 @@ func (t Triple[float64, any, void]) GetFirst() float64 {
 func (t Triple[any, float64, void]) GetSecond() float64 {
 	return t.Second
 }
-
-type Weapon int

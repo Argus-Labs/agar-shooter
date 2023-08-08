@@ -1,27 +1,20 @@
-﻿using System;
-using UnityEngine;
-using UnityEngine.Serialization;
+﻿using UnityEngine;
 
-public class BestPlayerIndicator : MonoBehaviour
+public class ExtractionPointIndicator : MonoBehaviour
 {
-    public Transform bestPlayerTransform;
+    public Transform extractionPointTransform;
     public Renderer extractionPointSpriteRenderer;
     public GameObject indicator;
 
     public void SetExtractPoint(Transform extractPoint,Renderer spriteRenderer)
     {
-        this.enabled= true;
-        bestPlayerTransform = extractPoint;
+        extractionPointTransform = extractPoint;
         extractionPointSpriteRenderer = spriteRenderer;
     }
 
     private void LateUpdate()
     {
-        if (bestPlayerTransform == null)
-        {
-            return;
-        }
-        Vector3 extractionPointScreenPos = Camera.main.WorldToScreenPoint(bestPlayerTransform.position);
+        Vector3 extractionPointScreenPos = Camera.main.WorldToScreenPoint(extractionPointTransform.position);
         Vector3 screenCenter = new Vector3(Screen.width, Screen.height, 0) / 2f;
         Vector3 enemyToCenterVector = screenCenter - extractionPointScreenPos;
         if (!extractionPointSpriteRenderer.isVisible)
@@ -35,7 +28,6 @@ public class BestPlayerIndicator : MonoBehaviour
             Vector3 newpos = Camera.main.ScreenToWorldPoint(indicatorPosition);
             newpos.z = 0;
             indicator.transform.position = newpos;
-            indicator.transform.LookAt(newpos-enemyToCenterVector,new Vector3(0,0,-1));
         }
         else
         {
@@ -43,14 +35,6 @@ public class BestPlayerIndicator : MonoBehaviour
             {
                 indicator.SetActive(false);
             }
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (indicator!=null)
-        {
-            indicator.SetActive(false);
         }
     }
 

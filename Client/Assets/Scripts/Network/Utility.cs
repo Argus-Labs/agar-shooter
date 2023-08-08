@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 public static class Utility
@@ -9,8 +8,8 @@ public static class Utility
         get
         {
             var deviceId = "";
-
-
+ 
+ 
 #if UNITY_EDITOR
             deviceId = "editordasdwdasdsadsadwaedasdwa";
 
@@ -23,16 +22,5 @@ public static class Utility
 #endif
             return deviceId;
         }
-    }
-
-    [DllImport("__Internal")]
-    private static extern bool IsMobile();
-
-    public static bool WebglIsMobile()
-    {
-#if !UNITY_EDITOR && UNITY_WEBGL
-             return IsMobile();
-#endif
-        return false;
     }
 }

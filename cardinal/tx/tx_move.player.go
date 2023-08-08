@@ -5,14 +5,14 @@ import (
 )
 
 type MovePlayerMsg struct {
-	TargetPlayerTag		    string  `json:"target_player_tag"`
-	PlayerID				string  `json:"playerID"`
-	Up						bool    `json:"up"`
-	Down					bool    `json:"down"`
-	Left					bool    `json:"left"`
-	Right					bool    `json:"right"`
-	Input_sequence_number	int		`json:"input_sequence_number"`
-	Delta					float64	`json:"delta"`
+	TargetPlayerTag     string  `json:"target_player_tag"`
+	PlayerID            string  `json:"playerID"`
+	Up                  bool    `json:"up"`
+	Down                bool    `json:"down"`
+	Left                bool    `json:"left"`
+	Right               bool    `json:"right"`
+	InputSequenceNumber int     `json:"input_sequence_number"`
+	Delta               float64 `json:"delta"`
 }
 
 var TxMovePlayer = ecs.NewTransactionType[MovePlayerMsg]("move-player")

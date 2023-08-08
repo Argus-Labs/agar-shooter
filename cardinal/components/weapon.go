@@ -7,9 +7,8 @@ import (
 
 type WeaponComponent struct {
 	Loc types.Pair[float64, float64]
-	Val types.Weapon// weapon type
-	Ammo int// number of attacks left
-	LastAttack int64// time of last attack
+	Val types.Weapon // weapon type; TODO: implement ammo later outside of weapon component
+	// cooldown, ammo, damage, range
 }
 
 var Weapon = ecs.NewComponentType[WeaponComponent]()

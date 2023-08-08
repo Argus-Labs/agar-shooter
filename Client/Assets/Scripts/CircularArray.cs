@@ -22,6 +22,7 @@ public class CircularArray<T>
     {
         if (count == array.Length)
         {
+            // 扩容数组
             ResizeArray();
         }
 

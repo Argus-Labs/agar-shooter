@@ -14,36 +14,32 @@ public class GameManager : MonoBehaviour
     {
         playerStatus = 0,
         coinsInfo = 1,
-        otherPlayerDie = 2,
         attack = 3,
         die = 5,
         addHealth = 6,
         playerName = 9,
-        healthPackInfo =10,
         playerMove = 17,
     }
 
     struct ServerPacket
     {
-        public string PersonaTag;
+        public string Name;
         public int Health;
         public int Coins;
         public float LocX;
         public float LocY;
         public bool IsRight;
         public int InputNum;
-        public int Level;
 
         public ServerPacket(string name, int health, int coins, int locX, int locY, bool isRight, int inputNum)
         {
-            PersonaTag = name;
+            Name = name;
             Health = health;
             Coins = coins;
             LocX = locX;
             LocY = locY;
             IsRight = isRight;
             InputNum = inputNum;
-            Level = 0;
         }
     }
 
@@ -60,12 +56,6 @@ public class GameManager : MonoBehaviour
         public float Y;
         public int Value;
     }
-    struct HealthPack
-    {
-        public float X;
-        public float Y;
-        public int Value;
-    }
 
     struct PlayerName
     {
@@ -76,7 +66,6 @@ public class GameManager : MonoBehaviour
     public bool gameInitialized;
     public RemotePlayer prefab;
     private Dictionary<string, RemotePlayer> otherPlayers;
-    public List<NakamaConnection> nakamaConnectionCandidates;
     public NakamaConnection nakamaConnection;
     public Player player;
     public string UserId;
@@ -91,9 +80,7 @@ public class GameManager : MonoBehaviour
     public Transform coinsParent;
     public DamageTextSpawner dmgTextSpawner;
     public AttackAnimSpawner attackAnimSpawner;
-    public List<GameObject> healthPacks;
-    public GameObject healthPackPrefab;
-    public Transform healthPackParent;
+
 
     #endregion
    
@@ -122,30 +109,16 @@ public class GameManager : MonoBehaviour
 
     #endregion
 
-    #region Input
-    
-    public GameObject virtualJoystick;
-
-    #endregion
-
-    #region BestPlayer
-
-    public BestPlayerIndicator bestPlayerIndicator;
-
-    #endregion
-
     // Start is called before the first frame update
     private void Awake()
     {
         // let the game run 60fps
-        Application.targetFrameRate = 15;
-        
+        Application.targetFrameRate = 59;
     }
 
     void Start()
     {
         introScreen.gameObject.SetActive(true);
-        virtualJoystick.SetActive(Utility.WebglIsMobile());
     }
 
     public async void StartGame()
@@ -160,12 +133,7 @@ public class GameManager : MonoBehaviour
             SpriteRenderer temp = Instantiate(coinPrefab, coinsParent);
             temp.gameObject.SetActive(false);
             coins.Add(temp);
-            var healthPack = Instantiate(healthPackPrefab, healthPackParent);
-            healthPack.SetActive(false);
-            healthPacks.Add(healthPack);
         }
-
-        
 
         // nakamaConnection.socket.ReceivedMatchmakerMatched += m => mainThread.Enqueue(() => OnReceivedMatchmakerMatched(m));
         nakamaConnection.socket.ReceivedMatchPresence += m => mainThread.Enqueue(() => OnReceivedMatchPresence(m));
@@ -231,57 +199,7 @@ public class GameManager : MonoBehaviour
             {
                 bestScore = player.Coin;
             }
-
-            RemotePlayer bestPlayerPos =  FindTheBestPlayerPos();
-            if (bestPlayerPos == null)
-            {
-                bestPlayerIndicator.enabled = false;
-                return;
-            }
-            bestPlayerIndicator.SetExtractPoint(bestPlayerPos.transform,bestPlayerPos.body);
         }
-    }
-
-    private RemotePlayer FindTheBestPlayerPos()
-    {
-        // based on the level if level tie, use coin to find the best position
-        // higher level, higher coin
-        RemotePlayer bestPlayer = null;
-        int bestLevel = 0;
-        int bestCoin = -1;
-        
-        foreach (KeyValuePair<string, RemotePlayer> otherPlayer in otherPlayers)
-        {
-            if (otherPlayer.Value.currLevel > bestLevel)
-            {
-                bestLevel = otherPlayer.Value.currLevel;
-                bestPlayer = otherPlayer.Value;
-                bestCoin = otherPlayer.Value.coin;
-            }
-            else if (otherPlayer.Value.currLevel == bestLevel)
-            {
-                if (otherPlayer.Value.coin > bestCoin)
-                {
-                    bestCoin = otherPlayer.Value.coin;
-                    bestPlayer = otherPlayer.Value;
-                }
-            }
-        }
-        //compare with the player itself
-        if (player.currLevel > bestLevel)
-        {
-            return null;
-        }
-        if (player.currLevel == bestLevel)
-        {
-            if (player.Coin > bestCoin)
-            {
-                return null;
-            }
-        }
-        return bestPlayer;
-        
-       
     }
 
     private void OnApplicationQuit()
@@ -330,37 +248,34 @@ public class GameManager : MonoBehaviour
                 }
 
                 // handle other player
-                if (packet.PersonaTag != UserId)
+                if (packet.Name != UserId)
                 {
                     // print("content: " + content);
-                    if (!otherPlayers.ContainsKey(packet.PersonaTag))
+                    if (!otherPlayers.ContainsKey(packet.Name))
                     {
                         RemotePlayer newPlayer = Instantiate(prefab, Vector3.one * -1f, quaternion.identity);
-                        otherPlayers.Add(packet.PersonaTag, newPlayer);
+                        otherPlayers.Add(packet.Name, newPlayer);
                         newPlayer.transform.position = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.prevPos = new Vector2(packet.LocX, packet.LocY);
                         newPlayer.isRight = packet.IsRight;
                         newPlayer.coin = packet.Coins;
-                        newPlayer.currLevel = packet.Level;
                         // newPlayer.SetName(packet.Name);
-                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.PersonaTag.GetHashCode() / int.MaxValue),
+                        newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.Name.GetHashCode() / int.MaxValue),
                             0.75f, 0.75f));
                     }
                     else
                     {
-                        RemotePlayer otherPlayer = otherPlayers[packet.PersonaTag];
+                        RemotePlayer otherPlayer = otherPlayers[packet.Name];
                         otherPlayer.prevPos = otherPlayer.newPos;
                         otherPlayer.newPos = new Vector2(packet.LocX, packet.LocY);
                         otherPlayer.t = 0;
                         otherPlayer.isRight = packet.IsRight;
                         otherPlayer.coin = packet.Coins;
                         otherPlayer.UpdateHealth(packet.Health);
-                        otherPlayer.CheckUpgrade(packet.Level);
                     }
 
                     break;
                 }
-                print("server feedback: " + content);
 
                 Player.ServerPayload serverPayload;
                 // serverPayload.isRight = resultDict["IsRight"] == "True";
@@ -384,7 +299,6 @@ public class GameManager : MonoBehaviour
                 player.UpdateCoins(packet.Coins);
                 player.UpdateHealth(packet.Health);
                 player.UpdatePosText($"{packet.LocX},{packet.LocY}");
-                player.CheckUpgrade(packet.Level);
                 player.ReceiveNewMsg(serverPayload);
                 break;
             case (long) opcode.coinsInfo:
@@ -430,31 +344,7 @@ public class GameManager : MonoBehaviour
                         coins[i].gameObject.SetActive(false);
                     }
                 }
-                break;
-            case (long) opcode.healthPackInfo:
-                List<HealthPack> HealthPackInfos;
-                try
-                {
-                    HealthPackInfos = content.FromJson<List<HealthPack>>();
-                }
-                catch (Exception e)
-                {
-                    print("content: " + content);
-                    Console.WriteLine(e);
-                    throw;
-                }
-                for (int i = 0; i < healthPacks.Count; i++)
-                {
-                    if (i < HealthPackInfos.Count)
-                    {
-                        healthPacks[i].gameObject.SetActive(true);
-                        healthPacks[i].transform.position = new Vector3(HealthPackInfos[i].X, HealthPackInfos[i].Y, 0);
-                    }
-                    else
-                    {
-                        healthPacks[i].gameObject.SetActive(false);
-                    }
-                }
+
                 break;
             case (long) opcode.attack:
                 List<Attack> attackInfos;
@@ -506,7 +396,9 @@ public class GameManager : MonoBehaviour
                 }
 
                 break;
+            
             case (long) opcode.playerName:
+                print(content);
                 List<PlayerName> playerNames;
                 try
                 {
@@ -518,6 +410,7 @@ public class GameManager : MonoBehaviour
                     Console.WriteLine(e);
                     throw;
                 }
+                print(playerNames);
                 foreach (PlayerName playerName in playerNames)
                 {
                     if (playerName.UserId == UserId)
@@ -552,24 +445,11 @@ public class GameManager : MonoBehaviour
 
 
                 break;
-            case(long) opcode.otherPlayerDie:
-                Debug.Log("Other player die");
-                if (!otherPlayers.ContainsKey(content))
-                {
-                    return;
-                }
-                Destroy(otherPlayers[content].gameObject);
-                otherPlayers.Remove(content);
-                break;
-            default:
-                // print("opcode: " + newState.OpCode + " "+ content);
-                break;
         }
     }
 
     public void SendMessageToServer(int opcode, string message)
     {
-        print(message);
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode, message);
     }
 
@@ -588,10 +468,5 @@ public class GameManager : MonoBehaviour
     {
         bestRankText.text = bestRank.ToString();
         bestScoreText.text = bestScore.ToString();
-    }
-
-    public void OnServerChange(TMP_Dropdown change)
-    {
-        nakamaConnection= nakamaConnectionCandidates[change.value];
     }
 }
