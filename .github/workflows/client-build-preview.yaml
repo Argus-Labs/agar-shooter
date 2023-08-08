@@ -25,8 +25,9 @@ jobs:
     defaults:
       run:
         shell: bash
-#        working-directory: Client
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       # Build
       - name: Checkout Repository
@@ -96,5 +97,22 @@ jobs:
         working-directory: ./build/WebGL/WebGL
 
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: ./build/WebGL/WebGL
+        id: vercel-deploy-results
+        run: |
+          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}  2>&1 | tee output.txt
+          ## Randomized EOF for multiline $GITHUB_OUTPUT
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "DEPLOY_OUTPUT<<$EOF" >> $GITHUB_OUTPUT
+          echo ":mag: $(cat output.txt  | grep Inspect)" >> $GITHUB_OUTPUT
+          echo ":globe_with_meridians: Preview: $(cat output.txt  | grep Queued | sed s/Queued//)" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: PR Comment Deploy Results
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment_tag: vercel_deploy_preview
+          message: |
+            ### Agar Shooter build deployed to Vercel (Preview)!
+            ___
+            ${{ steps.vercel-deploy-results.outputs.DEPLOY_OUTPUT }}
