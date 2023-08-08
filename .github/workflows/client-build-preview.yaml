@@ -56,6 +56,8 @@ jobs:
           restore-keys: |
             Library-
 
+      - run: sudo chown -R $USER ./
+
       - name: Build Project
         uses: game-ci/unity-builder@v2
         env:
