@@ -51,7 +51,7 @@ jobs:
       - name: Library Cache
         uses: actions/cache@v3
         with:
-          path: Library
+          path: Client/Library
           key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
             Library-
@@ -63,6 +63,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
+          projectPath: Client
           targetPlatform: WebGL
 
       - name: Purge Stale Artifacts
