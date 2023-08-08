@@ -5,7 +5,7 @@ import (
 )
 
 type RemovePlayerMsg struct {
-	PersonaTag string `json:"persona_tag"`
+	PersonaTag string `json:"name"`
 }
 
 var TxRemovePlayer = ecs.NewTransactionType[RemovePlayerMsg]("remove-player")

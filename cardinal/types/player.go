@@ -1,29 +1,30 @@
 package types
 
 type BarePlayer struct {
-	Name   string
-	Health int
-	Coins  int
-	//Weapon Weapon
-	//ExtractX float64
-	//ExtractY float64
-	LocX     float64
-	LocY     float64
-	IsRight  bool
-	InputNum int
+	PersonaTag	string
+	Health		int
+	Coins		int
+	LocX		float64
+	LocY		float64
+	IsRight		bool
+	InputNum	int
+	Level		int
 }
 
 type TestPlayer struct {
-	Name     string
-	Health   int
-	Coins    int
-	Weapon   Weapon
-	ExtractX float64
-	ExtractY float64
-	LocX     float64
-	LocY     float64
+	PersonaTag	string
+	Health		int
+	Coins		int
+	Weapon		Weapon
+	LocX		float64
+	LocY		float64
 }
 
-type ModPlayer struct { // for adding and removing players
-	Name string
+type ModPlayer struct { // for modifying players
+	PersonaTag	string
+}
+
+type AddPlayer struct {// for adding players
+	PersonaTag	string
+	Coins		int
 }

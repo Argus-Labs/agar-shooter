@@ -5,8 +5,8 @@ import (
 )
 
 type AddPlayerMsg struct {
-	PersonaTag string `json:"persona_tag"`
-	Coins      int    `json:"coins"`
+	PersonaTag  string `json:"name"`
+	Coins int    `json:"coins"`
 }
 
 var TxAddPlayer = ecs.NewTransactionType[AddPlayerMsg]("add-player")

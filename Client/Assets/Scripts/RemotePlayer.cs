@@ -15,6 +15,10 @@ public class RemotePlayer : MonoBehaviour
     public Slider healthBar;
     public SpriteRenderer body;
     public TextMeshProUGUI nameText;
+    public int currLevel;
+    public Animator levelAnimator;
+    public TextMeshProUGUI levelText;
+
     // lerp between prevPos and newPos
 
     private void Start()
@@ -51,4 +55,16 @@ public class RemotePlayer : MonoBehaviour
     {
         nameText.text = name;
     }
+
+    public void CheckUpgrade(int newlevel)
+    {
+        if (newlevel > currLevel)
+        {
+            currLevel = newlevel;
+            // update UI
+            levelText.text = $"LVL. {currLevel}";
+            levelAnimator.Play("levelUp");
+        }
+    }
+
 }
