@@ -15,8 +15,7 @@ After updating the gameplay server, the server can be rebuilt via:
 ```bash
 ./restart_server.sh
 ```
-
-TODO: client?
+To play the game, you must connect a game client to Nakama to allow it to communicate with Cardinal. The game client can be written in any language, but for this game we write the client in Unity with code in the `Client` folder.
 
 Note, if any server endpoints have been added or removed, Nakama must be relaunched (via the start.sh script). 
 
