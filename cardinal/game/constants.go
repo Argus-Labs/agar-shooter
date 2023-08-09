@@ -80,8 +80,8 @@ var (
 	PlayerCoins				= make(map[string] int)// the current number of coins each player has
 	Players					= make(map[string] storage.EntityID) //players are personatags and components identified by strings; input into a map to make it easier to add and remove components
 	LevelCoinParameters		= []float64{10, 10, 100}
-	LevelHealthParameters	= []float64{100, 10, 1000}
-	LevelAttackParameters	= []float64{0, 0.05, 1}
+	LevelHealthParameters	= []float64{95, 5, 1000}
+	LevelAttackParameters	= []float64{-0.02, 0.02, 1}
 	LevelCoins				= func(level int) int {
 		return int(math.Min(LevelCoinParameters[0] + LevelCoinParameters[1]*float64(level), LevelCoinParameters[2]))
 	}
