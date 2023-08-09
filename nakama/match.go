@@ -49,6 +49,7 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 
 // Called after MatchJoinAttempt to add the player to the Nakama match
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
+	fmt.Println("1:",time.Now().UnixMilli())
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
@@ -62,8 +63,10 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 
 		// Call tx-add-player with newly created persona
+		fmt.Println("2:", time.Now().UnixMilli())
 		logger.Debug(fmt.Sprint("Nakama: Add Player, JSON:", "{\"PersonaTag\":\""+p.GetUserId()+"\",\"Coins\":0}"))
 		result, err := rpcEndpoints["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
+		fmt.Println("3:", time.Now().UnixMilli())
 
 		if err != nil {
 			return err
@@ -101,6 +104,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name, "; result: ", result)
 	}
+	fmt.Println("4:", time.Now().UnixMilli())
 
 	return MatchState{}
 }
