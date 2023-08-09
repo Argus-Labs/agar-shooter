@@ -166,7 +166,7 @@ func AddPlayer(world *ecs.World, personaTag string, playerCoins int) error {
 
 	components.Player.Set(world, playerID, components.PlayerComponent{
 		PersonaTag: personaTag,
-		Health: 100,
+		Health: game.LevelHealth(1),
 		Coins: playerCoins,
 		Weapon: weaponID,
 		Loc: types.Pair[float64, float64]{game.WorldConstants.PlayerRadius + rand.Float64()*(game.GameParams.Dims.First-2*game.WorldConstants.PlayerRadius), game.WorldConstants.PlayerRadius + rand.Float64()*(game.GameParams.Dims.Second-2*game.WorldConstants.PlayerRadius)},
