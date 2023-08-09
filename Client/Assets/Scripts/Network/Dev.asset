@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be1c119e98d42ce409ab7a908d24f173, type: 3}
   m_Name: Dev
   m_EditorClassIdentifier: 
-  Scheme: http
-  Host: dev-agarshooter-1.staging.argus-dev.com
-  Port: 7350
+  Scheme: https
+  Host: dev-agarshooter-1.argus-dev.com
+  Port: 443
   ServerKey: defaultkey
   matchName: singleton_match
-  matchID: 
+  matchID: 10504fff-6b57-4289-bd5c-ea5cad31a350.nakama

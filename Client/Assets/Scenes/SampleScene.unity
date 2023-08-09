@@ -1376,6 +1376,9 @@ MonoBehaviour:
   nakamaConnection: {fileID: 11400000, guid: fb3bfee287dd8ac4e9a4b9f7dc043f3b, type: 2}
   player: {fileID: 1564357665}
   UserId: 
+  configReceived: 0
+  serverTick: 0
+  weaponRangeIndicator: {fileID: 585629637}
   coins: []
   coinSprites:
   - {fileID: 21300000, guid: 0f47a18e5d4afce4d84f194ff8795556, type: 3}
@@ -1831,6 +1834,8 @@ MonoBehaviour:
   pos: {x: 0, y: 0}
   nameText: {fileID: 768062666}
   currLevel: 1
+  width: 0
+  height: 0
 --- !u!1 &1603249788
 GameObject:
   m_ObjectHideFlags: 0

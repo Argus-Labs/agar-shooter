@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
         addHealth = 6,
         playerName = 9,
         healthPackInfo =10,
+        configFile = 14,
         playerMove = 17,
     }
 
@@ -81,7 +82,10 @@ public class GameManager : MonoBehaviour
     public Player player;
     public string UserId;
     public Action<IMatchState> OnMatchStateReceived;
-    
+    public DynamicPara config;
+    public bool configReceived;
+    public int serverTick;
+    public Transform weaponRangeIndicator;
     [Header("PoolingObjects")]
     #region PoolingObjects
 
@@ -138,7 +142,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         // let the game run 60fps
-        Application.targetFrameRate = 15;
+        Application.targetFrameRate = 60;
         
     }
 
@@ -313,6 +317,36 @@ public class GameManager : MonoBehaviour
 
         switch (newState.OpCode)
         {
+            // add a new case opcode.configFile
+            case ((long) opcode.configFile):
+                // print("configFile: " + content);
+                try
+                {
+                    config = content.FromJson<DynamicPara>();
+                }
+                catch (Exception e)
+                {
+                    print("content: " + content);
+                    Console.WriteLine(e);
+                    throw;
+                }
+
+                if (configReceived)
+                {
+                    return;
+                }
+                configReceived = true;
+                player.SetSpeed(config.PlayerSpeed);
+                player.SetWidthHeight(config.Width, config.Height);
+                player.SetCoinCapParameters(config.LevelCoinParameters[0],config.LevelCoinParameters[1],config.LevelCoinParameters[2]);
+                player.SetHealthCapParameters(config.LevelHealthParameters[0],config.LevelHealthParameters[1],config.LevelHealthParameters[2]);
+                serverTick = config.TickRate;
+                weaponRangeIndicator.localScale = new Vector3(config.WeaponRadius/2f, config.WeaponRadius/2, 1f);
+                
+                
+                
+                
+            break;
             case ((long) opcode.playerStatus):
 
                 // only care about it self
@@ -330,7 +364,7 @@ public class GameManager : MonoBehaviour
                 }
 
                 // handle other player
-                if (packet.PersonaTag != UserId)
+                if (packet.PersonaTag != UserId && configReceived)
                 {
                     // print("content: " + content);
                     if (!otherPlayers.ContainsKey(packet.PersonaTag))
@@ -345,6 +379,10 @@ public class GameManager : MonoBehaviour
                         // newPlayer.SetName(packet.Name);
                         newPlayer.SetColor(Color.HSVToRGB(Mathf.Abs((float) packet.PersonaTag.GetHashCode() / int.MaxValue),
                             0.75f, 0.75f));
+                        newPlayer.SetServerTickRate(serverTick);
+                        newPlayer.SetHealthCapParameters(config.LevelHealthParameters[0],config.LevelHealthParameters[1],config.LevelHealthParameters[2]);
+
+                        
                     }
                     else
                     {
@@ -368,7 +406,7 @@ public class GameManager : MonoBehaviour
                 serverPayload.isRight = packet.IsRight;
                 serverPayload.pos = new Vector2(packet.LocX, packet.LocY);
                 serverPayload.lastProcessedInput = packet.InputNum;
-                if (!gameInitialized)
+                if (!gameInitialized && configReceived)
                 {
                     gameInitialized = true;
                     player.PlayerInit(serverPayload.pos);

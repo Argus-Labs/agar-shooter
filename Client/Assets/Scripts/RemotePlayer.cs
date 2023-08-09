@@ -43,7 +43,7 @@ public class RemotePlayer : MonoBehaviour
     }
     public void UpdateHealth(int newHealth)
     {
-        healthBar.value = newHealth / 100f;
+        healthBar.value = newHealth /  HealthCap(currLevel);
     }
 
     public void SetColor(Color hsvToRGB)
@@ -55,6 +55,10 @@ public class RemotePlayer : MonoBehaviour
     {
         nameText.text = name;
     }
+    public void SetServerTickRate(int tickRate)
+    {
+        serverTickRate = tickRate;
+    }
 
     public void CheckUpgrade(int newlevel)
     {
@@ -65,6 +69,18 @@ public class RemotePlayer : MonoBehaviour
             levelText.text = $"LVL. {currLevel}";
             levelAnimator.Play("levelUp");
         }
+    }
+    private float baseHealth, healthMultiplier, healthCap;
+    private float HealthCap(int level)
+    {
+        // base 100
+        return Mathf.Min(baseHealth+ level * healthMultiplier,healthCap);
+    }
+    public void SetHealthCapParameters(float baseHealth, float healthMultiplier,float cap)
+    {
+        this.baseHealth = baseHealth;
+        this.healthMultiplier = healthMultiplier;
+        this.healthCap = cap;
     }
 
 }
