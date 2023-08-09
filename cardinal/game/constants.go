@@ -53,7 +53,7 @@ var (
 	WorldConstants = IWorldConstants{
 		Weapons: map[types.Weapon]types.WeaponData{
 			Dud: types.WeaponData{Attack: 0, Range: 0.0, MaxAmmo: 0, Reload: 0},
-			Melee: types.WeaponData{Attack: 2, Range: 4.0, MaxAmmo: -1, Reload: 1*time.Second.Nanoseconds()},
+			Melee: types.WeaponData{Attack: 10, Range: 4.0, MaxAmmo: -1, Reload: 200*time.Millisecond.Nanoseconds()},
 			Slug: types.WeaponData{Attack: 3, Range: 6.9, MaxAmmo: 6, Reload: 5*time.Second.Nanoseconds()},
 			TestWeapon: types.WeaponData{Attack: 2, Range: 4.0, MaxAmmo: -1, Reload: -1},
 		},
@@ -61,7 +61,7 @@ var (
 		ClientTickRate: 60,// used to determine tickrate relative to client
 		PlayerRadius: 0.5,// used to determine which coins are close enough to collect
 		PlayerSpeed: 2,
-		HealthPackValue: 5,
+		HealthPackValue: 200,
 		CoinRadius: 0.5,
 		HealthRadius: 0.5,
 		MaxCoinsPerTick: 100,
@@ -80,8 +80,8 @@ var (
 	PlayerCoins				= make(map[string] int)// the current number of coins each player has
 	Players					= make(map[string] storage.EntityID) //players are personatags and components identified by strings; input into a map to make it easier to add and remove components
 	LevelCoinParameters		= []float64{10, 10, 100}
-	LevelHealthParameters	= []float64{95, 5, 1000}
-	LevelAttackParameters	= []float64{-0.02, 0.02, 1}
+	LevelHealthParameters	= []float64{950, 50, 4000}
+	LevelAttackParameters	= []float64{-0.1, 0.1, 5}
 	LevelCoins				= func(level int) int {
 		return int(math.Min(LevelCoinParameters[0] + LevelCoinParameters[1]*float64(level), LevelCoinParameters[2]))
 	}
