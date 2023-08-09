@@ -81,9 +81,11 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 					}
 				}
 
-				for health, _ := range game.HealthMap[types.Pair[int, int]{i, j}] {
-					if utils.CoinProjDist(prevLoc, loc, health.Second) <= game.WorldConstants.PlayerRadius {
-						hitHealth = append(hitHealth, health)
+				if tmpPlayer.Health < game.LevelHealth(tmpPlayer.Level) {
+					for health, _ := range game.HealthMap[types.Pair[int, int]{i, j}] {
+						if utils.CoinProjDist(prevLoc, loc, health.Second) <= game.WorldConstants.PlayerRadius {
+							hitHealth = append(hitHealth, health)
+						}
 					}
 				}
 			}
@@ -118,6 +120,8 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			for game.LevelCoins(comp.Level) <= comp.Coins {
 				comp.Coins -= game.LevelCoins(comp.Level)
 				comp.Level++
+
+				comp.Health = game.LevelHealth(comp.Level)
 			}
 
 			comp.Health += extraHealth
