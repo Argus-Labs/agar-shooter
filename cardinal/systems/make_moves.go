@@ -120,6 +120,8 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			for game.LevelCoins(comp.Level) <= comp.Coins {
 				comp.Coins -= game.LevelCoins(comp.Level)
 				comp.Level++
+
+				comp.Health = game.LevelHealth(comp.Level)
 			}
 
 			comp.Health += extraHealth
