@@ -26,6 +26,7 @@ public class Player : MonoBehaviour
     public TextMeshProUGUI nameText;
     public PlayerAction playerAction;
     public int currLevel = 1;
+    public int width, height;
     // may need introduce other parameters
     public void PlayerInit(Vector2 pos)
     {
@@ -189,8 +190,8 @@ public class Player : MonoBehaviour
         //2m/s
         pos += speedVector * (Speed * deltaTime);
         // check the boundary map is from left bottom(0,0) to up right(100,100)
-        pos.x = Mathf.Clamp(pos.x, 0, 100);
-        pos.y = Mathf.Clamp(pos.y, 0, 100);
+        pos.x = Mathf.Clamp(pos.x, 0, width);
+        pos.y = Mathf.Clamp(pos.y, 0, height);
     }
 
     public void ReceiveNewMsg(ServerPayload payload)
@@ -238,7 +239,7 @@ public class Player : MonoBehaviour
     public void UpdateHealth(int newHealth)
     {
         health = newHealth;
-        healthBar.value = health / 100f;
+        healthBar.value = health / HealthCap(currLevel);
     }
 
     public void UpdateCoins(int newCoinCount)
@@ -251,6 +252,15 @@ public class Player : MonoBehaviour
     public void SetColor(Color color)
     {
         body.color = color;
+    }
+    public void SetSpeed(float speed)
+    {
+        this.speed = speed;
+    }
+    public void SetWidthHeight(int width, int height)
+    {
+        this.width = width;
+        this.height = height;
     }
 
     public void UpdatePosText(string newPos)
@@ -274,9 +284,31 @@ public class Player : MonoBehaviour
         }
     }
 
+    private float baseCoin,coinMultiplier,coinCap;
+    private float baseHealth, healthMultiplier, healthCap;
+
     private int CoinCap(int level)
     {
         // base 20 
-        return Mathf.Min(10+ level * 10,100);
+        return Mathf.Min((int)baseCoin+ level * (int)coinMultiplier,(int)coinCap);
     }
+    private float HealthCap(int level)
+    {
+        // base 100
+        return Mathf.Min(baseHealth+ level * healthMultiplier,healthCap);
+    }
+    public void SetCoinCapParameters(float baseCoin, float coinMultiplier,float cap)
+    {
+     
+        this.baseCoin = baseCoin;
+        this.coinMultiplier = coinMultiplier;
+        this.coinCap = cap;
+    }
+    public void SetHealthCapParameters(float baseHealth, float healthMultiplier,float cap)
+    {
+        this.baseHealth = baseHealth;
+        this.healthMultiplier = healthMultiplier;
+        this.healthCap = cap;
+    }
+    
 }
