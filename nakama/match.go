@@ -133,13 +133,22 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 
 // Processes messages (the list of messages sent from each player to Nakama) and broadcasts necessary information to each player
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
+	playerInputNum := make(map[string] int)
+
 	for _, m := range messages {
 		switch m.GetOpCode() {
 		case MOVE:
+			if key, contains := playerInputNum[m.GetUserId()]; contains && key > 20 {
+				fmt.Println("Bad player: ", m.GetUserId(), NameToNickname[m.GetUserId()])
+				continue
+			}
+			
 			data := m.GetData()
 			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
 				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 			}
+
+			playerInputNum[m.GetUserId()]++
 		}
 	}
 
