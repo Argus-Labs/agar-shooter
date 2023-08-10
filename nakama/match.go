@@ -12,6 +12,7 @@ import (
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
+var counter = time.Now().UnixMilli()
 // MatchState contains match data as the match progresses
 type MatchState struct{}
 
@@ -156,9 +157,11 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
+	diff := time.Now().UnixMilli() - counter
+	counter = time.Now().UnixMilli()
 	for key, val := range playerInputNum {
 		if val >= 20 {
-			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key])
+			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key], strconv.Itoa(int(diff)))
 		}
 	}
 
