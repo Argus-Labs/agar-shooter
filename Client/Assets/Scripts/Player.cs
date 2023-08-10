@@ -119,19 +119,19 @@ public class Player : MonoBehaviour
     }
 
     public const float cooldown = 1f/60f;
-    private float lastInputTime = 0f;
+    public float timer = 0f;
     
     private void Update()                       
     {
-        
+        timer+=Time.deltaTime;
         // only update when cooldown is over
-        if (Time.time - lastInputTime < cooldown)
+        if (timer < cooldown) 
         {
             return;
         }
-        lastInputTime = Time.time;
+        UploadPlayerInput(timer);
+        timer = 0;
         // print(sequenceNumber);
-        UploadPlayerInput();
         sequenceNumber++;
         // update the player position on main thread
         transform.localPosition = pos;
@@ -140,18 +140,18 @@ public class Player : MonoBehaviour
     }
 
 
-    private void UploadPlayerInput()
+    private void UploadPlayerInput(float deltaTime)
     {
         Vector2to4button(playerAction.Player.Movement.ReadValue<Vector2>(), out bool up, out bool down, out bool left, out bool right);
         // PlayerInput input = new PlayerInput(gameManager.UserId, Input.GetKey(inputProfile.up),
         //     Input.GetKey(inputProfile.down), Input.GetKey(inputProfile.left), Input.GetKey(inputProfile.right),
         //     sequenceNumber,Time.deltaTime);
         PlayerInput input = new PlayerInput(gameManager.UserId, up, down, left, right,
-            sequenceNumber,Time.deltaTime);
+            sequenceNumber,deltaTime);
         
         int opCode = 17;;
         gameManager.SendMessageToServer(opCode, input.ToJson()); 
-        ApplyInput(input, Time.deltaTime);
+        ApplyInput(input, deltaTime);
         // print player pos (x,y) isright and also sequence number
         //print("Client Sim: Pos: (" + pos.x + "," + pos.y + ") isRight: " + isRight + " sequenceNumber: " + sequenceNumber);
         
