@@ -89,14 +89,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		NameTakenMap[name] = true
 		NameToNickname[p.GetUserId()] = name
-		
-		if gameParameters, err := rpcEndpoints["read-game-parameters"](ctx, logger, db, nk, "{}"); err != nil { // assume that an error here means the player is dead
-			return err
-		} else { // send everyone player state & send player its nearby coins
-			if err = dispatcher.BroadcastMessage(PARAMS, []byte(gameParameters), []runtime.Presence{p}, nil, true); err != nil {
-				return err
-			}
-		}
 
 		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name, "; result: ", result)
 	}
@@ -161,9 +153,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	counter = time.Now().UnixMilli()
 	for key, val := range playerInputNum {
 		if val >= 20 {
-			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key], strconv.Itoa(int(diff)))
+			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key])
 		}
 	}
+
+	fmt.Println("Difference between Nakama ticks (ms):", strconv.Itoa(int(diff)), "Cardinal Operation Time (ms):",strconv.Itoa(int(CardinalOpCounter/1000)))
+	CardinalOpCounter = 0
+	
 
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
@@ -171,6 +167,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, pp := range Presences {
 		// Check that it's been a second since the player joined before querying for their state to give Cardinal time to add them and give them a buffer
 		if joinTimeMap[pp.GetUserId()].Add(time.Second).After(time.Now()) {
+			if gameParameters, err := rpcEndpoints["read-game-parameters"](ctx, logger, db, nk, "{}"); err != nil { // assume that an error here means the player is dead
+				return err
+			} else { // send everyone player state & send player its nearby coins
+				if err = dispatcher.BroadcastMessage(PARAMS, []byte(gameParameters), []runtime.Presence{pp}, nil, true); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 
