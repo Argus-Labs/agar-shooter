@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"strconv"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -138,8 +139,8 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, m := range messages {
 		switch m.GetOpCode() {
 		case MOVE:
-			if key, contains := playerInputNum[m.GetUserId()]; contains && key > 20 {
-				fmt.Println("Bad player: ", m.GetUserId(), NameToNickname[m.GetUserId()])
+			if key, contains := playerInputNum[m.GetUserId()]; contains && key >= 20 {
+				playerInputNum[m.GetUserId()]++
 				continue
 			}
 			
@@ -150,6 +151,10 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 			playerInputNum[m.GetUserId()]++
 		}
+	}
+
+	for key, val := range playerInputNum {
+		fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val))
 	}
 
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
