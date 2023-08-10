@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"strconv"
+	"strings"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -49,7 +51,6 @@ func (m *Match) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db 
 
 // Called after MatchJoinAttempt to add the player to the Nakama match
 func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, presences []runtime.Presence) interface{} {
-	fmt.Println("1:",time.Now().UnixMilli())
 	if presences == nil {
 		return fmt.Errorf("Nakama: no presence exists in MatchJoin")
 	}
@@ -63,17 +64,11 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 
 		// Call tx-add-player with newly created persona
-		fmt.Println("2:", time.Now().UnixMilli())
 		logger.Debug(fmt.Sprint("Nakama: Add Player, JSON:", "{\"PersonaTag\":\""+p.GetUserId()+"\",\"Coins\":0}"))
 		result, err := rpcEndpoints["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
-		fmt.Println("3:", time.Now().UnixMilli())
 
 		if err != nil {
 			return err
-		}
-
-		if _, err := rpcEndpoints["read-tick"](ctx, logger, db, nk, "{}"); err != nil {
-			return fmt.Errorf("Nakama: tick error: %w", err)
 		}
 
 		joinTimeMap[p.GetUserId()] = time.Now()
@@ -104,7 +99,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name, "; result: ", result)
 	}
-	fmt.Println("4:", time.Now().UnixMilli())
 
 	return MatchState{}
 }
@@ -141,13 +135,30 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 
 // Processes messages (the list of messages sent from each player to Nakama) and broadcasts necessary information to each player
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
+	playerInputNum := make(map[string] int)
+	playerInputSeqNum := make(map[string] string)
+
 	for _, m := range messages {
 		switch m.GetOpCode() {
 		case MOVE:
+			if key, contains := playerInputNum[m.GetUserId()]; contains && key >= 20 {
+				playerInputNum[m.GetUserId()]++
+				continue
+			}
+			
 			data := m.GetData()
 			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
 				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 			}
+
+			playerInputNum[m.GetUserId()]++
+			playerInputSeqNum[m.GetUserId()] = strings.Split(string(data),"Input_sequence_number")[1][2:9]
+		}
+	}
+
+	for key, val := range playerInputNum {
+		if val >= 20 {
+			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key])
 		}
 	}
 
