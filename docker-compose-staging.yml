@@ -1,7 +1,8 @@
 version: '3'
 services:
   cardinal:
-    build: ./cardinal
+    image: us-docker.pkg.dev/world-engine-test/agar-shooter/agar-shooter/cardinal:${VERSION_TAG:-latest}
+    restart: unless-stopped
     expose:
       - "3333"
     ports:
@@ -11,6 +12,7 @@ services:
 
   postgres:
     command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
+    restart: unless-stopped
     environment:
       - POSTGRES_DB=nakama
       - POSTGRES_PASSWORD=localdb
@@ -21,16 +23,12 @@ services:
     ports:
       - "5432:5432"
       - "8080:8080"
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "nakama"]
-      interval: 3s
-      timeout: 3s
-      retries: 5
     volumes:
       - data:/var/lib/postgresql/data
 
   nakama:
-    build: ./nakama
+    image: us-docker.pkg.dev/world-engine-test/agar-shooter/agar-shooter/nakama:${VERSION_TAG:-latest}
+    restart: unless-stopped
     depends_on:
       - postgres
       - cardinal
@@ -57,6 +55,6 @@ services:
       - "7349:7349"
       - "7350:7350"
       - "7351:7351"
-    restart: unless-stopped
+      - "80:7350"
 volumes:
   data:

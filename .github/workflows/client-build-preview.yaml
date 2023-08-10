@@ -1,0 +1,120 @@
+name: Game Client
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+  pull_request:
+    paths:
+      - Client/**
+    branches:
+      - main
+      - dev
+  push:
+    paths:
+      - Client/**
+    branches:
+      - dev
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  client-build:
+    name: Build Preview
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      # Build
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS Cache
+        uses: actions/cache@v3
+        id: lfs-cache
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Git LFS Pull
+        run: |
+          git lfs pull
+          git add .
+          git reset --hard
+
+      - name: Library Cache
+        uses: actions/cache@v3
+        with:
+          path: Client/Library
+          key: Library-${{ hashFiles('Client/Assets/**', 'Client/Packages/**', 'Client/ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      - run: sudo chown -R $USER ./
+
+      - name: Build Project
+        uses: game-ci/unity-builder@v2
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: Client
+          targetPlatform: WebGL
+
+      - name: Purge Stale Artifacts
+        uses: c-hive/gha-remove-artifacts@v1.2.0
+        with:
+          age: "7 days"
+          skip-tags: true
+          skip-recent: 3
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: WebGL Build
+          path: ./build/WebGL/WebGL
+
+      # Deploy
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - run: sudo chown $USER ./build/WebGL/WebGL
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: ./build/WebGL/WebGL
+
+      - name: Deploy Project Artifacts to Vercel
+        working-directory: ./build/WebGL/WebGL
+        id: vercel-deploy-results
+        run: |
+          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}  2>&1 | tee output.txt
+          ## Randomized EOF for multiline $GITHUB_OUTPUT
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "DEPLOY_OUTPUT<<$EOF" >> $GITHUB_OUTPUT
+          echo ":mag: $(cat output.txt  | grep Inspect)" >> $GITHUB_OUTPUT
+          echo ":globe_with_meridians: Preview: $(cat output.txt  | grep Queued | sed s/Queued//)" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: PR Comment Deploy Results
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment_tag: vercel_deploy_preview
+          message: |
+            ### Agar Shooter build deployed to Vercel (Preview)!
+            ___
+            ${{ steps.vercel-deploy-results.outputs.DEPLOY_OUTPUT }}
