@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 	"strconv"
+	"strings"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -135,6 +136,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 // Processes messages (the list of messages sent from each player to Nakama) and broadcasts necessary information to each player
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
 	playerInputNum := make(map[string] int)
+	playerInputSeqNum := make(map[string] string)
 
 	for _, m := range messages {
 		switch m.GetOpCode() {
@@ -150,11 +152,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			}
 
 			playerInputNum[m.GetUserId()]++
+			playerInputSeqNum[m.GetUserId()] = strings.Split(string(data),"Input_sequence_number")[1][2:9]
 		}
 	}
 
 	for key, val := range playerInputNum {
-		fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val))
+		if val >= 20 {
+			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key])
+		}
 	}
 
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
