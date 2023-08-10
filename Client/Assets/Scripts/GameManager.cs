@@ -142,7 +142,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         // let the game run 60fps
-        Application.targetFrameRate = 60;
+        // Application.targetFrameRate = 60;
         
     }
 
@@ -606,6 +606,7 @@ public class GameManager : MonoBehaviour
 
     public void SendMessageToServer(int opcode, string message)
     {
+      
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode, message);
     }
 

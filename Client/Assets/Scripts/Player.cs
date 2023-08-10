@@ -1,6 +1,7 @@
 using System;
 using Nakama.TinyJson;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -117,8 +118,18 @@ public class Player : MonoBehaviour
         playerAction.Disable();
     }
 
+    public const float cooldown = 1f/60f;
+    private float lastInputTime = 0f;
+    
     private void Update()                       
     {
+        
+        // only update when cooldown is over
+        if (Time.time - lastInputTime < cooldown)
+        {
+            return;
+        }
+        lastInputTime = Time.time;
         // print(sequenceNumber);
         UploadPlayerInput();
         sequenceNumber++;
