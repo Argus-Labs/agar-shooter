@@ -606,6 +606,7 @@ public class GameManager : MonoBehaviour
 
     public void SendMessageToServer(int opcode, string message)
     {
+      
         nakamaConnection.socket.SendMatchStateAsync(nakamaConnection.matchID, opcode, message);
     }
 
