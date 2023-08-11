@@ -1,11 +1,13 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
 	"time"
+	
+	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
 
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
@@ -13,16 +15,12 @@ import (
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-	
-	"github.com/rs/zerolog/log"
-	"github.com/downflux/go-geometry/nd/vector"
-	"github.com/downflux/go-kd/kd"
 )
 
 func InitializeGame(world *ecs.World, gameParams types.Game) error {
 	rand.Seed(time.Now().UnixNano())
 	if gameParams.CSize == 0 {
-		return errors.New("Cardinal: CellSize is zero")
+		return fmt.Errorf("Cardinal: CellSize is zero")
 	}
 	game.GameParams = gameParams
 
@@ -180,7 +178,6 @@ func AddPlayer(world *ecs.World, personaTag string, playerCoins int) error {
 	// Add player to local PlayerTree
 	playerComp, err := components.Player.Get(world, playerID)
 	game.PlayerTree.Insert(&types.P{vector.V{playerComp.Loc.First, playerComp.Loc.Second}, playerComp.PersonaTag})
-	log.Debug().Msgf("Created player with PersonaTag", playerComp.PersonaTag)
 
 	return nil
 }
@@ -188,7 +185,6 @@ func AddPlayer(world *ecs.World, personaTag string, playerCoins int) error {
 func RemovePlayer(world *ecs.World, personaTag string, playerList []read.PlayerPair) error {
 	// Check that the player exists
 	if _, contains := game.Players[personaTag]; !contains {
-		log.Error().Msg("player PersonaTag does not exist")
 		return fmt.Errorf("Cardinal: cannot remove player that does not exist")
 	}
 

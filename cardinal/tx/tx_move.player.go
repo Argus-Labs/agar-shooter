@@ -1,8 +1,6 @@
 package msg
 
-import (
-	"github.com/argus-labs/world-engine/cardinal/ecs"
-)
+import "github.com/argus-labs/world-engine/cardinal/ecs"
 
 type MovePlayerMsg struct {
 	TargetPlayerTag		    string  `json:"target_player_tag"`

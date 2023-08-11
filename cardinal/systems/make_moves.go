@@ -4,15 +4,15 @@ import (
 	"math"
 	"fmt"
 
+	"github.com/downflux/go-geometry/nd/vector"
+	"github.com/downflux/go-kd/kd"
+
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/new-game/game"
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/new-game/utils"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-
-	"github.com/downflux/go-geometry/nd/vector"
-	"github.com/downflux/go-kd/kd"
 )
 
 // moves player based on the coin-speed

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"strconv"
 	"strings"
 
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -65,8 +64,7 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 
 		// Call tx-add-player with newly created persona
-		logger.Debug(fmt.Sprint("Nakama: Add Player, JSON:", "{\"PersonaTag\":\""+p.GetUserId()+"\",\"Coins\":0}"))
-		result, err := rpcEndpoints["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
+		_, err := rpcEndpoints["tx-add-player"](ctx, logger, db, nk, "{\"Name\":\""+p.GetUserId()+"\",\"Coins\":0}")
 
 		if err != nil {
 			return err
@@ -89,8 +87,6 @@ func (m *Match) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 		NameTakenMap[name] = true
 		NameToNickname[p.GetUserId()] = name
-
-		fmt.Println("player joined: ", p.GetUserId(), "; name: ", name, "; result: ", result)
 	}
 
 	return MatchState{}
@@ -103,10 +99,10 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 	}
 
 	for i := 0; i < len(presences); i++ {
-		result, err := rpcEndpoints["tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
+		_, err := rpcEndpoints["tx-remove-player"](ctx, logger, db, nk, "{\"Name\":\""+presences[i].GetUserId()+"\"}")
 
 		if err != nil {
-			logger.Debug(fmt.Errorf("Nakama: error popping player:", err).Error())
+			logger.Info(fmt.Errorf("Nakama: error popping player:", err).Error())
 		}
 
 		// broadcast player removal to all players
@@ -115,8 +111,6 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 		if _, contains := Presences[presences[i].GetUserId()]; contains {
 			delete(Presences, presences[i].GetUserId())
 		}
-
-		fmt.Println("player left: ", presences[i].GetUserId(), "; result: ", result)
 
 		// nickname stuff
 		NameTakenMap[NameToNickname[presences[i].GetUserId()]] = false
@@ -128,6 +122,7 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 
 // Processes messages (the list of messages sent from each player to Nakama) and broadcasts necessary information to each player
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
+	CardinalOpCounter = 0
 	playerInputNum := make(map[string] int)
 	playerInputSeqNum := make(map[string] string)
 
@@ -149,21 +144,8 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	diff := time.Now().UnixMilli() - counter
-	counter = time.Now().UnixMilli()
-	for key, val := range playerInputNum {
-		if val >= 20 {
-			fmt.Println("Bad player: ", key, NameToNickname[key], strconv.Itoa(val), playerInputSeqNum[key])
-		}
-	}
-
-	fmt.Println("Difference between Nakama ticks (ms):", strconv.Itoa(int(diff)), "Cardinal Operation Time (ms):",strconv.Itoa(int(CardinalOpCounter/1000)))
-	CardinalOpCounter = 0
-	
-
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
-	logger.Debug("List of presences in MatchLoop: %v", Presences)
 	for _, pp := range Presences {
 		// Check that it's been a second since the player joined before querying for their state to give Cardinal time to add them and give them a buffer
 		if joinTimeMap[pp.GetUserId()].Add(time.Second).After(time.Now()) {
@@ -210,16 +192,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 					return err
 				}
 			}
-
-		/*
-			if intCoins, err := callRPCs["read-player-totalcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
-				return err
-			} else {
-				if err = dispatcher.BroadcastMessage(TOTAL_COINS, []byte(intCoins), nil, nil, true); err != nil {// send coins to all players
-					return err
-				}
-			}
-		*/
 		}
 	}
 
@@ -242,7 +214,6 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
 	} else {
 		if attacks != "[]\n" {
-			//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
 			if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
 				return err
 			}

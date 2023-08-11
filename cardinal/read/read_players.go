@@ -2,6 +2,7 @@ package read
 
 import (
 	"errors"
+
 	"github.com/argus-labs/new-game/components"
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 	"github.com/argus-labs/world-engine/cardinal/ecs/filter"

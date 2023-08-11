@@ -1,8 +1,6 @@
 package types
 
-import (
-	"github.com/downflux/go-geometry/nd/vector"
-)
+import "github.com/downflux/go-geometry/nd/vector"
 
 type P struct {
 	Point		vector.V
