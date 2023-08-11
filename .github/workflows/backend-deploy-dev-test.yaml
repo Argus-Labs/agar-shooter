@@ -9,6 +9,7 @@ env:
   GCP_COMPUTE_INSTANCE_STAGING: dev-gamebackend-agar-shooter--1
   GCP_ZONE: us-west1-b
   GCP_SERVICE_DEPLOY_DIR: /opt/agar-shooter
+  GCP_SERVICE_TMP_DIR: /tmp/agar-shooter
 
 jobs:
   backend-deploy-dev-test:
@@ -32,7 +33,7 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
       - name: GCP - SCP compose files
         run: |
-          gcloud compute ssh --zone "${{ env.GCP_ZONE }}" "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}"--project "${{ env.GCP_PROJECT_ID }}" --quiet -- "bash -c 'mkdir -p /tmp/agar-shooter'"
+          gcloud compute ssh --zone "${{ env.GCP_ZONE }}" "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}" --project "${{ env.GCP_PROJECT_ID }}" --quiet -- "bash -c 'mkdir -p ${{ env.GCP_SERVICE_TMP_DIR }}'"
           gcloud compute scp --zone "${{ env.GCP_ZONE }}" --recurse * "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}":/tmp/agar-shooter --project "${{ env.GCP_PROJECT_ID }}" --quiet
       - name: Set RELEASE_VERSION value (branch name)
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
@@ -42,7 +43,7 @@ jobs:
         with:
           instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
           zone: ${{ env.GCP_ZONE }}
-          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          ssh_private_key: ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
           command: |
             sudo mkdir -p ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             sudo rm -rf ${{ env.GCP_SERVICE_DEPLOY_DIR }}/*
@@ -59,7 +60,7 @@ jobs:
         with:
           instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
           zone: ${{ env.GCP_ZONE }}
-          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          ssh_private_key: ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
           command: |
             cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             docker compose ps | tr -d \'\"
