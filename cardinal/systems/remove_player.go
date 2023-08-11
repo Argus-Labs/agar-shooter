@@ -1,7 +1,6 @@
 package systems
 
 import (
-	"fmt"
 	"github.com/argus-labs/new-game/read"
 	transactions "github.com/argus-labs/new-game/tx"
 	"github.com/argus-labs/new-game/utils"
@@ -19,6 +18,6 @@ func RemovePlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 		log.Debug().Msgf("Removing player with PersonaTag: %s", tx.PersonaTag)
 		err = utils.RemovePlayer(world, tx.PersonaTag, playerList)
 	}
-	fmt.Printf("RemovePlayer TXs: %d\n", sum)
+	//fmt.Printf("RemovePlayer TXs: %d\n", sum)
 	return err
 }

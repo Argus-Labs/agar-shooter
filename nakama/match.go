@@ -156,12 +156,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			}
 
 			data := m.GetData()
-			t1 = time.Now()
 			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
 				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
 			}
-			t2 = time.Now()
-			fmt.Printf("MovePlayerTx: %d\n", t2.Sub(t1).Milliseconds())
 
 			playerInputNum[m.GetUserId()]++
 			playerInputSeqNum[m.GetUserId()] = strings.Split(string(data), "Input_sequence_number")[1][2:9]
@@ -174,18 +171,14 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	for _, pp := range Presences {
 		// Check that it's been a second since the player joined before querying for their state to give Cardinal time to add them and give them a buffer
 		if joinTimeMap[pp.GetUserId()].Add(time.Second).After(time.Now()) {
-			t1 = time.Now()
 			if gameParameters, err := rpcEndpoints["read-game-parameters"](ctx, logger, db, nk, "{}"); err != nil { // assume that an error here means the player is dead
 				return err
 			} else { // send everyone player state & send player its nearby coins
-				t2 = time.Now()
-				fmt.Printf("read-game-parameters: %d\n", t2.Sub(t1).Milliseconds())
-				t1 = time.Now()
+
 				if err = dispatcher.BroadcastMessage(PARAMS, []byte(gameParameters), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
-				t2 = time.Now()
-				fmt.Printf("Broadcast PARAMS: %d\n", t2.Sub(t1).Milliseconds())
+
 			}
 
 			continue
@@ -199,48 +192,31 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			return err
 		}
 
-		t1 = time.Now()
 		if playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, req); err != nil {
-			t2 = time.Now()
-			fmt.Printf("read-player-state: %d\n", t2.Sub(t1).Milliseconds())
 			kickList = append(kickList, pp.GetUserId())
 		} else {
 			t2 = time.Now()
 			fmt.Printf("read-player-state: %d\n", t2.Sub(t1).Milliseconds())
 			// send everyone player state & send player its nearby coins
-			t1 = time.Now()
 			if err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true); err != nil { // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 				return err
 			}
-			t2 = time.Now()
-			fmt.Printf("Broadcast LOCATION: %d\n", t2.Sub(t1).Milliseconds())
 
-			t1 = time.Now()
 			if nearbyCoins, err := rpcEndpoints["read-player-coins"](ctx, logger, db, nk, req); err != nil {
 				return err
 			} else {
-				t2 = time.Now()
-				fmt.Printf("read-player-coins: %d\n", t2.Sub(t1).Milliseconds())
-				t1 = time.Now()
 				if err := dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
-				t2 = time.Now()
-				fmt.Printf("Broadcast COINS: %d\n", t2.Sub(t1).Milliseconds())
+
 			}
 
-			t1 = time.Now()
 			if nearbyHealth, err := rpcEndpoints["read-player-health"](ctx, logger, db, nk, req); err != nil {
 				return err
 			} else {
-				t2 = time.Now()
-				fmt.Printf("read-player-health: %d\n", t2.Sub(t1).Milliseconds())
-				t1 = time.Now()
 				if err = dispatcher.BroadcastMessage(HEALTH, []byte(nearbyHealth), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
-				t2 = time.Now()
-				fmt.Printf("Broadcast HEALTH: %d\n", t2.Sub(t1).Milliseconds())
 			}
 
 			/*
@@ -257,19 +233,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 
 	// kick all dead players
 	for _, pid := range kickList {
-		t1 = time.Now()
 		if err := dispatcher.BroadcastMessage(DED, []byte(""), []runtime.Presence{Presences[pid]}, nil, true); err != nil {
 			return err
 		}
-		t2 = time.Now()
-		fmt.Printf("Broadcast DED: %d\n", t2.Sub(t1).Milliseconds())
 
-		t1 = time.Now()
 		if err := dispatcher.BroadcastMessage(REMOVE, []byte(pid), nil, nil, true); err != nil { // broadcast player removal to all players
 			return err
 		}
-		t2 = time.Now()
-		fmt.Printf("Broadcast REMOVE: %d\n", t2.Sub(t1).Milliseconds())
 
 		dispatcher.MatchKick([]runtime.Presence{Presences[pid]})
 		delete(Presences, pid)
@@ -283,12 +253,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		t2 = time.Now()
 		fmt.Printf("read-attacks: %d\n", t2.Sub(t1).Milliseconds())
 		if attacks != "[]\n" {
-			t1 = time.Now()
 			if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
 				return err
 			}
-			t2 = time.Now()
-			fmt.Printf("Broadcast ATTACKS: %d\n", t2.Sub(t1).Milliseconds())
 		}
 	}
 
@@ -307,12 +274,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"},"
 		}
 		stringmap = stringmap[:len(stringmap)-1] + "]"
-		t1 = time.Now()
 		if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
 			return err
 		}
-		t2 = time.Now()
-		fmt.Printf("Broadcast NICKNAME: %d\n", t2.Sub(t1).Milliseconds())
 	}
 	fmt.Printf("MATCH LOOP END\n")
 	return MatchState{}

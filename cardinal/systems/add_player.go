@@ -19,6 +19,6 @@ func AddPlayerSystem(world *ecs.World, tq *ecs.TransactionQueue) error {
 		}
 	}
 
-	fmt.Printf("AddPlayerTxs: %d\n", sum)
+	//fmt.Printf("AddPlayerTxs: %d\n", sum)
 	return nil
 }

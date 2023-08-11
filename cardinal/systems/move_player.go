@@ -120,6 +120,6 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 			return comp
 		})
 	}
-	fmt.Printf("MoveTxs: %d\n", sum)
+	//fmt.Printf("MoveTxs: %d\n", sum)
 	return nil
 }
