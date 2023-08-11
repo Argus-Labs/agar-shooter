@@ -8,10 +8,10 @@ on:
         description: 'Tag version to deploy'
         required: true
       GCP_COMPUTE_INSTANCE_NAME:
-        description: 'Tag version to deploy'
+        description: 'GCP Instance Name'
         required: true
       GCP_COMPUTE_REGION_ZONE:
-        description: 'Tag version to deploy'
+        description: 'GCP Zone (example: us-west1-c)'
         required: true
         
 env:
