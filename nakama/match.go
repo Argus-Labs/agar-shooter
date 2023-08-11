@@ -5,14 +5,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 var counter = time.Now().UnixMilli()
+
 // MatchState contains match data as the match progresses
 type MatchState struct{}
 
@@ -128,26 +129,9 @@ func (m *Match) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.D
 
 // Processes messages (the list of messages sent from each player to Nakama) and broadcasts necessary information to each player
 func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, dispatcher runtime.MatchDispatcher, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-	playerInputNum := make(map[string] int)
-	playerInputSeqNum := make(map[string] string)
-
-	for _, m := range messages {
-		switch m.GetOpCode() {
-		case MOVE:
-			if key, contains := playerInputNum[m.GetUserId()]; contains && key >= 20 {
-				playerInputNum[m.GetUserId()]++
-				continue
-			}
-			
-			data := m.GetData()
-			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
-				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
-			}
-
-			playerInputNum[m.GetUserId()]++
-			playerInputSeqNum[m.GetUserId()] = strings.Split(string(data),"Input_sequence_number")[1][2:9]
-		}
-	}
+	fmt.Printf("MATCH LOOP START\n")
+	playerInputNum := make(map[string]int)
+	playerInputSeqNum := make(map[string]string)
 
 	diff := time.Now().UnixMilli() - counter
 	counter = time.Now().UnixMilli()
@@ -157,9 +141,29 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		}
 	}
 
-	fmt.Println("Difference between Nakama ticks (ms):", strconv.Itoa(int(diff)), "Cardinal Operation Time (ms):",strconv.Itoa(int(CardinalOpCounter/1000)))
+	fmt.Println("Nakama MatchLoop (ms):", strconv.Itoa(int(diff)), "\nCardinal Endpoint Calls (ms):", strconv.Itoa(int(CardinalOpCounter/1000)))
 	CardinalOpCounter = 0
-	
+
+	t1 := time.Now()
+	t2 := time.Now()
+
+	for _, m := range messages {
+		switch m.GetOpCode() {
+		case MOVE:
+			if key, contains := playerInputNum[m.GetUserId()]; contains && key >= 20 {
+				playerInputNum[m.GetUserId()]++
+				continue
+			}
+
+			data := m.GetData()
+			if _, err := rpcEndpoints["tx-move-player"](ctx, logger, db, nk, string(data)); err != nil {
+				logger.Error(fmt.Errorf("Nakama: error registering input:", err).Error())
+			}
+
+			playerInputNum[m.GetUserId()]++
+			playerInputSeqNum[m.GetUserId()] = strings.Split(string(data), "Input_sequence_number")[1][2:9]
+		}
+	}
 
 	// get player statuses; if this does not throw an error, broadcast to everyone & offload coins, otherwise add to removal list
 	kickList := make([]string, 0)
@@ -170,10 +174,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			if gameParameters, err := rpcEndpoints["read-game-parameters"](ctx, logger, db, nk, "{}"); err != nil { // assume that an error here means the player is dead
 				return err
 			} else { // send everyone player state & send player its nearby coins
+
 				if err = dispatcher.BroadcastMessage(PARAMS, []byte(gameParameters), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
+
 			}
+
 			continue
 		}
 
@@ -184,12 +191,13 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 		if err != nil {
 			return err
 		}
-		// Get player state
-		
 
-		if playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, req); err != nil { // assume that an error here means the player is dead
+		if playerState, err := rpcEndpoints["read-player-state"](ctx, logger, db, nk, req); err != nil {
 			kickList = append(kickList, pp.GetUserId())
-		} else { // send everyone player state & send player its nearby coins
+		} else {
+			t2 = time.Now()
+			fmt.Printf("read-player-state: %d\n", t2.Sub(t1).Milliseconds())
+			// send everyone player state & send player its nearby coins
 			if err = dispatcher.BroadcastMessage(LOCATION, []byte(playerState), nil, nil, true); err != nil { // idk what the boolean is for the last argument of BroadcastMessage, but it isn't listed in the docs
 				return err
 			}
@@ -200,9 +208,9 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				if err := dispatcher.BroadcastMessage(COINS, []byte(nearbyCoins), []runtime.Presence{pp}, nil, true); err != nil {
 					return err
 				}
+
 			}
-			
-			
+
 			if nearbyHealth, err := rpcEndpoints["read-player-health"](ctx, logger, db, nk, req); err != nil {
 				return err
 			} else {
@@ -211,15 +219,15 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 				}
 			}
 
-		/*
-			if intCoins, err := callRPCs["read-player-totalcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
-				return err
-			} else {
-				if err = dispatcher.BroadcastMessage(TOTAL_COINS, []byte(intCoins), nil, nil, true); err != nil {// send coins to all players
+			/*
+				if intCoins, err := callRPCs["read-player-totalcoins"](ctx, logger, db, nk, "{\"Name\":\"" + pp.GetUserId() + "\"}"); err != nil {
 					return err
+				} else {
+					if err = dispatcher.BroadcastMessage(TOTAL_COINS, []byte(intCoins), nil, nil, true); err != nil {// send coins to all players
+						return err
+					}
 				}
-			}
-		*/
+			*/
 		}
 	}
 
@@ -238,20 +246,25 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 	}
 
 	// send attack information to all players
+	t1 = time.Now()
 	if attacks, err := rpcEndpoints["read-attacks"](ctx, logger, db, nk, "{}"); err != nil {
 		logger.Error(fmt.Errorf("Nakama: error fetching attack information: ", err).Error())
 	} else {
+		t2 = time.Now()
+		fmt.Printf("read-attacks: %d\n", t2.Sub(t1).Milliseconds())
 		if attacks != "[]\n" {
-			//logger.Debug(fmt.Sprintf("Nakama: attacks: ", attacks))
 			if err = dispatcher.BroadcastMessage(ATTACKS, []byte(attacks), nil, nil, true); err != nil {
 				return err
 			}
 		}
 	}
 
+	t1 = time.Now()
 	if _, err := rpcEndpoints["read-tick"](ctx, logger, db, nk, "{}"); err != nil {
 		return fmt.Errorf("Nakama: tick error: %w", err)
 	}
+	t2 = time.Now()
+	fmt.Printf("read-ticks: %d\n", t2.Sub(t1).Milliseconds())
 
 	m.tick++
 	//broadcast player nicknames
@@ -261,12 +274,11 @@ func (m *Match) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB
 			stringmap += "{\"UserId\":\"" + key + "\",\"Name\":\"" + val + "\"},"
 		}
 		stringmap = stringmap[:len(stringmap)-1] + "]"
-
 		if err := dispatcher.BroadcastMessage(NICKNAME, []byte(stringmap), nil, nil, true); err != nil {
 			return err
 		}
 	}
-
+	fmt.Printf("MATCH LOOP END\n")
 	return MatchState{}
 }
 
