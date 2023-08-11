@@ -32,7 +32,7 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
       - name: GCP - SCP compose files
         run: |
-          gcloud compute ssh --zone "${{ env.GCP_ZONE }}" "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}"--project "${{ env.GCP_PROJECT_ID }}" --quiet -- "bash -c 'mkdir -p /tmp/agar-shooter'"
+          gcloud compute ssh --zone "${{ env.GCP_ZONE }}" "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}" --project "${{ env.GCP_PROJECT_ID }}" --quiet -- "bash -c 'mkdir -p /tmp/agar-shooter'"
           gcloud compute scp --zone "${{ env.GCP_ZONE }}" --recurse * "${{ env.GCP_COMPUTE_INSTANCE_STAGING }}":/tmp/agar-shooter --project "${{ env.GCP_PROJECT_ID }}" --quiet
       - name: Set RELEASE_VERSION value (branch name)
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
