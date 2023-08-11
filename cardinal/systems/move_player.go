@@ -28,28 +28,8 @@ func MoveSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 	// Build the moveMap from the txQueue
 	for _, move := range msg.TxMovePlayer.In(q) {
 		if _, contains := moveMap[move.PlayerID]; !contains {
-			// The commented code is used to verify that no packets are lost when the client is sending inputs to the server, but rather than erroring out when a packet is unrecoverable, we choose to ignore it so we don't stop the game just because a packet was not sent
-			/*
-			pcomp, err := components.Player.Get(world, game.Players[move.PlayerID])
-
-			if err != nil {
-				return err
-			}
-
-			if pcomp.MoveNum != move.Input_sequence_number -1 {
-				fmt.Println("Difference in input sequence number is not 1; received sequence number", move.Input_sequence_number, "after sequence number", pcomp.MoveNum)
-			}
-			*/
-
 			moveMap[move.PlayerID] = []msg.MovePlayerMsg{move}
 		} else {
-			/*
-			if num := moveMap[move.PlayerID][len(moveMap[move.PlayerID]) - 1].Input_sequence_number; move.Input_sequence_number != num + 1 {
-				fmt.Println("Difference in input sequence number is not 1; received sequence number", move.Input_sequence_number, "after sequence number", num)
-				return nil
-			}
-			*/
-
 			moveMap[move.PlayerID] = append(moveMap[move.PlayerID], move)
 		}
 	}

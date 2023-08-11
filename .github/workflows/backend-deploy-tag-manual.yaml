@@ -1,4 +1,4 @@
-name: Dark Forest Backend - Deploy
+name: Backend Staging Tag - Deploy
 
 ## workflow will need manual trigger from actions page
 on:
@@ -7,12 +7,18 @@ on:
       DEPLOY_VERSION_TAG:
         description: 'Tag version to deploy'
         required: true
+      GCP_COMPUTE_INSTANCE_NAME:
+        description: 'GCP Instance Name'
+        required: true
+      GCP_COMPUTE_REGION_ZONE:
+        description: 'GCP Zone (example: us-west1-c)'
+        required: true
         
 env:
   GCP_REGISTRY_ARTIFACT_PATH: us-docker.pkg.dev/world-engine-test/agar-shooter
   GCP_PROJECT_ID: world-engine-test
-  GCP_COMPUTE_INSTANCE_STAGING: gamebackend-agar-shooter-latest-1
-  GCP_ZONE: us-west1-b
+  GCP_COMPUTE_INSTANCE_STAGING: ${{ github.event.inputs.GCP_COMPUTE_INSTANCE_NAME || 'gamebackend-agar-shooter-us-1' }}
+  GCP_ZONE: ${{ github.event.inputs.GCP_COMPUTE_REGION_ZONE || 'us-west1-b' }}
   GCP_SERVICE_DEPLOY_DIR: /opt/agar-shooter
 
 jobs:
@@ -44,13 +50,13 @@ jobs:
         with:
           instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
           zone: ${{ env.GCP_ZONE }}
-          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          ssh_private_key: ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
           command: |
             gcloud auth configure-docker us-docker.pkg.dev --quiet
             sudo mkdir -p ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             echo "Deploying: ${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}"
             export VERSION_TAG=${{ github.event.inputs.DEPLOY_VERSION_TAG || 'latest' }}
-            sudo cp /tmp/docker-compose.yml ${{ env.GCP_SERVICE_DEPLOY_DIR }}/docker-compose.yml
+            sudo cp -f /tmp/docker-compose.yml ${{ env.GCP_SERVICE_DEPLOY_DIR }}/docker-compose.yml
             cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             docker compose up --detach --wait --wait-timeout 60
       - name: GCP - Check Deployments
@@ -59,7 +65,7 @@ jobs:
         with:
           instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
           zone: ${{ env.GCP_ZONE }}
-          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          ssh_private_key: ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
           command: |
             cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             docker compose ps | tr -d \'\"

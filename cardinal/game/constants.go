@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/downflux/go-kd/kd"
+
 	"github.com/argus-labs/new-game/types"
 	"github.com/argus-labs/world-engine/cardinal/ecs/storage"
-
-	"github.com/downflux/go-kd/kd"
 )
 
 type IWorldConstants struct {

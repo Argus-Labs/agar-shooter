@@ -223,6 +223,7 @@ var (
 	}
 	nakamaPersonaTag = "nakama-persona"
 	globalNamespace = "agar-shooter"
+	CardinalOpCounter int64
 )
 
 // Initializes all functions and variables for Nakama: fetches all Cardinal endpoints, creates a Nakama match using the MatchCreate function, which calls newMatch, then passes the result to MatchInit
@@ -250,6 +251,7 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 // Returns a function that takes a request and sends it to the given endpoint
 func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
 	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		diffTime := time.Now().UnixMicro()
 		logger.Debug("Got request for %q, with payload: %q", currEndpoint, payload)
 
 		signedPayload, err := makeSignedPayload(ctx, nk, payload)
@@ -275,6 +277,7 @@ func makeEndpoint(currEndpoint string, makeURL func(string) string) func(context
 		if err != nil {
 			return logError(logger, "can't read body: %v", err)
 		}
+		CardinalOpCounter += time.Now().UnixMicro() - diffTime
 
 		return string(str), nil
 	}

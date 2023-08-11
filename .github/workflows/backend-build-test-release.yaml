@@ -153,7 +153,7 @@ jobs:
           docker push "${{ env.GCP_REGISTRY_ARTIFACT_PATH }}/${{ env.NAKAMA_REGISTRY_PATH }}:${{ env.RELEASE_VERSION }}"
           docker push "${{ env.GCP_REGISTRY_ARTIFACT_PATH }}/${{ env.CARDINAL_REGISTRY_PATH }}:latest"
           docker push "${{ env.GCP_REGISTRY_ARTIFACT_PATH }}/${{ env.NAKAMA_REGISTRY_PATH }}:latest"
-      - name: Dark Forest - Docker Image Released
+      - name: Agar Shooter - Docker Image Released
         run: |
           echo "----------------------------------------------"
           echo "🎉 Agar Shooter container images released [${{ env.RELEASE_VERSION }}]"

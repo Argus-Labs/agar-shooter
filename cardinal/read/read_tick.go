@@ -3,6 +3,7 @@ package read
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/argus-labs/world-engine/cardinal/ecs"
 )
 
