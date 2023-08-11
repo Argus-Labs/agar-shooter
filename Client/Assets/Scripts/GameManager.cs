@@ -218,13 +218,13 @@ public class GameManager : MonoBehaviour
         if (refreshTimer > refreshRate)
         {
             refreshTimer = 0f;
-            Dictionary<string, int> players = new Dictionary<string, int>();
+            Dictionary<string, Vector2Int> players = new Dictionary<string, Vector2Int>();
             foreach (KeyValuePair<string, RemotePlayer> otherPlayer in otherPlayers)
             {
-                players.Add(otherPlayer.Value.nameText.text, otherPlayer.Value.coin);
+                players.Add(otherPlayer.Value.nameText.text, new Vector2Int(otherPlayer.Value.coin, otherPlayer.Value.currLevel));
             }
 
-            players.Add(player.nameText.text, player.Coin);
+            players.Add(player.nameText.text, new Vector2Int(player.Coin,player.currLevel));
             int currRank = scoreBoard.Refresh(players, player.nameText.text, scoreboardSize);
             if (currRank < bestRank)
             {

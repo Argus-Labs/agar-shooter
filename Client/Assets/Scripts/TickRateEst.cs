@@ -1,5 +1,4 @@
-﻿using System;
-using Nakama;
+﻿using Nakama;
 using UnityEngine;
 
 // This class is used to estimate the tick rate of the server by tracking the last time we received a match state

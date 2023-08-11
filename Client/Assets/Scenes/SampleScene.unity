@@ -1370,9 +1370,9 @@ MonoBehaviour:
   gameInitialized: 0
   prefab: {fileID: 1835360544227996713, guid: c63b58d0670eb4c4d8b6f0ad2b0d5bf8, type: 3}
   nakamaConnectionCandidates:
+  - {fileID: 11400000, guid: fb3bfee287dd8ac4e9a4b9f7dc043f3b, type: 2}
   - {fileID: 11400000, guid: 8a6d48dff0e345d49b507b6604328709, type: 2}
   - {fileID: 11400000, guid: dde93a0d29fef5543a6b5c0358401fe1, type: 2}
-  - {fileID: 11400000, guid: 83a37b321fc5c584f8ecc589e9f83724, type: 2}
   nakamaConnection: {fileID: 11400000, guid: fb3bfee287dd8ac4e9a4b9f7dc043f3b, type: 2}
   player: {fileID: 1564357665}
   UserId: 
@@ -1443,6 +1443,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackAnimPrefab: {fileID: -954562982105736210, guid: 6dcbc88ee9369b84abc2857563b47f7c, type: 3}
   damageTextSpawner: {fileID: 977874919}
+  attackSound: {fileID: 8300000, guid: 06923c0b94afdd44f8d9efd0a6f48727, type: 3}
 --- !u!1 &1155933514
 GameObject:
   m_ObjectHideFlags: 0
@@ -1594,7 +1595,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1303667075
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1985,6 +1986,7 @@ MonoBehaviour:
   currLevel: 1
   width: 0
   height: 0
+  timer: 0
 --- !u!1 &1603249788
 GameObject:
   m_ObjectHideFlags: 0
@@ -2619,6 +2621,18 @@ PrefabInstance:
     - target: {fileID: 8156450798663125137, guid: 527684b8edcffa449909d0728bab5219, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0.000011444092
+      objectReference: {fileID: 0}
+    - target: {fileID: 8716061406678512609, guid: 527684b8edcffa449909d0728bab5219, type: 3}
+      propertyPath: m_Options.m_Options.Array.data[0].m_Text
+      value: Dev
+      objectReference: {fileID: 0}
+    - target: {fileID: 8716061406678512609, guid: 527684b8edcffa449909d0728bab5219, type: 3}
+      propertyPath: m_Options.m_Options.Array.data[1].m_Text
+      value: American
+      objectReference: {fileID: 0}
+    - target: {fileID: 8716061406678512609, guid: 527684b8edcffa449909d0728bab5219, type: 3}
+      propertyPath: m_Options.m_Options.Array.data[2].m_Text
+      value: Europe
       objectReference: {fileID: 0}
     - target: {fileID: 8716061406678512609, guid: 527684b8edcffa449909d0728bab5219, type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_Target

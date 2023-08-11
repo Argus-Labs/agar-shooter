@@ -1,7 +1,6 @@
 ﻿// create a test script that call DamageTextSpawner.create when I press right click pass the mouse position,
 // and the damage number is fixed 5
 
-using System;
 using UnityEngine;
 
 public class Testing : MonoBehaviour
