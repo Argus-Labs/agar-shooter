@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -9,7 +7,7 @@ public class AttackAnimSpawner : MonoBehaviour
    [SerializeField] private AttackAnim attackAnimPrefab;
    private ObjectPool<AttackAnim> _pool;
    [SerializeField] private DamageTextSpawner damageTextSpawner;
-
+   [SerializeField] private AudioClip attackSound;
    private void Start()
    {
       _pool = new ObjectPool<AttackAnim>(() =>
@@ -32,6 +30,8 @@ public class AttackAnimSpawner : MonoBehaviour
       AttackAnim anim = _pool.Get();
       anim.Setup(origin,target,damage);
       anim.Init(KillAnim);
+      // play attack sound
+      AudioSource.PlayClipAtPoint(attackSound,origin);
    }
    
    public void KillAnim(AttackAnim anim)

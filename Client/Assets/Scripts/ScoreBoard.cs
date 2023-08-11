@@ -8,14 +8,26 @@ public class ScoreBoard : MonoBehaviour
 
     // players dictionary contains player name and score
     // playerSelf is the player name of the current player
-    public int Refresh(Dictionary<string, int> players, string playerSelf, int scoreboardSize)
+    public int Refresh(Dictionary<string, Vector2Int> players, string playerSelf, int scoreboardSize)
     {
-        // based on players dictionary, update the scoreText format "1. player1" just rank and name player itself must be in the output 
+        // based on players dictionary, update the scoreText format "1. player1" just rank and name . player itself must be in the output 
         // if player count <= scoreboardSize display all players
         // if player count > scoreboardSize display top scoreboardSize-1 players and last line is playerSelf
 
         List<string> playerList = new List<string>(players.Keys);
-        playerList.Sort((a, b) => players[b].CompareTo(players[a]));
+        playerList.Sort((a, b) =>
+        {
+            // first sort by y value
+            // then sort by x value
+            if (players[a].y != players[b].y)
+            {
+                return players[b].y - players[a].y;
+            }
+            else
+            {
+                return players[b].x - players[a].x;
+            }
+        });
         bool selfInList = playerList.Contains(playerSelf);
         if (!selfInList)
         {

@@ -1,10 +1,7 @@
-using System;
 using Nakama.TinyJson;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
 
 public class Player : MonoBehaviour

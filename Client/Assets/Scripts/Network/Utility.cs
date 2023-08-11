@@ -1,6 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using UnityEngine;
+﻿using System.Runtime.InteropServices;
 
 public static class Utility
 {
