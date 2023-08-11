@@ -396,6 +396,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 	coins := false
 	var loc types.Pair[float64, float64]
 	var personaTag string
+	var damage int
 	worldConstants := game.WorldConstants
 
 	if err := components.Weapon.Update(world, weapon, func(comp components.WeaponComponent) components.WeaponComponent {// updates weapon ammo and last attack time
@@ -413,7 +414,8 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 			coins = true
 		} else {
 			if attacker_, err := components.Player.Get(world, game.Players[attacker]); err == nil {
-				comp.Health -= int(math.Ceil(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack(attacker_.Level))))
+				damage = int(math.Ceil(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack(attacker_.Level))))
+				comp.Health -= damage
 			}
 		}
 		kill = comp.Health <= 0
@@ -435,7 +437,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 
 		game.Attacks = append(game.Attacks, types.AttackTriple{AttackerID: attacker, DefenderID: defender, Damage: -1})
 	} else { // adds attack to display queue if it was executed
-		game.Attacks = append(game.Attacks, types.AttackTriple{AttackerID: attacker, DefenderID: defender, Damage: worldConstants.Weapons[wipun.Val].Attack})
+		game.Attacks = append(game.Attacks, types.AttackTriple{AttackerID: attacker, DefenderID: defender, Damage: damage})
 	}
 
 	// removes player from map if they die
