@@ -413,7 +413,7 @@ func Attack(world *ecs.World, id, weapon storage.EntityID, left bool, attacker, 
 			coins = true
 		} else {
 			if attacker_, err := components.Player.Get(world, game.Players[attacker]); err == nil {
-				comp.Health -= int(math.Floor(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack(attacker_.Level))))
+				comp.Health -= int(math.Ceil(float64(worldConstants.Weapons[wipun.Val].Attack) * (1 + game.LevelAttack(attacker_.Level))))
 			}
 		}
 		kill = comp.Health <= 0
