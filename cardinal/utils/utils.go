@@ -239,8 +239,10 @@ func RemovePlayer(world *ecs.World, personaTag string, playerList []read.PlayerP
 		}
 	}
 
-	if _, err := AddHealth(world, types.Triple[float64, float64, int]{player.Component.Loc.First, player.Component.Loc.Second, player.Component.Health}); err != nil {
-		return err
+	if player.Component.Health > 0 {
+			if _, err := AddHealth(world, types.Triple[float64, float64, int]{player.Component.Loc.First, player.Component.Loc.Second, player.Component.Health}); err != nil {
+			return err
+		}
 	}
 
 	// Delete the player from the local PlayerTree
