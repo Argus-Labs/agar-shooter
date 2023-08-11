@@ -75,14 +75,14 @@ func ProcessMovesSystem(world *ecs.World, q *ecs.TransactionQueue) error {
 
 		for i := int(math.Floor(prevLoc.First / game.GameParams.CSize)); i <= int(math.Floor(loc.First/game.GameParams.CSize)); i++ {
 			for j := int(math.Floor(prevLoc.Second / game.GameParams.CSize)); j <= int(math.Floor(loc.Second/game.GameParams.CSize)); j++ {
-				for coin, _ := range game.CoinMap[types.Pair[int, int]{First: i, Second: j}] {
+				for coin, _ := range game.CoinMap[i][j] {
 					if utils.CoinProjDist(prevLoc, loc, coin.Second) <= game.WorldConstants.PlayerRadius {
 						hitCoins = append(hitCoins, coin)
 					}
 				}
 
 				if tmpPlayer.Health < game.LevelHealth(tmpPlayer.Level) {
-					for health, _ := range game.HealthMap[types.Pair[int, int]{i, j}] {
+					for health, _ := range game.HealthMap[i][j] {
 						if utils.CoinProjDist(prevLoc, loc, health.Second) <= game.WorldConstants.PlayerRadius {
 							hitHealth = append(hitHealth, health)
 						}

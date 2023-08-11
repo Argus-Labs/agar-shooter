@@ -27,10 +27,12 @@ func InitializeGame(world *ecs.World, gameParams types.Game) error {
 	game.Width = int(math.Ceil(game.GameParams.Dims.First / game.GameParams.CSize))
 	game.Height = int(math.Ceil(game.GameParams.Dims.Second / game.GameParams.CSize))
 
+	game.CoinMap = make([][]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void, game.Width+1) // maps cells to sets of coin lists
+	game.HealthMap = make([][]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void, game.Width+2) // maps cells to sets of healthpack lists
 	for i := 0; i <= game.Width; i++ {
 		for j := 0; j <= game.Height; j++ {
-			game.CoinMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void)
-			game.HealthMap[types.Pair[int, int]{i, j}] = make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void)
+			game.CoinMap[i] = append(game.CoinMap[i], make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void))
+			game.HealthMap[i] = append(game.HealthMap[i], make(map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void))
 		}
 	}
 
@@ -50,14 +52,14 @@ func SpawnCoins(world *ecs.World) error { // spawn coins randomly over the board
 		newCoin := types.Triple[float64, float64, int]{consts.CoinRadius + rand.Float64()*(game.GameParams.Dims.First-2*consts.CoinRadius), consts.CoinRadius + rand.Float64()*(game.GameParams.Dims.Second-2*consts.CoinRadius), 1} // random location over range where coins can actually be generated
 		keep := true
 		coinRound := GetCell(newCoin)
-		if len(game.CoinMap[coinRound]) >= game.MaxCoinsInCell() {
+		if len(game.CoinMap[coinRound.First][coinRound.Second]) >= game.MaxCoinsInCell() {
 			continue
 		}
 
 		for i := math.Max(0, float64(coinRound.First-1)); i <= math.Min(float64(game.Width), float64(coinRound.First+1)); i++ {
 			for j := math.Max(0, float64(coinRound.Second-1)); j <= math.Min(float64(game.Height), float64(coinRound.Second+1)); j++ {
 				game.CoinMutex.RLock()
-				for coin, _ := range game.CoinMap[types.Pair[int, int]{int(i), int(j)}] {
+				for coin, _ := range game.CoinMap[int(i)][int(j)] {
 					keep = keep && (Distance(coin.Second, newCoin) > 2*consts.CoinRadius)
 				}
 				game.CoinMutex.RUnlock()
@@ -97,14 +99,14 @@ func SpawnHealths(world *ecs.World) error { // spawn healths randomly over the b
 		newHealth := types.Triple[float64, float64, int]{consts.HealthRadius + rand.Float64()*(game.GameParams.Dims.First-2*consts.HealthRadius), consts.HealthRadius + rand.Float64()*(game.GameParams.Dims.Second-2*consts.HealthRadius), game.WorldConstants.HealthPackValue} // random location over range where coins can actually be generated
 		keep := true
 		healthRound := GetCell(newHealth)
-		if len(game.HealthMap[healthRound]) >= game.MaxHealthInCell() {
+		if len(game.HealthMap[healthRound.First][healthRound.Second]) >= game.MaxHealthInCell() {
 			continue
 		}
 
 		for i := math.Max(0, float64(healthRound.First-1)); i <= math.Min(float64(game.Width), float64(healthRound.First+1)); i++ {
 			for j := math.Max(0, float64(healthRound.Second-1)); j <= math.Min(float64(game.Height), float64(healthRound.Second+1)); j++ {
 				game.HealthMutex.RLock()
-				for health, _ := range game.HealthMap[types.Pair[int, int]{int(i), int(j)}] {
+				for health, _ := range game.HealthMap[int(i)][int(j)] {
 					keep = keep && (Distance(health.Second, newHealth) > 2*consts.HealthRadius)
 				}
 				game.HealthMutex.RUnlock()
@@ -314,8 +316,9 @@ func AddCoin(world *ecs.World, coin types.Triple[float64, float64, int]) (int, e
 		return -1, fmt.Errorf("Coin creation failed: %w", err)
 	}
 
+	coinCell := GetCell(coin)
 	game.CoinMutex.Lock()
-	game.CoinMap[GetCell(coin)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = types.Pewp
+	game.CoinMap[coinCell.First][coinCell.Second][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{coinID, coin}] = types.Pewp
 	game.CoinMutex.Unlock()
 	game.TotalCoins++
 
@@ -330,7 +333,7 @@ func RemoveCoin(world *ecs.World, coinID types.Pair[storage.EntityID, types.Trip
 	}
 
 	game.CoinMutex.Lock()
-	delete(game.CoinMap[types.Pair[int, int]{int(math.Floor(coinID.Second.First / game.GameParams.CSize)), int(math.Floor(coinID.Second.Second / game.GameParams.CSize))}], coinID)
+	delete(game.CoinMap[int(math.Floor(coinID.Second.First / game.GameParams.CSize))][int(math.Floor(coinID.Second.Second / game.GameParams.CSize))], coinID)
 	game.CoinMutex.Unlock()
 
 	if err := world.Remove(coinID.First); err != nil {
@@ -351,8 +354,9 @@ func AddHealth(world *ecs.World, health types.Triple[float64, float64, int]) (in
 
 	components.Health.Set(world, healthID, components.HealthComponent{types.Pair[float64, float64]{health.First, health.Second}, health.Third})
 
+	healthCell := GetCell(health)
 	game.HealthMutex.Lock()
-	game.HealthMap[GetCell(health)][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{healthID, health}] = types.Pewp
+	game.HealthMap[healthCell.First][healthCell.Second][types.Pair[storage.EntityID, types.Triple[float64, float64, int]]{healthID, health}] = types.Pewp
 	game.HealthMutex.Unlock()
 	game.TotalHealth++
 
@@ -367,7 +371,7 @@ func RemoveHealth(world *ecs.World, healthID types.Pair[storage.EntityID, types.
 	}
 
 	game.HealthMutex.Lock()
-	delete(game.HealthMap[types.Pair[int, int]{int(math.Floor(healthID.Second.First / game.GameParams.CSize)), int(math.Floor(healthID.Second.Second / game.GameParams.CSize))}], healthID)
+	delete(game.HealthMap[int(math.Floor(healthID.Second.First / game.GameParams.CSize))][int(math.Floor(healthID.Second.Second / game.GameParams.CSize))], healthID)
 	game.HealthMutex.Unlock()
 
 	if err := world.Remove(healthID.First); err != nil {

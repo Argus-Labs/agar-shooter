@@ -24,7 +24,7 @@ func getNearbyCoins(playerComp components.PlayerComponent) []types.NearbyCoin {
 
 	for i := math.Max(0, math.Floor((playerComp.Loc.First-game.ClientView.First/2)/game.GameParams.CSize)); i <= math.Min(float64(game.Width), math.Ceil((playerComp.Loc.First+game.ClientView.First/2)/game.GameParams.CSize)); i++ {
 		for j := math.Max(0, math.Floor((playerComp.Loc.Second-game.ClientView.Second/2)/game.GameParams.CSize)); j <= math.Min(float64(game.Height), math.Ceil((playerComp.Loc.Second+game.ClientView.Second/2)/game.GameParams.CSize)); j++ {
-			for coin, _ := range game.CoinMap[types.Pair[int, int]{First: int(i), Second: int(j)}] {
+			for coin, _ := range game.CoinMap[int(i)][int(j)] {
 				coins = append(coins, types.NearbyCoin{coin.Second.First, coin.Second.Second, coin.Second.Third})
 			}
 		}

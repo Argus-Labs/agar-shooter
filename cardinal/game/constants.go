@@ -73,8 +73,8 @@ var (
 	}
 
 	GameParams				types.Game
-	CoinMap					= make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of coin lists
-	HealthMap				= make(map[types.Pair[int, int]]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void) // maps cells to sets of healthpack lists
+	CoinMap					[][]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void // maps cells to sets of coin lists
+	HealthMap				[][]map[types.Pair[storage.EntityID, types.Triple[float64, float64, int]]]types.Void // maps cells to sets of healthpack lists
 
 	PlayerTree				= kd.New[*types.P](kd.O[*types.P]{ []*types.P{}, 2, 16, })
 	PlayerCoins				= make(map[string] int)// the current number of coins each player has

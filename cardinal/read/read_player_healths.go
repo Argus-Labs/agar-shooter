@@ -24,7 +24,7 @@ func getNearbyHealths(playerComp components.PlayerComponent) []types.NearbyHealt
 
 	for i := math.Max(0, math.Floor((playerComp.Loc.First-game.ClientView.First/2)/game.GameParams.CSize)); i <= math.Min(float64(game.Width), math.Ceil((playerComp.Loc.First+game.ClientView.First/2)/game.GameParams.CSize)); i++ {
 		for j := math.Max(0, math.Floor((playerComp.Loc.Second-game.ClientView.Second/2)/game.GameParams.CSize)); j <= math.Min(float64(game.Height), math.Ceil((playerComp.Loc.Second+game.ClientView.Second/2)/game.GameParams.CSize)); j++ {
-			for health, _ := range game.HealthMap[types.Pair[int, int]{First: int(i), Second: int(j)}] {
+			for health, _ := range game.HealthMap[int(i)][int(j)] {
 				healths = append(healths, types.NearbyHealth{health.Second.First, health.Second.Second, health.Second.Third})
 			}
 		}
