@@ -1,4 +1,4 @@
-name: Dark Forest Backend - Deploy
+name: Backend Staging Tag - Deploy
 
 ## workflow will need manual trigger from actions page
 on:
@@ -44,7 +44,7 @@ jobs:
         with:
           instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
           zone: ${{ env.GCP_ZONE }}
-          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          ssh_private_key: ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
           command: |
             gcloud auth configure-docker us-docker.pkg.dev --quiet
             sudo mkdir -p ${{ env.GCP_SERVICE_DEPLOY_DIR }}
@@ -59,7 +59,7 @@ jobs:
         with:
           instance_name: ${{ env.GCP_COMPUTE_INSTANCE_STAGING }}
           zone: ${{ env.GCP_ZONE }}
-          ssh_private_key: ${{ secrets.DARK_FOREST_DEPLOY_RSA }}
+          ssh_private_key: ${{ secrets.CARDINAL_AGAR_SHOOTER_DEPLOY_KEY }}
           command: |
             cd ${{ env.GCP_SERVICE_DEPLOY_DIR }}
             docker compose ps | tr -d \'\"
